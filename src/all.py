@@ -9,6 +9,10 @@ import traceback
 
 logger = common.getLogger(__file__)
 
+logger.info("----------------------------------------")
+logger.info("             DisNOTE {}".format(common.getVersion()))
+logger.info("----------------------------------------")
+
 if len(sys.argv) < 2:
 	logger.error("ファイルが指定されていません")
 	sys.exit(1)
@@ -27,7 +31,7 @@ while index < len(sys.argv):
 		seg.main(input_file)
 	except:
 		logger.error(traceback.format_exc())
-		logger.error("{} の無音解析(1)に失敗しました。logファイルを見ると何かわかるかもしれません。".format(input_file))
+		logger.error("{} の無音解析(1)に失敗しました".format(input_file))
 		sys.exit(1)
 
 	# 音声分割
@@ -35,7 +39,7 @@ while index < len(sys.argv):
 		split.main(input_file)
 	except:
 		logger.error(traceback.format_exc())
-		logger.error("{} の音声分割(2)に失敗しました。logファイルを見ると何かわかるかもしれません。".format(input_file))
+		logger.error("{} の音声分割(2)に失敗しました".format(input_file))
 		sys.exit(1)
 
 	# 音声認識
@@ -43,7 +47,7 @@ while index < len(sys.argv):
 		speech_rec.main(input_file)
 	except:
 		logger.error(traceback.format_exc())
-		logger.error("{} の音声認識(3)に失敗しました。logファイルを見ると何かわかるかもしれません。".format(input_file))
+		logger.error("{} の音声認識(3)に失敗しました".format(input_file))
 		sys.exit(1)
 
 	index += 1

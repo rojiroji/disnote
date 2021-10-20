@@ -7,6 +7,9 @@ import hashlib
 
 DONE = "done"
 
+def getVersion():
+	return "v1.0.1"
+
 # configファイルのpath
 def getConfigFile(input_file):
 	base = os.path.splitext(os.path.basename(input_file))[0] # 拡張子なしのファイル名（これをフォルダ名などにする）

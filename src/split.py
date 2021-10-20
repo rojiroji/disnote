@@ -59,7 +59,7 @@ def main(input_file):
 			end_time = float(segment[2]) * 1000
 
 
-			if (segment_label != 'noEnergy'):  # 無音区間以外にする。noiseは捨てていいかも。 'speech' noEnergyで、startとendの間が1未満の場合は、前の項目と繋げていいかも。1回目のstartと2回目のendを採用する。
+			if (segment_label != 'noEnergy'):  # 無音区間以外。noiseも捨てていいかも。 'speech' noEnergyで、startとendの間が1未満の場合は、前の項目と繋げていいかも。1回目のstartと2回目のendを採用する。
 				if connect: # 1つ前と連結させる
 					prev = segmentation.pop()
 					start_time = prev[1]
@@ -67,10 +67,21 @@ def main(input_file):
 					start_time -= min(prev_noEnergy_length, 500) # 前回の無音部分の0.5秒を頭に入れる
 				
 				connect = False
-				segmentation.append([segment_label, start_time, end_time]) # push
 				prev_length = end_time - start_time
+				
+				mlength = 2 * 60 * 1000 # N分ごとに区切る(これ以上長いと音声認識がエラーを返す可能性がある)
+				while True :
+					length = end_time - start_time
+					
+					if length < mlength:
+						segmentation.append([segment_label, start_time, end_time ]) # push(末尾)
+						break
+					else:
+						segmentation.append([segment_label, start_time, start_time + mlength]) # push(3分)
+						start_time += mlength
+						logger.debug("length > mlength: length={}".format(length))
 
-			else:
+			else: # 無音区間
 				length = end_time - start_time
 				prev_noEnergy_length = length
 				connect = False

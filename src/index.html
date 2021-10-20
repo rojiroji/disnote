@@ -69,11 +69,6 @@
 			$("#" + textId + "_l").attr({"title": title });
 			$("#" + textId + "_r").attr({"title": title });
 		}
-
-		var $script = $('<script>').attr({
-			'type': 'text/javascript',
-			'src': './merged.json.js'
-		});
 		
 		function getTimeStr(base, t){
 			date = new Date(base.getTime() + t);
@@ -186,20 +181,20 @@
 
 		}
 		
-		$script.on('load', function(){
-			var data = results;
-			$tableObj = $("#table"),
-			len = data.length;
+		var data = results;
+		$tableObj = $("#table"),
+		len = data.length;
 
-			if(typeof baseDate === "undefined"){
-				$("#abstime").prop("disabled", true);
-				$("#timelabel").css("display", "none")
-			}
-			addTr(data, 0);
-			
-		});
-		$('body')[0].appendChild($script[0]);
+		if(typeof baseDate === "undefined"){
+			$("#abstime").prop("disabled", true);
+			$("#timelabel").css("display", "none")
+		}
+		addTr(data, 0);
+
 	});
+
+RESULTS
+
 	</script>
 
 </head>

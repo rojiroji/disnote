@@ -3,6 +3,7 @@ import os
 import sys
 from collections import deque
 import common
+import traceback
 
 logger = common.getLogger(__file__)
 
@@ -54,9 +55,11 @@ def main(input_file):
 	with open(recognize_result_file , mode) as f:
 
 		logger.info("音声認識中… ")
+		queuesize = len(split_result_queue)
 		
 		while len(split_result_queue) > 0:
 			split_result = split_result_queue.popleft() # ID,ファイル名,開始時間,終了時間の順
+			id = int(split_result[0]) + 1
 			audio_file = split_result[1]
 			start_time = int(float(split_result[2]))
 			length = int(float(split_result[4]))
@@ -94,8 +97,13 @@ def main(input_file):
 			except sr.UnknownValueError:
 				text = ""
 				confidence = 0
+			except:
+				logger.error(traceback.format_exc()) # 音声認識失敗。ログを吐いた後にファイル名だけわかるように再度例外を投げる
+				raise RuntimeError("音声認識に失敗したファイル … {}".format(audio_file))
 
-			logger.debug("音声認識中… {},{},{}".format(num, int(confidence * 100), text))
+			logger.debug("音声認識中… {},{},{}".format(id, int(confidence * 100), text))
+			if (id % 10) == 0 or (len(split_result_queue) == 1): # 10行ごとか、最後の1行ごとに進捗を出す
+				logger.info("　音声認識中… {}/{}".format(id , queuesize))
 			
 #			if len(text) > 0: # 認識結果が無くても追加することにした
 			f.write("{},{},{},{},{},{}\n".format(base, audio_file, start_time, length, int(confidence * 100), text))

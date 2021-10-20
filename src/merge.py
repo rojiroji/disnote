@@ -67,19 +67,29 @@ def main(input_files):
 		logger.info("info.txtなし")
 	except :
 		logger.info("info.txtの読み込み失敗")
-		
-	# jsファイル書き込み
-	with open(merged_js_file , "w" ) as f:
-		f.write("results =");
-		f.write(json.dumps(l, indent=4, ensure_ascii=False))
-		f.write(";\n");
-		if(baseDate):
-			baseDate += relativedelta(hours=+9)
-			f.write("baseDate=")
-			f.write("new Date({},{},{},{},{},{});".format(baseDate.year, baseDate.month, baseDate.day, baseDate.hour, baseDate.minute, baseDate.second));
+	
+	# index.htmlのオリジナル読み込み
+	with open("src/index.html" , "r" ) as f:
+		index_data = f.read()
+
+	# JavaScriptの変数部分を作成
+	merged_js = "results ="
+	merged_js += json.dumps(l, indent=4, ensure_ascii=False)
+	merged_js += ";\n";
+	if(baseDate):
+		baseDate += relativedelta(hours=+9)
+		merged_js += "baseDate="
+		merged_js += "new Date({},{},{},{},{},{});".format(baseDate.year, baseDate.month, baseDate.day, baseDate.hour, baseDate.minute, baseDate.second)
+
+	# index.html の値の部分を置換
+	index_data = index_data.replace('RESULTS', merged_js)
+	
+	# index.html書き込み
+	with open(os.path.join(basedir, "index.html") , "w", newline='' ) as f: # 変な改行が入るのを防ぐため newline='' 
+		f.write(index_data)
 
 	# htmlファイルなどをコピー
-	shutil.copyfile("src/index.html", os.path.join(basedir, "index.html"))
+	# shutil.copyfile("src/index.html", os.path.join(basedir, "index.html"))
 	dir_util.copy_tree("src/htmlfiles", os.path.join(basedir, "htmlfiles"))
 
 	logger.info("すべての処理が完了しました！")
