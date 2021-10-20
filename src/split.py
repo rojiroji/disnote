@@ -141,7 +141,7 @@ def main(input_file):
 				# 分割結果をflacに出力
 				#newAudio = audio_all[start_time:end_time]
 				#newAudio.export(filename, format="flac")
-				res = subprocess.check_output("ffmpeg -i \"{}\" -ss {} -t {} -vn -acodec flac -y {}".format(input_file,start_time/1000, (end_time-start_time)/1000,filename))
+				res = subprocess.check_output("ffmpeg -i \"{}\" -ss {} -t {} -vn -acodec flac -y \"{}\"".format(input_file,start_time/1000, (end_time-start_time)/1000,filename))
 
 
 				# 分割結果の時間やファイル名など
