@@ -10,6 +10,7 @@ from dateutil.parser import parse
 from dateutil.parser import ParserError
 from dateutil.relativedelta import relativedelta
 import datetime
+import codecs
 
 logger = common.getLogger(__file__)
 
@@ -42,8 +43,8 @@ def main(input_files):
 		writer.writerows(l);
 
 	# json(形式のjsファイル)
-	merged_js_file = common.getMergedJsFile(input_files[0])
-	logger.info("最終結果ファイル(json)：{}".format(merged_js_file))
+	#merged_js_file = common.getMergedJsFile(input_files[0])
+	#logger.info("最終結果ファイル(json)：{}".format(merged_js_file))
 
 	# ファイルパスを相対パスにする
 	basedir = os.path.dirname(input_files[0]) # 入力音声ファイルの置いてあるディレクトリ
@@ -91,6 +92,12 @@ def main(input_files):
 	# htmlファイルなどをコピー
 	# shutil.copyfile("src/index.html", os.path.join(basedir, "index.html"))
 	dir_util.copy_tree("src/htmlfiles", os.path.join(basedir, "htmlfiles"))
+
+	# プレイリスト作成(ファイルパスだけ書く)
+	with codecs.open(os.path.join(basedir, "merged.m3u8") , "w", "utf8", 'ignore') as f:
+		for line in l:
+			f.write(line[1])
+			f.write("\n")
 
 	logger.info("すべての処理が完了しました！")
 

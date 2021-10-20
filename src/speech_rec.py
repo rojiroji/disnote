@@ -4,6 +4,8 @@ import sys
 from collections import deque
 import common
 import traceback
+import codecs
+from mutagen.flac import FLAC
 
 logger = common.getLogger(__file__)
 
@@ -52,7 +54,7 @@ def main(input_file):
 			split_result_queue.append(line.split("\t"))
 
 
-	with open(recognize_result_file , mode) as f:
+	with codecs.open(recognize_result_file , mode, "CP932", 'ignore') as f:
 
 		logger.info("音声認識中… ")
 		queuesize = len(split_result_queue)
@@ -68,7 +70,7 @@ def main(input_file):
 			
 			if len(progress) > 0: # 中断データまでスキップ
 				if audio_file == progress:
-					progress = '' # 追いついたので、次の行からちゃんとやる
+					progress = '' # 追いついたので、次の行から続き
 				continue
 			
 			try:
@@ -100,13 +102,25 @@ def main(input_file):
 			except:
 				logger.error(traceback.format_exc()) # 音声認識失敗。ログを吐いた後にファイル名だけわかるように再度例外を投げる
 				raise RuntimeError("音声認識に失敗したファイル … {}".format(audio_file))
+			
+			# 分析した音声にタグをつける
+			try:
+				audio = FLAC(audio_file)
+				
+				audio['artist'] = audio['album artist'] = audio['albumartist'] = audio['ensemble'] = base
+				audio['comment'] = audio['description'] = text
+				audio['title'] = "{:0=2}:{:0=2}:{:0=2} {}".format(int(start_time / 1000 / 60 / 60), int(start_time / 1000 / 60) % 60, int(start_time/ 1000) % 60, text)
+				audio.pprint()
+				audio.save()
+			except:
+				pass
 
 			logger.debug("音声認識中… {},{},{}".format(id, int(confidence * 100), text))
-			if (id % 10) == 0 or (len(split_result_queue) == 1): # 10行ごとか、最後の1行ごとに進捗を出す
+			if (id % 10) == 0 or (len(split_result_queue) == 0): # 10行ごとか、最後の1行に進捗を出す
 				logger.info("　音声認識中… {}/{}".format(id , queuesize))
 			
-#			if len(text) > 0: # 認識結果が無くても追加することにした
-			f.write("{},{},{},{},{},{}\n".format(base, audio_file, start_time, length, int(confidence * 100), text))
+#			if len(text) > 0: # 認識結果が無くても追加することにした # ↓TODO：https://qiita.com/butada/items/33db39ced989c2ebf644
+			f.write("{},{},{},{},{},{}\n".format(base, audio_file, start_time, length, int(confidence * 100), text)) 
 			f.flush()
 			config.set('DEFAULT',CONFIG_WORK_PROGRESS ,audio_file) # ここまで完了した、と記録
 			common.writeConfig(input_file, config)
@@ -115,7 +129,7 @@ def main(input_file):
 	if len(progress) > 0: # 中断したまま終わってしまった
 		config.set('DEFAULT',CONFIG_WORK_PROGRESS ,"")
 		common.writeConfig(input_file, config)
-		logger.info("音声認識再開失敗。再度実行してください。")
+		raise RuntimeError("音声認識再開失敗。再度実行してください。")
 		return
 		
 	# 終了したことをiniファイルに保存

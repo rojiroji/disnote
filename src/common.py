@@ -6,9 +6,40 @@ import configparser
 import hashlib
 
 DONE = "done"
+SYSTEM_CONF_FILE="DisNOTE.ini"
+SEG_TMP_AUDIO_LENGTH="seg_tmp_audio_length"
 
 def getVersion():
-	return "v1.0.1"
+	return "v1.1.0"
+
+# 無音検出時に作るテンポラリファイルの音声の長さ（ミリ秒）
+def getSegTmpAudioLength():
+	min = 30 # 30分ごとに分割（デフォルト）
+
+	try:
+		config = readSysConfig()
+		tmp_min = config['DEFAULT'].get(SEG_TMP_AUDIO_LENGTH)
+		min = int(tmp_min)
+		if min < 10: # 最低でも10分区切り
+			min = 10
+			
+	except: # 設定ファイルが読めなかったり(初回起動時)、値がおかしかったらデフォルトで保存
+		min = 30
+		config.set('DEFAULT',SEG_TMP_AUDIO_LENGTH , str(min))
+		writeSysConfig(config)
+	
+	return min * 60 * 1000
+
+# システムconfig読み込み
+def readSysConfig():
+	config = configparser.ConfigParser()
+	config.read(SYSTEM_CONF_FILE, "utf-8")
+	return config
+
+# システムconfig書き込み
+def writeSysConfig(config):
+	with open(SYSTEM_CONF_FILE, "w", encoding="utf-8") as configfile:
+		config.write(configfile)
 
 # configファイルのpath
 def getConfigFile(input_file):
@@ -50,12 +81,15 @@ def inputFileHash(input_file):
 		return hash_sha3_256
 
 # 分析結果ファイル
-def getSegResultFile(input_file):
+def getSegResultFile(input_file, index):
 	base = os.path.splitext(os.path.basename(input_file))[0] # 拡張子なしのファイル名（これをフォルダ名などにする）
 	basedir = os.path.dirname(input_file) # 入力音声ファイルの置いてあるディレクトリ
 	outputdir = os.path.join(basedir, base) # 各種ファイルの出力先ディレクトリ
 
-	output_file = "_{}.txt".format(base)
+	if index > 0:
+		output_file = "_{}_{}.txt".format(base, index+1)
+	else:
+		output_file = "_{}.txt".format(base)
 		
 	# なければmkdir
 	try:

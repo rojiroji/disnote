@@ -4,21 +4,68 @@
 	<meta charset="Shift-JIS">
 	<title>DisNOTE</title>
 	<link href="htmlfiles/main.css" rel="stylesheet">
+	<link href="htmlfiles/jquery-ui.css" rel="stylesheet">
 	<script src="htmlfiles/jquery-3.6.0.min.js"></script>
 	<script src="htmlfiles/jquery.floatThead.min.js"></script>
+	<script src="htmlfiles/jquery-ui.min.js"></script>
 
 	<script>
 	$(function() {
-		// 認識できなかった行を表示
-		$("#notext").change(function(){
-			var $toptr = undefined;
-			var $prevtr;
-			var toptr_top = undefined;
+
+		// 話者
+		var people = {};
+		
+		var textBase = 5; // resultの配列の中で本文がある場所
+		
+		$toptr = $($('#table').find('tr')[0]);
+		var toptr_top = $toptr.offset().top; // 先頭tr（thead）の表示位置
+		
+		// 指定した<tr>が上の端に来るようにスクロール
+		function scrollToTop($target, force){
+			if(!$target){
+				return;
+			}
+			var y = $target.offset().top - toptr_top;
+			if(force || y < $(window).scrollTop()){
+				$(window).scrollTop(y);
+			}
+		}
+
+		// 指定した<tr>が下の端に表示されるようにスクロール
+		function scrollToBottom($target, force){
+			var y = $target.offset().top + $target.height() + $("#foottable").height() + 35;
+			if(force || ($(window).scrollTop() +  $(window).height() < y)){
+				$(window).scrollTop(y - $(window).height());
+			}
+		}
+		
+		// 行の表示/非表示切り替え(特定話者)
+		function updatePersonLineDisplay($person){
+			var id = $person.attr("id");
+			
+			if($person.prop("checked")){ // 話者チェック
+				if($('#notext').prop('checked')){ // 「認識できなかった行を表示」チェック
+					$(".textexists."+id).css("display", "table-row");
+					$(".notext."+id).css("display", "table-row");
+
+				}else{ //「認識できなかった行を表示」チェックされてない ⇒ 特定の話者 and notextでない行だけ表示
+					$(".textexists."+id).css("display", "table-row");
+					$(".notext."+id).css("display", "none");
+				}
+			}else{ // 話者非表示
+				$(".textexists."+id).css("display", "none");
+				$(".notext."+id).css("display", "none");
+			}
+		}
+		
+		// 行の表示/非表示切り替え
+		function updateLineDisplay(){
+			$prevtr = undefined;
+			$toptr = undefined;
+			
+			// いま画面の一番上に表示されているtrを探す（このtrが画面の一番上に表示されるようにスクロール位置を調整する）
 			$('#table').find('tr').each( function( index, element ){
-				if(!$(element).hasClass("notext")){
-					if(!toptr_top){
-						toptr_top = $(element).offset().top;			// 現在先頭に表示しているtrを確認
-					}
+				if(!($(element).css('display') == "none")){ // $(element).hasClass("notext")
 					var t = $(element).offset().top -  $(window).scrollTop();
 					if(t > toptr_top){
 						$toptr = $prevtr;
@@ -27,17 +74,28 @@
 					$prevtr = $(element);
 				}
 			});
-		
-			if($('#notext').prop('checked')){
-				$(".notext").css("display", "table-row");
-			}else{
-				$(".notext").css("display", "none");
-			}
 			
-			// 元のtrを先頭に表示するように調整
-			if($toptr){
-				$(window).scrollTop($toptr.offset().top - toptr_top);
+			// 話者ごとの表示/非表示設定
+			$(".person_input").each( function( index, element ){
+				updatePersonLineDisplay($(element));
+			});
+
+			// 元のtrを先頭に表示するようにスクロール位置を調整
+			scrollToTop($toptr, true);
+			
+			// 再検索
+			search(true);
+
+			if($("#peoplelist").dialog("isOpen")){ // スクロールで話者選択ウィンドウが遠くに行ってしまうことがあるので再表示
+				$("#peoplelist").dialog( "close" );
+				$("#peoplelist").dialog("open");
 			}
+		
+		}
+
+		// 認識できなかった行を表示
+		$("#notext").change(function(){
+			updateLineDisplay();
 		});
 
 		// 時刻切り替え
@@ -53,11 +111,11 @@
 			
 		});
 		
+		// 行内の表示する候補を変更
+		function changeText($td, d){
+			changeCurrentTd($td);
+			$target = $td.parent().data('textTd');
 
-
-		// 表示する候補を変更
-		function changeText(textId, d){
-			$target = $("#" + textId);
 			var current = 0 + $target.data('current');
 			var len = 0 + $target.data('textlen');
 			current = (len + current + d) % len;
@@ -66,17 +124,426 @@
 			$target.text($target.data('text' + current));
 			
 			var title = (current + 1) + "/" + len;
+			var textId = $target.attr('id');
 			$("#" + textId + "_l").attr({"title": title });
 			$("#" + textId + "_r").attr({"title": title });
 		}
 		
+		// ミリ秒から時間表記に変換
 		function getTimeStr(base, t){
 			date = new Date(base.getTime() + t);
 			d = ('0' + date.getHours()).slice(-2) + ":" + ('0' + date.getMinutes()).slice(-2) + ":" + ('0' + date.getSeconds()).slice(-2);
 			return d;
 		}
 		
+		// 現在選択されている行
+		$currentTd = undefined;
+		
+		// $tdを選択
+		function changeCurrentTd($td){
+			$(".current").removeClass('current');
+			if(!$td){		return;			}
+			
+			$td = $td.parent().data('playTd');
+			if(!$td){		return;			}
+			
+			$currentTd = $td;
+			
+			// 再生中の行に色付け
+			if($currentTd ){
+				$currentTd.parent().addClass('current');
+			}
+		}
+		
+		// 次の行へ(d=1),前の行へ(d=-1)
+		function nextTd($td, d){
+			if(!$td){	return;}
+			var next_id = $td.data('number'); // 最後の空白時間を飛ばしたいが難しいか
+			$nextPlayTd = null;
+			
+			do{ // 次の行を探す（非表示の場合はスキップ）
+				next_id += d;
+				$nextPlayTd = $("#play_" + next_id);
+				
+				if($nextPlayTd.length <= 0){	return null;} // 最後まで進んだ
+				
+			}while($nextPlayTd.parent().css('display') == "none")
+			
+			return $nextPlayTd;
+		
+		}
+		
+		// 音声再生
+		function play($td){
+			changeCurrentTd($td);
+
+			// ファイル名設定
+			$("#sound").attr({"src": $td.data('filename') });
+			// 再生
+			$("#sound")[0].play();
+		}
+		
+		// 再生終了
+		$("#sound").on("ended", function(){
+			if($('#autoplay').prop('checked')){ // 連続再生
+				$currentTd = nextTd($currentTd, +1); // 次の行へ
+
+				// 次の行を再生
+				if($currentTd){
+					play($currentTd);
+		
+					// 画面外に出ていた場合はスクロール
+					scrollToBottom($nextPlayTd, false);
+				}
+			}
+		});
+		
+		// ヘルプダイアログ設定
+		$("#help").dialog({ autoOpen: false, modal: true , title:"ショートカットキー", closeOnEscape:true, width:"630"});
+		$( "#open_help" ).click(function() {
+			$("#help").dialog("open");
+		}); 
+		$("#close_help").on("click", function(){
+			$("#help").dialog( "close" );
+		});
+
+		// 話者表示切替ダイアログ設定
+		$("#peoplelist").dialog({ autoOpen: false, modal: true , title:"話者表示選択", closeOnEscape:true});
+		$( "#open_peoplelist" ).click(function() {
+			$("#peoplelist").dialog("open");
+		}); 
+		$("#switch_people").on("click", function(){
+			$("#peoplelist").dialog( "close" );
+		});
+		$("#show_all_person").change(function(){ // 全員表示/非表示
+			var checked = $("#show_all_person").prop("checked");
+
+			$(".person_input").each( function( index, element ){
+				$(element).prop("checked", checked);
+			});
+			updateLineDisplay();
+		});
+		
+		// ダイアログ表示中にダイアログ外を押したら閉じる
+		$( document ).on( "click", ".ui-widget-overlay", function(){
+			$("#help").dialog( "close" );
+			$("#peoplelist").dialog( "close" );
+		});
+		
+		// 選択行を適当に決める
+		function defaultCurrentTd(){
+			if($currentTd){
+				return;
+			}
+			$prevtr = undefined;
+			$toptr = undefined;
+			$('#table').find('tr').each( function( index, element ){
+				var t = $(element).offset().top -  $(window).scrollTop();
+				if(t > toptr_top && $prevtr.data('playTd')){
+					$toptr = $prevtr; // 画面上最初に表示されているもの
+					return false;
+				}
+				$prevtr = $(element);
+			});
+			if($toptr){ // 位置調整
+				$currentTd = nextTd($toptr.data('playTd'),  1);
+				$currentTd = nextTd($currentTd, -1);
+			}
+		}
+		
+
+		// 検索
+		var prevSearch = "";
+		var searchHit = false;
+		var searchHitCount = 0;
+		
+		function updateSearchResult(){// ヒット件数表示
+			if($currentTd && $currentTd.parent() && $currentTd.parent().hasClass("highlight")){
+				var count = $currentTd.parent().data("searchhit_count");
+				$("#search_result").text(count+"/"+searchHitCount);
+			}else if($("#search").val().trim().length > 0){
+				$("#search_result").text(searchHitCount);
+			}else{
+				$("#search_result").text("");
+			}
+			$(".searchbutton").css("opacity", searchHit ? "1" : "0.5");
+		}
+
+		function searchTr(i){ // 特定の行が検索にヒットするかどうかを確認（検索入力更新時か、tr追加時に呼ばれる）
+			var search = $("#search").val().trim();
+			if(search.length <= 0){
+				return;
+			}
+			
+			$tr = $("#tr_" + i);
+			if(!$tr.css('display') || $tr.css('display') == "none"){ // 未生成の行+非表示行は対象外とする
+				return;
+			}
+			for(k = textBase; k < data[i].length; k++){
+				if(!data[i][k]){
+					break;
+				}
+				if(data[i][k].indexOf(search) >= 0){
+					searchHit = true;
+					searchHitCount++;
+					$tr.addClass("highlight").data("searchhit_count",searchHitCount);
+					updateSearchResult();
+					return;
+				}
+			}
+		}
+		function search(force){ // 全体検索
+			var search = $("#search").val().trim();
+			if(!force && search == prevSearch){	return;		}
+
+			$(".highlight").removeClass('highlight');
+			searchHit = false;
+			updateSearchResult();
+			if(search.length <= 0){
+				return;
+			}
+			prevSearch = search;
+			
+			var data = results;
+			len = data.length;
+
+			searchHitCount = 0;
+			for(i = 0; i < data.length; i++){
+				searchTr(i);
+			}
+		}
+		
+		// 次の行へ検索(d=1),前の行へ検索(d=-1)
+		function nextSearch(d){
+			if(!searchHit){				return;			}
+
+			defaultCurrentTd();
+
+			var next_id = $currentTd.data('number');
+			$nextPlayTd = null;
+			
+			do{ // 次の行を探す（非表示の場合はスキップ）
+				next_id += d;
+				$nextPlayTd = $("#play_" + next_id);
+				
+				if($nextPlayTd.length <= 0){	return null;} // 最後まで進んだ
+				
+			}while($nextPlayTd.parent().hasClass("highlight") == false)
+			
+			// 該当行にフォーカス
+			$currentTd = $nextPlayTd;
+			changeCurrentTd($currentTd);
+			scrollToTop($currentTd, false);
+			scrollToBottom($currentTd, false);
+			
+			// 検索件数表示
+			updateSearchResult();
+			
+		}
+		
+		// 検索次
+		$("#search_next").click(function(){
+			nextSearch(1);
+		});
+		// 検索前
+		$("#search_prev").click(function(){
+			nextSearch(-1);
+		});
+
+		$("#search").keyup(function(){search()});
+		$("#search").change(function(){search()});
+		
+		// キーボード入力
+		$(document).on("keydown", function(e) {
+			if($("#help").dialog("isOpen")){ // 話者選択ダイアログ表示中
+				return true;
+			}
+			
+			if($("#peoplelist").dialog("isOpen")){ // 話者選択ダイアログ表示中
+				if(e.key == "ArrowUp" || e.key == "ArrowDown"){ // スクロール抑制
+					return false;
+				}
+
+				return true;
+			}
+			
+			if(e.code == "F3"){ // 検索
+				if(searchHit){ // 次へ検索
+					if(e.shiftKey){
+						nextSearch(-1);
+					}else{
+						nextSearch(1);
+					}
+					$("#search").blur(); 
+					return false;
+				}else{
+					$("#search").focus(); // 検索窓にフォーカス
+					return false;
+				}
+			}
+			
+			if($("#search").is(":focus")){ // 検索窓で入力中
+				if(e.key == "Enter"){ // Enter（次へ）
+					if(e.shiftKey){
+						nextSearch(-1);
+					}else{
+						nextSearch(1);
+					}
+
+					return false;
+				}
+				if(e.key == "Escape" ){ // ESC（フォーカス外す）
+					$("#search").blur(); 
+					return false;
+				}
+
+				return true; // 文字入力できるようにtrueを返す
+			}
+			
+			if(e.key == "Enter"){ // Enter
+				defaultCurrentTd();
+				changeCurrentTd($currentTd);
+				return false;
+			}
+
+			if(e.key == "Escape"){ // ESC
+				$currentTd = undefined;
+				changeCurrentTd($currentTd);
+				$("#sound")[0].stop();
+				return false;
+			}
+			
+			if(e.key == "ArrowUp"){ // ↑（行選択）
+				if(e.shiftKey	|| $currentTd){
+					defaultCurrentTd();
+					
+					$td = nextTd($currentTd, -1);
+					if($td){
+						changeCurrentTd($td);
+						scrollToTop($currentTd, false);
+					}
+					return false;
+				}
+			}
+			if(e.key == "ArrowDown"){ // ↓（行選択）
+				if(e.shiftKey	|| $currentTd){
+					defaultCurrentTd();
+					
+					$td = nextTd($currentTd, 1);
+					if($td){
+						changeCurrentTd($td);
+						scrollToBottom($currentTd, false);
+					}
+					return false;
+				}
+			}
+			
+			if(e.key == "ArrowRight"){ // →（候補選択）
+				if(e.shiftKey	|| $currentTd){
+					defaultCurrentTd();
+					changeText($currentTd, 1);
+					return false;
+				}
+			}
+			if(e.key == "ArrowLeft"){ // ←（候補選択）
+				if(e.shiftKey	|| $currentTd){
+					defaultCurrentTd();
+					changeText($currentTd, -1);
+					return false;
+				}
+			}
+					
+			if(e.key == " "){ // スペース（再生/停止）
+
+				if($currentTd){
+					if($("#sound").attr("src") != $currentTd.data('filename')){ // 行が変わっていたら再生し直し
+						play($currentTd);
+					}else{
+						if(!$("#sound")[0].paused){// 一時停止/再開
+							$("#sound")[0].pause();
+						}else{
+							$("#sound")[0].play();
+						}
+					}
+					return false;
+				}
+			}
+			
+			if(e.code == "KeyC"){ // C,c（コピー）
+				if($currentTd){
+					copyTdText($currentTd);
+					return false;
+				}
+			}
+
+			
+			// 以下、通常のショートカットキーと重複しないように処理（Ctrl+Aなど）
+			if(e.ctrlKey){
+				return true;
+			}
+				
+			if(e.code == "KeyS"){ // S,s（「認識できなかった行を表示」のチェック切り替え）
+				$target = $("#notext");
+				$target.prop("checked",!$target.prop("checked")).change();
+				return false;
+			}
+			if(e.code == "KeyT"){ // T,t（「時刻表示」のチェック切り替え）
+				$target = $("#abstime");
+				$target.prop("checked",!$target.prop("checked")).change();
+				return false;
+			}
+			if(e.code == "KeyA"){ // A,a（連続再生のチェック切り替え）
+				$target = $("#autoplay");
+				$target.prop("checked",!$target.prop("checked")).change();
+				return false;
+			}
+			if(e.code == "KeyP"){ // P,p（話者表示選択）
+				$("#peoplelist").dialog("open");
+				return false;
+			}
+			if(e.code == "KeyF"){ // F,f（検索窓にフォーカス）
+				$("#search").focus();
+				return false;
+			}
+			if(e.code == "KeyH"){ // H,h（ヘルプ）
+				$("#help").dialog("open");
+				return false;
+			}
+
+			
+		});
+		
+		
+		// クリップボードにテキストをコピー
+		function copyTdText($target){
+			changeCurrentTd($target);
+			
+			$target = $target.parent().data('textTd');
+			
+			var $clipboard = $('<textarea></textarea>');
+			$clipboard.text($target.text());
+			$('body').append($clipboard);
+
+			$clipboard.val($target.text());
+			$clipboard.select();
+			document.execCommand("Copy");
+			$clipboard.remove();
+		}
+		
+		// 行追加
+		var personId = 0;
 		function addTr(data, i){
+			var name = data[i][0];
+			
+			// 人名登録
+			if(!people[name]){
+				personId++;
+				people[name] = personId;
+				$input = $("<input>").prop("type","checkbox").prop("id","person_" + personId).prop("checked", true).change(function(){	updateLineDisplay();}).addClass("person_input");
+				$td = $("<td>").append($("<label>").append($input).append($("<span>").text(name)));
+				$("#peopletable").append($("<tr>").append($td));
+			}
+		
 			len = data.length;
 		
 			
@@ -96,42 +563,33 @@
 			}
 			
 			// 再生ボタン
-			$play = $("<td>").addClass("play").attr({"title": "" }).data('filename',data[i][1]).on("click", function(){
-				$("#sound").attr({"src":  $(this).data('filename') }); // クリックで再生
-				$("#sound")[0].play();
+			var playTdId = "play_" + i;
+			$play = $("<td>").addClass("play").attr({"title": "" }).data('filename',data[i][1]).attr({"id": playTdId }).data('number', i).on("click", function(){
+				play($(this));
 			});
 
 			// 候補
 			var textTdId = "text_" + i;
 			$textTd = $("<td>").attr({"id": textTdId }).addClass("text").on("click", function(){ // クリックでコピー
-				var $clipboard = $('<textarea></textarea>');
-				$clipboard.text($(this).text());
-				$('body').append($clipboard);
-
-				$clipboard.val($(this).text());
-				$clipboard.select();
-				document.execCommand("Copy");
-				$clipboard.remove();
+				copyTdText($(this));
 			});
 
 			// 左矢印
-			$left = $("<td>").attr({"id": textTdId + "_l"}).addClass("button").addClass("prev").data('target', textTdId).on("click", function(){
-				target = $(this).data('target');
-				changeText(target, -1);
+			$left = $("<td>").attr({"id": textTdId + "_l"}).addClass("button").addClass("prev").on("click", function(){
+				changeText($(this), -1);
 			});
 
 			// 右矢印
-			$right = $("<td>").attr({"id": textTdId + "_r" }).addClass("button").addClass("next").data('target', textTdId).on("click", function(){
-				target = $(this).data('target');
-				changeText(target, 1);
+			$right = $("<td>").attr({"id": textTdId + "_r" }).addClass("button").addClass("next").on("click", function(){
+				changeText($(this), 1);
 			});
 
-			$tr = $("<tr>").addClass("line").attr({"id": "tr_" + i });
+			$tr = $("<tr>").addClass("line").attr({"id": "tr_" + i }).data('playTd', $play).data('textTd', $textTd);
 
 			$tableObj.append(
 				$tr
 					.append($timeTd) // 時間
-					.append($("<td>").text(data[i][0]).addClass("name")) // 話者
+					.append($("<td>").text(name).addClass("name")) // 話者
 					.append($play)
 					//.append($("<td>").text(data[i][3]).addClass("score")) // スコア
 					//.append($("<td>").attr({"id":"td1_" + i }).text(data[i][1]).hide()) // ファイル名
@@ -141,7 +599,6 @@
 			);
 
 			// 5から先が候補(text<n>に代入
-			var textBase = 5;
 			var k;
 			for(k = textBase; k < data[i].length; k++){
 				if(!data[i][k]){
@@ -162,9 +619,14 @@
 			$left.attr({"title": "1/" + textlen });
 			$right.attr({"title": "1/" + textlen });
 
-			if(textlen <= 0){ // 認識できなかったファイルは隠す
-				$tr.addClass("notext");
+			var personClass = "person_" + people[name];
+			if(textlen <= 0){ // 認識できなかった行は隠す
+				$tr.addClass(personClass).addClass("notext");
+			}else{
+				$tr.addClass(personClass).addClass("textexists");
 			}
+			updatePersonLineDisplay($("#" + personClass));
+			searchTr(i);
 			
 			i++;
 			if (i < len){
@@ -174,21 +636,23 @@
 			//	$('#loading').css("display","none");
 				$('#loading').text("complete! 100%");
 				var $table = $('table');
+				search(true);
 			}
-			$tableObj.floatThead({
-				position: 'absolute'
-			});
+			//$("#table").floatThead({ // ヘッダ固定を試したけどしなくてもいいかな
+			//	position: 'absolute'
+			//});
 
 		}
 		
 		var data = results;
-		$tableObj = $("#table"),
+		$tableObj = $("#tbody"),
 		len = data.length;
 
 		if(typeof baseDate === "undefined"){
 			$("#abstime").prop("disabled", true);
 			$("#timelabel").css("display", "none")
 		}
+		updateSearchResult();
 		addTr(data, 0);
 
 	});
@@ -202,15 +666,75 @@ RESULTS
 <div class="container">
 	<div class="main">
 		<div id="loading" class="loading"></div>
+		
+		<div id="peoplelist" style="display:none">
+			<table id="peopletable">
+				<tr>
+					<td>
+						<!-- <label><input type="checkbox" id="show_all_person" checked="checked"><span>全員</span></label> -->
+					</td>
+				</tr>
+			</table>
+			<input type="button" id="switch_people" value="閉じる">
+		</div>
+		
+		<div id="help" style="display:none">
+			<div>
+				<span class="caption">通常ショートカット</span>
+				<table class="helptable">
+					<th>Key</th><th>説明</th></tr>
+					<td>Enter</td><td>選択モードON</td></tr>
+					<td>H</td>    <td><div class="icon help"></div>この画面を表示</td></tr>
+					<td>P</td>    <td><div class="icon people"></div>話者表示選択</td></tr>
+					<td>F,F3</td> <td><div class="icon search"></div>検索</td></tr>
+					<td>S</td>    <td><input type="checkbox" disabled checked>認識できなかった行を表示</td></tr>
+					<td>T</td>    <td><input type="checkbox" disabled checked>時刻表示 <span style="font-size:small">※時刻情報がある場合のみ</span></td></tr>
+					<td>A</td>    <td><input type="checkbox" disabled checked>連続再生</td></tr>
+				</table>
+			</div>
+
+			<div>
+				<span class="caption">選択モードON状態のみ</span>
+				<table class="helptable">
+					<th>Key</th><th>説明</th></tr>
+					<td>ESC</td> <td>選択モードOFF</td></tr>
+					<td>↑↓</td><td>行選択</td></tr>
+					<td>←→</td><td>候補選択</td></tr>
+					<td>Space</td><td>再生/停止</td></tr>
+					<td>C</td><td>コピー</td></tr>
+				</table>
+			</div>
+
+		</div>
+		
+		<div class="header">
+			<div id="open_help" class="push icon help" title="説明(H)" ></div>
+			<div id="open_peoplelist" class="push icon people" title="話者表示選択(P)" ></div>
+			<div id="search_icon" class="icon search"  ></div>
+			<div><input type="text" id="search"></div>
+			<div id="search_prev" class="push icon searchbutton"></div>
+			<div id="search_next" class="push icon searchbutton"></div>
+		</div>
+		<span id="search_result" ></span>
+
 		<div class="footer">
-			<audio id="sound" class="sound" src="" controls></audio>
-			<span class="check">
-				<label><input type="checkbox" id="notext">認識できなかった行を表示</label>
-				<label id="timelabel">　<input type="checkbox" id="abstime" checked>時刻表示</label>
-			</span>
+			<table id="foottable">
+				<tr>
+					<td>
+						<audio id="sound" class="sound" src="" controls></audio>
+					</td>
+					<td>
+						<span class="check">
+							<label><input type="checkbox" id="notext"><span>認識できなかった行を表示(S)</span></label><br>
+							<label id="timelabel"><input type="checkbox" id="abstime" checked><span>時刻表示(T)</span><br></label>
+							<label><input type="checkbox" id="autoplay"><span>連続再生(A)</span></label><br>
+						</span>
+					</td>
+				</tr>
+			</table>
 		</div>
 
-		<table id="table" class="thead">
+		<table id="table" class="thead main">
 			<thead>
 				<tr id="head">
 					<th >時間</th>
@@ -221,6 +745,8 @@ RESULTS
 					<th >候補</th>
 				</tr>
 			</thead>
+			<tbody id="tbody">
+			</tbody>
 
 		</table>
 		

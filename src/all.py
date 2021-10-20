@@ -29,25 +29,28 @@ while index < len(sys.argv):
 	# 無音解析
 	try:
 		seg.main(input_file)
-	except:
+	except Exception as e:
+		tb = sys.exc_info()[2]
 		logger.error(traceback.format_exc())
-		logger.error("{} の無音解析(1)に失敗しました".format(input_file))
+		logger.error("{} の無音解析(1)に失敗しました({})。".format(input_file,e.with_traceback(tb)))
 		sys.exit(1)
 
 	# 音声分割
 	try:
 		split.main(input_file)
-	except:
+	except Exception as e:
+		tb = sys.exc_info()[2]
 		logger.error(traceback.format_exc())
-		logger.error("{} の音声分割(2)に失敗しました".format(input_file))
+		logger.error("{} の音声分割(2)に失敗しました({})。".format(input_file,e.with_traceback(tb)))
 		sys.exit(1)
 
 	# 音声認識
 	try:
 		speech_rec.main(input_file)
-	except:
+	except Exception as e:
+		tb = sys.exc_info()[2]
 		logger.error(traceback.format_exc())
-		logger.error("{} の音声認識(3)に失敗しました".format(input_file))
+		logger.error("{} の音声認識(3)に失敗しました({})。".format(input_file,e.with_traceback(tb)))
 		sys.exit(1)
 
 	index += 1
@@ -56,9 +59,10 @@ while index < len(sys.argv):
 # 結果マージ
 try:
 	merge.main(l)
-except:
-	logger.error(sys.exc_info())
-	logger.error("結果マージ(4)に失敗しました")
+except Exception as e:
+	tb = sys.exc_info()[2]
+	logger.error(traceback.format_exc())
+	logger.error("結果マージ(4)に失敗しました({})。".format(e.with_traceback(tb)))
 	sys.exit(1)
 
 
