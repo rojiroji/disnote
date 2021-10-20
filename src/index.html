@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+	<meta charset="Shift-JIS">
+	<title>DisNOTE</title>
+	<link href="htmlfiles/main.css" rel="stylesheet">
+	<script src="htmlfiles/jquery-3.6.0.min.js"></script>
+	<script src="htmlfiles/jquery.floatThead.min.js"></script>
+
+	<script>
+	$(function() {
+		// 認識できなかった行を表示
+		$("#notext").change(function(){
+			var $toptr = undefined;
+			var $prevtr;
+			var toptr_top = undefined;
+			$('#table').find('tr').each( function( index, element ){
+				if(!$(element).hasClass("notext")){
+					if(!toptr_top){
+						toptr_top = $(element).offset().top;			// 現在先頭に表示しているtrを確認
+					}
+					var t = $(element).offset().top -  $(window).scrollTop();
+					if(t > toptr_top){
+						$toptr = $prevtr;
+						return false;
+					}
+					$prevtr = $(element);
+				}
+			});
+		
+			if($('#notext').prop('checked')){
+				$(".notext").css("display", "table-row");
+			}else{
+				$(".notext").css("display", "none");
+			}
+			
+			// 元のtrを先頭に表示するように調整
+			if($toptr){
+				$(window).scrollTop($toptr.offset().top - toptr_top);
+			}
+		});
+
+		// 時刻切り替え
+		$("#abstime").change(function(){
+			
+			if($('#abstime').prop('checked')){
+				$(".abstime").css("display", "inline");
+				$(".reltime").css("display", "none");
+			}else{
+				$(".reltime").css("display", "inline");
+				$(".abstime").css("display", "none");
+			}
+			
+		});
+		
+
+
+		// 表示する候補を変更
+		function changeText(textId, d){
+			$target = $("#" + textId);
+			var current = 0 + $target.data('current');
+			var len = 0 + $target.data('textlen');
+			current = (len + current + d) % len;
+
+			$target.data('current', current);
+			$target.text($target.data('text' + current));
+			
+			var title = (current + 1) + "/" + len;
+			$("#" + textId + "_l").attr({"title": title });
+			$("#" + textId + "_r").attr({"title": title });
+		}
+
+		var $script = $('<script>').attr({
+			'type': 'text/javascript',
+			'src': './merged.json.js'
+		});
+		
+		function getTimeStr(base, t){
+			date = new Date(base.getTime() + t);
+			d = ('0' + date.getHours()).slice(-2) + ":" + ('0' + date.getMinutes()).slice(-2) + ":" + ('0' + date.getSeconds()).slice(-2);
+			return d;
+		}
+		
+		function addTr(data, i){
+			len = data.length;
+		
+			
+			// 時刻
+			t = parseInt(data[i][2])
+			$timeTd = $("<td>").addClass("time");
+
+			
+			d = getTimeStr(new Date(2000,1,1), t)
+			$reltime = $("<span>").addClass("reltime").text(d);
+			$timeTd.append($reltime);
+
+			if(typeof baseDate !== "undefined"){
+				d = getTimeStr(baseDate, t);
+				$timeTd.append($("<span>").addClass("abstime").text(d));
+				$reltime.css("display","none");
+			}
+			
+			// 再生ボタン
+			$play = $("<td>").addClass("play").attr({"title": "" }).data('filename',data[i][1]).on("click", function(){
+				$("#sound").attr({"src":  $(this).data('filename') }); // クリックで再生
+				$("#sound")[0].play();
+			});
+
+			// 候補
+			var textTdId = "text_" + i;
+			$textTd = $("<td>").attr({"id": textTdId }).addClass("text").on("click", function(){ // クリックでコピー
+				var $clipboard = $('<textarea></textarea>');
+				$clipboard.text($(this).text());
+				$('body').append($clipboard);
+
+				$clipboard.val($(this).text());
+				$clipboard.select();
+				document.execCommand("Copy");
+				$clipboard.remove();
+			});
+
+			// 左矢印
+			$left = $("<td>").attr({"id": textTdId + "_l"}).addClass("button").addClass("prev").data('target', textTdId).on("click", function(){
+				target = $(this).data('target');
+				changeText(target, -1);
+			});
+
+			// 右矢印
+			$right = $("<td>").attr({"id": textTdId + "_r" }).addClass("button").addClass("next").data('target', textTdId).on("click", function(){
+				target = $(this).data('target');
+				changeText(target, 1);
+			});
+
+			$tr = $("<tr>").addClass("line").attr({"id": "tr_" + i });
+
+			$tableObj.append(
+				$tr
+					.append($timeTd) // 時間
+					.append($("<td>").text(data[i][0]).addClass("name")) // 話者
+					.append($play)
+					//.append($("<td>").text(data[i][3]).addClass("score")) // スコア
+					//.append($("<td>").attr({"id":"td1_" + i }).text(data[i][1]).hide()) // ファイル名
+					.append($left)
+					.append($right)
+					.append($textTd)
+			);
+
+			// 5から先が候補(text<n>に代入
+			var textBase = 5;
+			var k;
+			for(k = textBase; k < data[i].length; k++){
+				if(!data[i][k]){
+					break;
+				}
+				if(data[i][k].length > 0){
+					$textTd.data('text' + (k - textBase), data[i][k]);
+				}else{
+					break;
+				}
+			}
+			var textlen = k - textBase;
+			$textTd.text(data[i][textBase]) // 候補1を表示しておく
+			$textTd.data('textlen', textlen);
+			$textTd.data('current', 0);
+
+			// ボタンに、いまどの候補を表示しているかを出す
+			$left.attr({"title": "1/" + textlen });
+			$right.attr({"title": "1/" + textlen });
+
+			if(textlen <= 0){ // 認識できなかったファイルは隠す
+				$tr.addClass("notext");
+			}
+			
+			i++;
+			if (i < len){
+				$('#loading').text("loading... " + Math.ceil(100 * i / len) + "%");
+				setTimeout(addTr, 0, data, i); // 非同期の…実装が…ダサい…
+			}else{
+			//	$('#loading').css("display","none");
+				$('#loading').text("complete! 100%");
+				var $table = $('table');
+			}
+			$tableObj.floatThead({
+				position: 'absolute'
+			});
+
+		}
+		
+		$script.on('load', function(){
+			var data = results;
+			$tableObj = $("#table"),
+			len = data.length;
+
+			if(typeof baseDate === "undefined"){
+				$("#abstime").prop("disabled", true);
+				$("#timelabel").css("display", "none")
+			}
+			addTr(data, 0);
+			
+		});
+		$('body')[0].appendChild($script[0]);
+	});
+	</script>
+
+</head>
+<body>
+<div class="container">
+	<div class="main">
+		<div id="loading" class="loading"></div>
+		<div class="footer">
+			<audio id="sound" class="sound" src="" controls></audio>
+			<span class="check">
+				<label><input type="checkbox" id="notext">認識できなかった行を表示</label>
+				<label id="timelabel">　<input type="checkbox" id="abstime" checked>時刻表示</label>
+			</span>
+		</div>
+
+		<table id="table" class="thead">
+			<thead>
+				<tr id="head">
+					<th >時間</th>
+					<th >話者</th>
+					<th ></th>
+					<th ></th>
+					<th ></th>
+					<th >候補</th>
+				</tr>
+			</thead>
+
+		</table>
+		
+
+		
+	</div>
+</div>
+</body>
+</html>
