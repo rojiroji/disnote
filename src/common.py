@@ -10,7 +10,7 @@ SYSTEM_CONF_FILE="DisNOTE.ini"
 SEG_TMP_AUDIO_LENGTH="seg_tmp_audio_length"
 
 def getVersion():
-	return "v1.1.0"
+	return "v1.2.0"
 
 # 無音検出時に作るテンポラリファイルの音声の長さ（ミリ秒）
 def getSegTmpAudioLength():
