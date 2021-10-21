@@ -2,7 +2,6 @@ import os
 import sys
 from inaSpeechSegmenter import Segmenter
 from inaSpeechSegmenter.export_funcs import seg2csv, seg2textgrid
-from pydub import AudioSegment
 from collections import deque
 import subprocess
 import common
@@ -114,7 +113,6 @@ def main(input_file):
 	logger.info("分割結果ファイル：{}".format(split_result_file))
 
 	with open(split_result_file , "w") as f:# 分割結果ファイルに結果書き込み+音声書き込み
-		# audio_all = AudioSegment.from_file(input_file, format=type)
 		speech_segment_index = 0
 		index = 0
 
@@ -139,8 +137,6 @@ def main(input_file):
 				filename = "{}{}.flac".format(audio_file_prefix , speech_segment_index)
 
 				# 分割結果をflacに出力
-				#newAudio = audio_all[start_time:end_time]
-				#newAudio.export(filename, format="flac")
 				res = subprocess.check_output("ffmpeg -i \"{}\" -ss {} -t {} -vn -acodec flac -y \"{}\"".format(input_file,start_time/1000, (end_time-start_time)/1000,filename))
 
 
