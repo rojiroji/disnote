@@ -22,7 +22,7 @@ PATHを通した先に[ffmpeg](https://ffmpeg.org/)を配置しておくこと�
 Pythonとffmpegを用意した上で、DisNOTE.batに音声ファイルをドラッグ＆ドロップすることで起動する。
 インストール方法などは上記の動画で説明している。
 
-Readme.txtは、フリーソフトとしてのDisNOTEのReadmeである。
+Readme.txtはフリーソフトとしてのDisNOTEのReadme、README.md（このファイル）は開発者向けのReadmeである。
 
 # 認識APIについて
 内部で[Speech API](https://console.cloud.google.com/apis/library/speech-json.googleapis.com?project=black-dragon-324616)を呼び出している。
@@ -33,3 +33,6 @@ Readme.txtは、フリーソフトとしてのDisNOTEのReadmeである。
 Speech APIについては次の記事を参考にした。https://qiita.com/lethe2211/items/7c9b1b82c7eda40dafa9
 
 [Speech-to-Text](https://cloud.google.com/speech-to-text)とは別物（っぽい）ので注意。
+
+# Pull requestについて
+Wikiに設計メモ書いてるので参考にしてください。待ってる。
