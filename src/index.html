@@ -96,11 +96,11 @@
 		// 認識できなかった行を表示
 		$("#notext").change(function(){
 			updateLineDisplay();
+			saveConfig();
 		});
 
 		// 時刻切り替え
-		$("#abstime").change(function(){
-			
+		function updateTimeMode(){
 			if($('#abstime').prop('checked')){
 				$(".abstime").css("display", "inline");
 				$(".reltime").css("display", "none");
@@ -108,7 +108,15 @@
 				$(".reltime").css("display", "inline");
 				$(".abstime").css("display", "none");
 			}
-			
+		}
+		$("#abstime").change(function(){
+			updateTimeMode();
+			saveConfig();
+		});
+		
+		// 自動再生切り替え（設定保存のみ）
+		$("#autoplay").change(function(){
+			saveConfig();
 		});
 		
 		// 行内の表示する候補を変更
@@ -556,10 +564,16 @@
 			$reltime = $("<span>").addClass("reltime").text(d);
 			$timeTd.append($reltime);
 
-			if(typeof baseDate !== "undefined"){
+			if(typeof baseDate !== "undefined"){ // 時刻情報あり
 				d = getTimeStr(baseDate, t);
-				$timeTd.append($("<span>").addClass("abstime").text(d));
-				$reltime.css("display","none");
+				$abstime = $("<span>").addClass("abstime").text(d);
+				$timeTd.append($abstime);
+				
+				if($('#abstime').prop('checked')){ // updateTimeModeと同じことをしている（が、ここでupdateTimeModeを呼び出すとガタガタする）
+					$reltime.css("display","none");
+				}else{
+					$abstime.css("display","none");
+				}
 			}
 			
 			// 再生ボタン
@@ -644,6 +658,20 @@
 
 		}
 		
+		// ---ページ読み込み終了時の処理---
+
+		// 設定保存
+		var CONFIG_KEY = "DisNote_CONFIG";
+		function saveConfig(){
+			var config = new Object();
+			config["notext"] = $("#notext").prop("checked");
+			config["abstime"] = $("#abstime").prop("checked");
+			config["autoplay"] = $("#autoplay").prop("checked");
+			localStorage.setItem(CONFIG_KEY, JSON.stringify(config));
+			//console.log("saveconfig");
+		}
+
+		
 		var data = results;
 		$tableObj = $("#tbody"),
 		len = data.length;
@@ -653,6 +681,17 @@
 			$("#timelabel").css("display", "none")
 		}
 		updateSearchResult();
+		
+		// 設定読み込み
+		var config = JSON.parse(localStorage.getItem(CONFIG_KEY));
+		if(config){
+			if(config.notext){	$("#notext").prop("checked", true);	}
+			if(config.abstime){	$("#abstime").prop("checked", true);	}
+			if(config.autoplay){	$("#autoplay").prop("checked", true);	}
+		}
+		updateTimeMode();
+		updateLineDisplay();
+
 		addTr(data, 0);
 
 	});
@@ -726,7 +765,7 @@ RESULTS
 					<td>
 						<span class="check">
 							<label><input type="checkbox" id="notext"><span>認識できなかった行を表示(S)</span></label><br>
-							<label id="timelabel"><input type="checkbox" id="abstime" checked><span>時刻表示(T)</span><br></label>
+							<label id="timelabel"><input type="checkbox" id="abstime" ><span>時刻表示(T)</span><br></label>
 							<label><input type="checkbox" id="autoplay"><span>連続再生(A)</span></label><br>
 						</span>
 					</td>
