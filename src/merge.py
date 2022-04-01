@@ -33,6 +33,12 @@ def main(input_files):
 
 	l.sort(key = lambda x:int(x[2])) # 3列目（発話タイミング）でソート
 
+	# ファイルパスを相対パスにする
+	basedir = os.path.dirname(input_files[0]) # 入力音声ファイルの置いてあるディレクトリ
+	for line in l:
+		p = pathlib.Path(line[1]);
+		line[1] = str(p.relative_to(basedir))
+
 	# csvファイル出力
 	merged_csv_file = common.getMergedCsvFile(input_files[0])
 	logger.info("最終結果ファイル(csv)：{}".format(merged_csv_file))
@@ -46,11 +52,6 @@ def main(input_files):
 	#merged_js_file = common.getMergedJsFile(input_files[0])
 	#logger.info("最終結果ファイル(json)：{}".format(merged_js_file))
 
-	# ファイルパスを相対パスにする
-	basedir = os.path.dirname(input_files[0]) # 入力音声ファイルの置いてあるディレクトリ
-	for line in l:
-		p = pathlib.Path(line[1]);
-		line[1] = str(p.relative_to(basedir))
 
 	# Craigのinfo.txtを探す
 	baseDate = None 
