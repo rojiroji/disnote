@@ -43,7 +43,7 @@ def writeSysConfig(config):
 
 # configファイルのpath
 def getConfigFile(input_file):
-	base = os.path.splitext(os.path.basename(input_file))[0] # 拡張子なしのファイル名（これをフォルダ名などにする）
+	base = getFileNameWithoutExtension(input_file)
 	basedir = os.path.dirname(input_file) # 入力音声ファイルの置いてあるディレクトリ
 	outputdir = os.path.join(basedir, base) # 各種ファイルの出力先ディレクトリ
 
@@ -80,9 +80,13 @@ def inputFileHash(input_file):
 		hash_sha3_256 = hashlib.sha3_256(fileData).hexdigest()
 		return hash_sha3_256
 
+# 拡張子を省いたファイル名を返す（これをフォルダ名などにする）
+def getFileNameWithoutExtension(input_file):
+	return os.path.splitext(os.path.basename(input_file))[0]
+
 # 分析結果ファイル
 def getSegResultFile(input_file, index):
-	base = os.path.splitext(os.path.basename(input_file))[0] # 拡張子なしのファイル名（これをフォルダ名などにする）
+	base = getFileNameWithoutExtension(input_file)
 	basedir = os.path.dirname(input_file) # 入力音声ファイルの置いてあるディレクトリ
 	outputdir = os.path.join(basedir, base) # 各種ファイルの出力先ディレクトリ
 
@@ -101,7 +105,7 @@ def getSegResultFile(input_file, index):
 
 # 分割音声ファイルのprefix
 def getSplitAudioFilePrefix(input_file):
-	base = os.path.splitext(os.path.basename(input_file))[0] # 拡張子なしのファイル名（これをフォルダ名などにする）
+	base = getFileNameWithoutExtension(input_file)
 	basedir = os.path.dirname(input_file) # 入力音声ファイルの置いてあるディレクトリ
 	outputdir = os.path.join(basedir, base) # 各種ファイルの出力先ディレクトリ
 
@@ -110,7 +114,7 @@ def getSplitAudioFilePrefix(input_file):
 
 # 分割結果ファイル
 def getSplitResultFile(input_file):
-	base = os.path.splitext(os.path.basename(input_file))[0] # 拡張子なしのファイル名（これをフォルダ名などにする）
+	base = getFileNameWithoutExtension(input_file)
 	basedir = os.path.dirname(input_file) # 入力音声ファイルの置いてあるディレクトリ
 	outputdir = os.path.join(basedir, base) # 各種ファイルの出力先ディレクトリ
 
@@ -120,23 +124,13 @@ def getSplitResultFile(input_file):
 
 # 認識結果ファイル
 def getRecognizeResultFile(input_file):
-	base = os.path.splitext(os.path.basename(input_file))[0] # 拡張子なしのファイル名（これをフォルダ名などにする）
+	base = getFileNameWithoutExtension(input_file)
 	basedir = os.path.dirname(input_file) # 入力音声ファイルの置いてあるディレクトリ
 	outputdir = os.path.join(basedir, base) # 各種ファイルの出力先ディレクトリ
 
 	output_file = "_{}.csv".format(base)
 
 	return os.path.join(outputdir, output_file)
-
-# マージ結果(csv)
-def getMergedCsvFile(input_file):
-	basedir = os.path.dirname(input_file) # 入力音声ファイルの置いてあるディレクトリ
-	return os.path.join(basedir, "merged.csv")
-
-# マージ結果(js)
-def getMergedJsFile(input_file):
-	basedir = os.path.dirname(input_file) # 入力音声ファイルの置いてあるディレクトリ
-	return os.path.join(basedir, "merged.json.js")
 
 # logger
 def getLogger(srcfile):

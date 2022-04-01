@@ -11,6 +11,7 @@ from dateutil.parser import ParserError
 from dateutil.relativedelta import relativedelta
 import datetime
 import codecs
+import hashlib
 
 logger = common.getLogger(__file__)
 
@@ -19,6 +20,21 @@ CONFIG_WORK_KEY = 'merge'
 def main(input_files):
 
 	logger.info("4. 結果マージ開始")
+	
+	# 出力するファイル名の決定
+	basefilename = ""
+	if len(input_files) > 1: # 複数ある場合はハッシュから決定
+		input_files.sort() # 入力ファイル名をソート（引数の順番だけ違う場合はファイル名を揃えるため）
+
+		# 入力ファイルのハッシュ値を読み込む
+		join_hash = "";
+		for input_file in input_files:
+			config = common.readConfig(input_file)
+			hash = config['DEFAULT'].get("hash")
+			join_hash += hash + "_"
+		basefilename = hashlib.md5(join_hash.encode()).hexdigest()[:8] + "_disnote" # ハッシュ値の先頭8文字だけ採用（まあ被らないでしょう…）
+	else:
+		basefilename = common.getFileNameWithoutExtension(input_files[0]) + "_disnote" # ファイルが1つの場合はそのままのファイル名を使う
 
 	l = list()
 
@@ -40,7 +56,7 @@ def main(input_files):
 		line[1] = str(p.relative_to(basedir))
 
 	# csvファイル出力
-	merged_csv_file = common.getMergedCsvFile(input_files[0])
+	merged_csv_file = os.path.join(basedir, basefilename + ".csv")
 	logger.info("最終結果ファイル(csv)：{}".format(merged_csv_file))
 
 	with open(merged_csv_file , "w", newline='' ) as f: # 変な改行が入るのを防ぐため newline='' 
@@ -87,7 +103,7 @@ def main(input_files):
 	index_data = index_data.replace('RESULTS', merged_js)
 	
 	# index.html書き込み
-	with open(os.path.join(basedir, "index.html") , "w", newline='' ) as f: # 変な改行が入るのを防ぐため newline='' 
+	with open(os.path.join(basedir, basefilename + ".html") , "w", newline='' ) as f: # 変な改行が入るのを防ぐため newline='' 
 		f.write(index_data)
 
 	# htmlファイルなどをコピー
@@ -95,11 +111,12 @@ def main(input_files):
 	dir_util.copy_tree("src/htmlfiles", os.path.join(basedir, "htmlfiles"))
 
 	# プレイリスト作成(ファイルパスだけ書く)
-	with codecs.open(os.path.join(basedir, "merged.m3u8") , "w", "utf8", 'ignore') as f:
+	with codecs.open(os.path.join(basedir, basefilename + ".m3u8") , "w", "utf8", 'ignore') as f:
 		for line in l:
 			f.write(line[1])
 			f.write("\n")
 
+	logger.info(basefilename + ".htmlを出力しました。")
 	logger.info("すべての処理が完了しました！")
 
 
