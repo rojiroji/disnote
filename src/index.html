@@ -126,6 +126,9 @@
 
 			var current = 0 + $target.data('current');
 			var len = 0 + $target.data('textlen');
+			if(len <= 0){
+				return;
+			}
 			current = (len + current + d) % len;
 
 			$target.data('current', current);
@@ -135,6 +138,10 @@
 			var textId = $target.attr('id');
 			$("#" + textId + "_l").attr({"title": title });
 			$("#" + textId + "_r").attr({"title": title });
+			
+			var number = $td.data('number');
+			selection[number] = String(Number.isInteger(current) ? current : 0);
+			saveProjectSelection();
 		}
 		
 		// ミリ秒から時間表記に変換
@@ -592,12 +599,12 @@
 			});
 
 			// 左矢印
-			$left = $("<td>").attr({"id": textTdId + "_l"}).addClass("button").addClass("prev").on("click", function(){
+			$left = $("<td>").attr({"id": textTdId + "_l"}).addClass("button").data('number', i).addClass("prev").on("click", function(){
 				changeText($(this), -1);
 			});
 
 			// 右矢印
-			$right = $("<td>").attr({"id": textTdId + "_r" }).addClass("button").addClass("next").on("click", function(){
+			$right = $("<td>").attr({"id": textTdId + "_r" }).addClass("button").data('number', i).addClass("next").on("click", function(){
 				changeText($(this), 1);
 			});
 
@@ -629,13 +636,17 @@
 				}
 			}
 			var textlen = k - textBase;
-			$textTd.text(data[i][textBase]) // 候補1を表示しておく
+			var current = parseInt(selection[i]); // どの候補を表示するかを設定から読み込む
+			if(!current){ current = 0;} // 何か変な文字が入ってたら0にする
+			if(current >= textlen){current = 0;} // 外にあふれていても0にする
+			
+			$textTd.text(data[i][textBase + current]) // 候補を表示
 			$textTd.data('textlen', textlen);
-			$textTd.data('current', 0);
+			$textTd.data('current', current);
 
 			// ボタンに、いまどの候補を表示しているかを出す
-			$left.attr({"title": "1/" + textlen });
-			$right.attr({"title": "1/" + textlen });
+			$left.attr( {"title": (current + 1) + "/" + textlen });
+			$right.attr({"title": (current + 1) + "/" + textlen });
 
 			// 認識できたかどうかでクラスを設定
 			if(textlen <= 0){
@@ -669,12 +680,12 @@
 
 		}
 		
-		// localStrageに保存
+		// localStrageに保存(保存できるサイズの上限はブラウザ依存だが、5MB上限の環境が多いようなので保存できると信じる)
 		function saveToLocalStorage(key, value){
 			try{
 				saveVal = JSON.stringify(value);
 				localStorage.setItem("DisNote_" + key, saveVal);
-				console.log("saveToLocalStorage:" + saveVal);
+			//	console.log("saveToLocalStorage:" + saveVal);
 			}catch (e){
 			}
 		}
@@ -708,6 +719,7 @@
 		}
 		
 		// 話者設定保存（プロジェクト単位の設定）
+		var PROJECT_SETTING_KEY = projectHash + "_SETTING";
 		function saveProjectSetting(){
 			for (key in personalData){
 				var pv = personalData[key];
@@ -718,11 +730,11 @@
 				var nameSettingId = "person_namesetting_" + pv["hash"]; // 表示名
 				pv["displayname"] = $("#" + nameSettingId).val();
 			}
-			saveToLocalStorage(projectHash,personalData);
+			saveToLocalStorage(PROJECT_SETTING_KEY,personalData);
 		}
 		// 話者設定読み込み（プロジェクト単位の設定）
 		function loadProjectSetting(){
-			var setting = loadFromLocalStorage(projectHash);
+			var setting = loadFromLocalStorage(PROJECT_SETTING_KEY);
 			for (key in setting){
 				var pv = setting[key];
 				
@@ -735,10 +747,35 @@
 			}
 		}
 		
+		// 行ごとの候補選択設定保存（操作のたびに保存すると保存頻度が高くなるので、最後の操作からN秒後に保存するようにする）
+		var PROJECT_SELECTION_KEY= projectHash + "_SELECTION";
+		var selectionTimeoutId = undefined;
+		function saveProjectSelection(){
+			if (typeof selectionTimeoutId === 'number') {
+				clearTimeout(selectionTimeoutId);
+			}
+			selectionTimeoutId = setTimeout(saveToLocalStorage, 10 * 1000, PROJECT_SELECTION_KEY,{"selection":selection.join("")});
+		}
+		// 行ごとの候補選択設定読み込み
+		function loadProjectSelection(){
+			var s = loadFromLocalStorage(PROJECT_SELECTION_KEY);
+			var s2;
+			if(s && s["selection"]){
+				s2 = s["selection"].split(""); // 文字列で入っているので、1文字ずつの配列にする
+			}else{
+				s2 = new Array();
+			}
+			
+			for(var i = s2.length; i < data.length; i++){ // 未定義部分に0を詰める
+				s2.push("0");
+			}
+			return s2;
+		}
+		
 		// --- ここからページ読み込み終了時の処理 ---
 		var data = results;
-		$tableObj = $("#tbody"),
-		len = data.length;
+		$tableObj = $("#tbody");
+		var selection =loadProjectSelection();
 
 		if(typeof baseDate === "undefined"){ // craigの開始時間情報がない場合、時刻表示のcheckbox表示しない
 			$("#abstime").prop("disabled", true);
