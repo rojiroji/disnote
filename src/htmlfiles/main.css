@@ -156,6 +156,23 @@ label span{
   user-select: none;
 }
 
+div#peoplelist{
+  width: 500px;
+}
+table#peopletable td,
+table#peopletable th{
+  border-bottom: solid 2px #ddd;
+}
+table#peopletable p.orgfile{
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  overflow: hidden;
+  width: 230px;
+}
+table#peopletable td.name input{
+  width: 180px;
+}
+
 div#help div{
   float:left;
   margin: 0px 15px;

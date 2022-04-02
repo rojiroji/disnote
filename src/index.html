@@ -43,7 +43,7 @@
 		function updatePersonLineDisplay($person){
 			var id = $person.attr("id");
 			
-			if($person.prop("checked")){ // 話者チェック
+			if($person.val() != "false"){ // 話者チェック
 				if($('#notext').prop('checked')){ // 「認識できなかった行を表示」チェック
 					$(".textexists."+id).css("display", "table-row");
 					$(".notext."+id).css("display", "table-row");
@@ -216,20 +216,33 @@
 		});
 
 		// 話者表示切替ダイアログ設定
-		$("#peoplelist").dialog({ autoOpen: false, modal: true , title:"話者表示選択", closeOnEscape:true});
+		$("#peoplelist").dialog({
+			autoOpen: false,
+			modal: true ,
+			title:"話者設定選択",
+			closeOnEscape:true,
+			close: function(event, ui){ // ダイアログを閉じるときに表示非表示と話者名を変更
+				for (key in personalData){
+					pv = personalData[key];
+					// 名前変更
+					name = $("#person_namesetting_" + pv["hash"]).val();
+					$(".person_name_"+ pv["hash"]).text(name);
+
+					// 表示/非表示設定を反映
+					personalId = "person_" + pv["hash"];
+					val = $("#" + personalId + "_temp").prop("checked");
+					$("#" + personalId).val(val);
+				}
+
+				updateLineDisplay(); // 表示/非表示切り替え
+			},
+			width:"500"}
+		);
 		$( "#open_peoplelist" ).click(function() {
 			$("#peoplelist").dialog("open");
 		}); 
 		$("#switch_people").on("click", function(){
 			$("#peoplelist").dialog( "close" );
-		});
-		$("#show_all_person").change(function(){ // 全員表示/非表示
-			var checked = $("#show_all_person").prop("checked");
-
-			$(".person_input").each( function( index, element ){
-				$(element).prop("checked", checked);
-			});
-			updateLineDisplay();
 		});
 		
 		// ダイアログ表示中にダイアログ外を押したら閉じる
@@ -539,21 +552,10 @@
 		}
 		
 		// 行追加
-		var personId = 0;
 		function addTr(data, i){
 			var name = data[i][0];
 			
-			// 人名登録
-			if(!people[name]){
-				personId++;
-				people[name] = personId;
-				$input = $("<input>").prop("type","checkbox").prop("id","person_" + personId).prop("checked", true).change(function(){	updateLineDisplay();}).addClass("person_input");
-				$td = $("<td>").append($("<label>").append($input).append($("<span>").text(name)));
-				$("#peopletable").append($("<tr>").append($td));
-			}
-		
 			len = data.length;
-		
 			
 			// 時刻
 			t = parseInt(data[i][2])
@@ -599,11 +601,12 @@
 			});
 
 			$tr = $("<tr>").addClass("line").attr({"id": "tr_" + i }).data('playTd', $play).data('textTd', $textTd);
+			pv = personalData[name];
 
 			$tableObj.append(
 				$tr
 					.append($timeTd) // 時間
-					.append($("<td>").text(name).addClass("name")) // 話者
+					.append($("<td>").text($("#person_namesetting_"  + pv["hash"]).val()).addClass("name").addClass("person_name_" + pv["hash"])) // 話者名
 					.append($play)
 					//.append($("<td>").text(data[i][3]).addClass("score")) // スコア
 					//.append($("<td>").attr({"id":"td1_" + i }).text(data[i][1]).hide()) // ファイル名
@@ -633,15 +636,22 @@
 			$left.attr({"title": "1/" + textlen });
 			$right.attr({"title": "1/" + textlen });
 
-			var personClass = "person_" + people[name];
-			if(textlen <= 0){ // 認識できなかった行は隠す
-				$tr.addClass(personClass).addClass("notext");
+			// 認識できたかどうかでクラスを設定
+			if(textlen <= 0){
+				$tr.addClass("notext");
 			}else{
-				$tr.addClass(personClass).addClass("textexists");
+				$tr.addClass("textexists");
 			}
-			updatePersonLineDisplay($("#" + personClass));
+
+			// 話者設定に従って表示非表示を切り替え
+			var personalId = "person_" + personalData[name]["hash"];
+			$tr.addClass(personalId)
+			updatePersonLineDisplay($("#" + personalId));
+			
+			// 今回追加したtrが検索にヒットするかどうかを再検索
 			searchTr(i);
 			
+			// 次の行へ
 			i++;
 			if (i < len){
 				$('#loading').text("loading... " + Math.ceil(100 * i / len) + "%");
@@ -692,6 +702,24 @@
 		updateTimeMode();
 		updateLineDisplay();
 
+		// 話者設定画面の表を作成
+		for (key in personalData){
+			pv = personalData[key];
+			
+			personalId = "person_" + pv["hash"];
+			$input  = $("<input>").prop("type","checkbox").prop("id",personalId + "_temp").prop("checked", true); // checkboxで表示非表示を切り替えるが、画面を閉じるまで反映しない
+			$hidden = $("<input>").prop("type","hidden").prop("id",personalId).addClass("person_input").val($input.prop("checked")); // こちらが設定値の本体
+			$checkboxTd = $("<td>").append($("<label>").append($input).append($hidden));
+			
+			$filenameTd = $("<td>").append($("<p>").text(pv["orgfile"]).addClass("orgfile"));
+			
+			nameSettingId = "person_namesetting_" + pv["hash"];
+			$nameTd = $("<td>").append($("<input>").attr("id",nameSettingId).prop("type","input").val(pv["name"])).addClass("name");
+			
+			$("#peopletable").append($("<tr>").append($checkboxTd).append($filenameTd).append($nameTd));
+		}
+
+		// 認識結果行の追加を始める
 		addTr(data, 0);
 
 	});
@@ -709,12 +737,11 @@ RESULTS
 		<div id="peoplelist" style="display:none">
 			<table id="peopletable">
 				<tr>
-					<td>
-						<!-- <label><input type="checkbox" id="show_all_person" checked="checked"><span>全員</span></label> -->
-					</td>
+					<th>表示</th><th>音声ファイル名</th><th>名前</th>
 				</tr>
+
 			</table>
-			<input type="button" id="switch_people" value="閉じる">
+			<!-- <input type="button" id="switch_people" value="閉じる"> -->
 		</div>
 		
 		<div id="help" style="display:none">

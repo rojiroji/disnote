@@ -20,21 +20,27 @@ CONFIG_WORK_KEY = 'merge'
 def main(input_files):
 
 	logger.info("4. 結果マージ開始")
-	
+
+	personalData = {} # 話者情報
+
 	# 出力するファイル名の決定
 	basefilename = ""
-	if len(input_files) > 1: # 複数ある場合はハッシュから決定
-		input_files.sort() # 入力ファイル名をソート（引数の順番だけ違う場合はファイル名を揃えるため）
 
-		# 入力ファイルのハッシュ値を読み込む
-		join_hash = "";
-		for input_file in input_files:
-			config = common.readConfig(input_file)
-			hash = config['DEFAULT'].get("hash")
-			join_hash += hash + "_"
-		basefilename = hashlib.md5(join_hash.encode()).hexdigest()[:8] + "_disnote" # ハッシュ値の先頭8文字だけ採用（まあ被らないでしょう…）
+	# 入力ファイルのハッシュ値を読み込む
+	input_files.sort() # 入力ファイル名をソート（引数の順番だけ違う場合にファイル名を揃えるため）
+	join_hash = "";
+	for input_file in input_files:
+		config = common.readConfig(input_file)
+		hash = config['DEFAULT'].get("hash")
+		join_hash += hash + "_"
+		
+		key = common.getFileNameWithoutExtension(input_file)
+		personalData[key] = {"orgfile":os.path.basename(input_file), "hash": hash, "name": key}
+
+	if len(input_files) <= 1: # ファイルが1つの場合はそのままのファイル名を使う
+		basefilename = common.getFileNameWithoutExtension(input_files[0]) + "_disnote"
 	else:
-		basefilename = common.getFileNameWithoutExtension(input_files[0]) + "_disnote" # ファイルが1つの場合はそのままのファイル名を使う
+		basefilename = hashlib.md5(join_hash.encode()).hexdigest()[:8] + "_disnote" # ハッシュ値の先頭8文字だけ採用（まあ被らないでしょう…）
 
 	l = list()
 
@@ -97,7 +103,11 @@ def main(input_files):
 	if(baseDate):
 		baseDate += relativedelta(hours=+9)
 		merged_js += "baseDate="
-		merged_js += "new Date({},{},{},{},{},{});".format(baseDate.year, baseDate.month, baseDate.day, baseDate.hour, baseDate.minute, baseDate.second)
+		merged_js += "new Date({},{},{},{},{},{})".format(baseDate.year, baseDate.month, baseDate.day, baseDate.hour, baseDate.minute, baseDate.second)
+		merged_js += ";\n";
+	merged_js += "personalData ="
+	merged_js += json.dumps(personalData, indent=4, ensure_ascii=False)
+	merged_js += ";\n";
 
 	# index.html の値の部分を置換
 	index_data = index_data.replace('RESULTS', merged_js)
