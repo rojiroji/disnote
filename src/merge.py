@@ -23,10 +23,7 @@ def main(input_files):
 
 	personalData = {} # 話者情報
 
-	# 出力するファイル名の決定
-	basefilename = ""
-
-	# 入力ファイルのハッシュ値を読み込む
+	# 出力ファイル用のハッシュ値を、入力ファイルから決定する
 	input_files.sort() # 入力ファイル名をソート（引数の順番だけ違う場合にファイル名を揃えるため）
 	join_hash = "";
 	for input_file in input_files:
@@ -37,14 +34,17 @@ def main(input_files):
 		key = common.getFileNameWithoutExtension(input_file)
 		personalData[key] = {"orgfile":os.path.basename(input_file), "hash": hash, "name": key}
 
+	project_hash = hashlib.md5(join_hash.encode()).hexdigest() # 出力ファイル用のハッシュ値
+
+	# 出力するファイル名の決定
+	basefilename = ""
 	if len(input_files) <= 1: # ファイルが1つの場合はそのままのファイル名を使う
 		basefilename = common.getFileNameWithoutExtension(input_files[0]) + "_disnote"
 	else:
-		basefilename = hashlib.md5(join_hash.encode()).hexdigest()[:8] + "_disnote" # ハッシュ値の先頭8文字だけ採用（まあ被らないでしょう…）
-
-	l = list()
+		basefilename = project_hash[:8] + "_disnote" # ファイル名はハッシュ値の先頭8文字だけ採用（まあ被らないでしょう…）
 
 	# 認識結果ファイル(csv)を読み込んでマージする
+	l = list()
 	for input_file in input_files:
 		recognize_result_file = common.getRecognizeResultFile(input_file)
 		logger.info("認識結果ファイル：{}".format(recognize_result_file))
@@ -97,20 +97,16 @@ def main(input_files):
 		index_data = f.read()
 
 	# JavaScriptの変数部分を作成
-	merged_js = "results ="
-	merged_js += json.dumps(l, indent=4, ensure_ascii=False)
-	merged_js += ";\n";
+	merged_js =  "results = {};\n".format(json.dumps(l, indent=4, ensure_ascii=False));
+	merged_js += "personalData = {};\n".format(json.dumps(personalData, indent=4, ensure_ascii=False));
+	merged_js += "projectHash = \"{}\";\n".format(project_hash);
+	
 	if(baseDate):
 		baseDate += relativedelta(hours=+9)
-		merged_js += "baseDate="
-		merged_js += "new Date({},{},{},{},{},{})".format(baseDate.year, baseDate.month, baseDate.day, baseDate.hour, baseDate.minute, baseDate.second)
-		merged_js += ";\n";
-	merged_js += "personalData ="
-	merged_js += json.dumps(personalData, indent=4, ensure_ascii=False)
-	merged_js += ";\n";
+		merged_js += "baseDate=new Date({},{},{},{},{},{});\n".format(baseDate.year, baseDate.month, baseDate.day, baseDate.hour, baseDate.minute, baseDate.second)
 
 	# index.html の値の部分を置換
-	index_data = index_data.replace('RESULTS', merged_js)
+	index_data = index_data.replace('TITLE', basefilename).replace('RESULTS', merged_js)
 	
 	# index.html書き込み
 	with open(os.path.join(basedir, basefilename + ".html") , "w", newline='' ) as f: # 変な改行が入るのを防ぐため newline='' 

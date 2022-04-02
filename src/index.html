@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
 	<meta charset="Shift-JIS">
-	<title>DisNOTE</title>
+	<title>DisNOTE - TITLE</title>
 	<link href="htmlfiles/main.css" rel="stylesheet">
 	<link href="htmlfiles/jquery-ui.css" rel="stylesheet">
 	<script src="htmlfiles/jquery-3.6.0.min.js"></script>
@@ -219,22 +219,23 @@
 		$("#peoplelist").dialog({
 			autoOpen: false,
 			modal: true ,
-			title:"話者設定選択",
+			title:"話者設定",
 			closeOnEscape:true,
 			close: function(event, ui){ // ダイアログを閉じるときに表示非表示と話者名を変更
 				for (key in personalData){
-					pv = personalData[key];
+					var pv = personalData[key];
 					// 名前変更
-					name = $("#person_namesetting_" + pv["hash"]).val();
+					var name = $("#person_namesetting_" + pv["hash"]).val();
 					$(".person_name_"+ pv["hash"]).text(name);
 
 					// 表示/非表示設定を反映
-					personalId = "person_" + pv["hash"];
-					val = $("#" + personalId + "_temp").prop("checked");
+					var personalId = "person_" + pv["hash"];
+					var val = $("#" + personalId + "_temp").prop("checked");
 					$("#" + personalId).val(val);
 				}
 
 				updateLineDisplay(); // 表示/非表示切り替え
+				saveProjectSetting(); // 話者設定保存
 			},
 			width:"500"}
 		);
@@ -518,7 +519,7 @@
 				$target.prop("checked",!$target.prop("checked")).change();
 				return false;
 			}
-			if(e.code == "KeyP"){ // P,p（話者表示選択）
+			if(e.code == "KeyP"){ // P,p（話者設定）
 				$("#peoplelist").dialog("open");
 				return false;
 			}
@@ -668,56 +669,105 @@
 
 		}
 		
-		// ---ページ読み込み終了時の処理---
+		// localStrageに保存
+		function saveToLocalStorage(key, value){
+			try{
+				saveVal = JSON.stringify(value);
+				localStorage.setItem("DisNote_" + key, saveVal);
+				console.log("saveToLocalStorage:" + saveVal);
+			}catch (e){
+			}
+		}
+		
+		// localStorageから読み込み
+		function loadFromLocalStorage(key){
+			try{
+				return JSON.parse(localStorage.getItem("DisNote_" + key));
+			} catch(e){
+				return new Object();
+			}
+		}
 
-		// 設定保存
-		var CONFIG_KEY = "DisNote_CONFIG";
+		// 設定保存（DisNOTE全体の設定）
+		var CONFIG_KEY = "CONFIG";
 		function saveConfig(){
 			var config = new Object();
 			config["notext"] = $("#notext").prop("checked");
 			config["abstime"] = $("#abstime").prop("checked");
 			config["autoplay"] = $("#autoplay").prop("checked");
-			localStorage.setItem(CONFIG_KEY, JSON.stringify(config));
-			//console.log("saveconfig");
+			saveToLocalStorage(CONFIG_KEY, config);
 		}
-
+		// 設定読み込み（DisNOTE全体の設定）
+		function loadConfig(){
+			var config = loadFromLocalStorage(CONFIG_KEY);
+			if(config){
+				if(config.notext){	$("#notext").prop("checked", true);	}
+				if(config.abstime){	$("#abstime").prop("checked", true);	}
+				if(config.autoplay){	$("#autoplay").prop("checked", true);	}
+			}
+		}
 		
+		// 話者設定保存（プロジェクト単位の設定）
+		function saveProjectSetting(){
+			for (key in personalData){
+				var pv = personalData[key];
+				
+				var personalId = "person_" + pv["hash"]; // 表示/非表示
+				pv["show"] = $("#" + personalId).val();
+				
+				var nameSettingId = "person_namesetting_" + pv["hash"]; // 表示名
+				pv["displayname"] = $("#" + nameSettingId).val();
+			}
+			saveToLocalStorage(projectHash,personalData);
+		}
+		// 話者設定読み込み（プロジェクト単位の設定）
+		function loadProjectSetting(){
+			var setting = loadFromLocalStorage(projectHash);
+			for (key in setting){
+				var pv = setting[key];
+				
+				var personalId = "person_" + pv["hash"]; // 表示/非表示(hiddenとcheckbox両方に反映)
+				$("#" + personalId).val(pv["show"]);
+				$("#" + personalId + "_temp").prop("checked", (pv["show"] != "false")); 
+
+				var nameSettingId = "person_namesetting_" + pv["hash"]; // 表示名
+				$("#" + nameSettingId).val(pv["displayname"]);
+			}
+		}
+		
+		// --- ここからページ読み込み終了時の処理 ---
 		var data = results;
 		$tableObj = $("#tbody"),
 		len = data.length;
 
-		if(typeof baseDate === "undefined"){
+		if(typeof baseDate === "undefined"){ // craigの開始時間情報がない場合、時刻表示のcheckbox表示しない
 			$("#abstime").prop("disabled", true);
 			$("#timelabel").css("display", "none")
 		}
-		updateSearchResult();
-		
-		// 設定読み込み
-		var config = JSON.parse(localStorage.getItem(CONFIG_KEY));
-		if(config){
-			if(config.notext){	$("#notext").prop("checked", true);	}
-			if(config.abstime){	$("#abstime").prop("checked", true);	}
-			if(config.autoplay){	$("#autoplay").prop("checked", true);	}
-		}
-		updateTimeMode();
-		updateLineDisplay();
 
 		// 話者設定画面の表を作成
 		for (key in personalData){
-			pv = personalData[key];
+			var pv = personalData[key];
 			
-			personalId = "person_" + pv["hash"];
+			var personalId = "person_" + pv["hash"];
 			$input  = $("<input>").prop("type","checkbox").prop("id",personalId + "_temp").prop("checked", true); // checkboxで表示非表示を切り替えるが、画面を閉じるまで反映しない
 			$hidden = $("<input>").prop("type","hidden").prop("id",personalId).addClass("person_input").val($input.prop("checked")); // こちらが設定値の本体
 			$checkboxTd = $("<td>").append($("<label>").append($input).append($hidden));
 			
-			$filenameTd = $("<td>").append($("<p>").text(pv["orgfile"]).addClass("orgfile"));
+			$filenameTd = $("<td>").append($("<p>").text(pv["orgfile"]).attr({"title": pv["orgfile"] }).addClass("orgfile"));
 			
-			nameSettingId = "person_namesetting_" + pv["hash"];
+			var nameSettingId = "person_namesetting_" + pv["hash"];
 			$nameTd = $("<td>").append($("<input>").attr("id",nameSettingId).prop("type","input").val(pv["name"])).addClass("name");
 			
 			$("#peopletable").append($("<tr>").append($checkboxTd).append($filenameTd).append($nameTd));
 		}
+		
+		loadConfig();
+		loadProjectSetting();
+		updateSearchResult();
+		updateTimeMode();
+		updateLineDisplay();
+
 
 		// 認識結果行の追加を始める
 		addTr(data, 0);
@@ -751,7 +801,7 @@ RESULTS
 					<th>Key</th><th>説明</th></tr>
 					<td>Enter</td><td>選択モードON</td></tr>
 					<td>H</td>    <td><div class="icon help"></div>この画面を表示</td></tr>
-					<td>P</td>    <td><div class="icon people"></div>話者表示選択</td></tr>
+					<td>P</td>    <td><div class="icon people"></div>話者設定</td></tr>
 					<td>F,F3</td> <td><div class="icon search"></div>検索</td></tr>
 					<td>S</td>    <td><input type="checkbox" disabled checked>認識できなかった行を表示</td></tr>
 					<td>T</td>    <td><input type="checkbox" disabled checked>時刻表示 <span style="font-size:small">※時刻情報がある場合のみ</span></td></tr>
@@ -775,7 +825,7 @@ RESULTS
 		
 		<div class="header">
 			<div id="open_help" class="push icon help" title="説明(H)" ></div>
-			<div id="open_peoplelist" class="push icon people" title="話者表示選択(P)" ></div>
+			<div id="open_peoplelist" class="push icon people" title="話者設定(P)" ></div>
 			<div id="search_icon" class="icon search"  ></div>
 			<div><input type="text" id="search"></div>
 			<div id="search_prev" class="push icon searchbutton"></div>
