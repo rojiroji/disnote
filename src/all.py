@@ -8,6 +8,7 @@ import merge
 import traceback
 import requests
 import subprocess
+import json
 
 logger = common.getLogger(__file__)
 
@@ -54,6 +55,15 @@ try:
 		basename = os.path.basename(input_file)
 		
 		logger.info("---- 作業開始：{} ----".format(basename))
+		
+		# フォーマット確認
+		res = subprocess.run("ffprobe.exe -v error -show_streams -print_format json \"{}\"".format(input_file), capture_output=True, text=True)
+		if (res.returncode != 0):
+			logger.error("フォーマット確認失敗。処理を中断します（{} は音声ファイルではないようです）。".format(input_file))
+			sys.exit(1)
+		
+		# f = json.loads(res.stdout)
+		# logger.info(f['streams'][0]['codec_name'])
 
 		# 無音解析
 		try:
