@@ -7,6 +7,7 @@ import common
 import merge
 import traceback
 import requests
+import subprocess
 
 logger = common.getLogger(__file__)
 
@@ -16,7 +17,33 @@ logger.info("----------------------------------------")
 
 try:
 	if len(sys.argv) < 2:
-		logger.error("ファイルが指定されていません")
+		logger.error("ファイルが指定されていません。")
+		sys.exit(1)
+	
+	# ffmpeg起動確認
+	try:
+		subprocess.check_output("ffmpeg -h")
+		logger.info("ffmpeg 実行確認OK")
+	except FileNotFoundError as e:
+		logger.error(e)
+		logger.error("ffmpegが見つかりません。ffmpegがDisNOTEと同じフォルダにあるか確認してください。")
+		sys.exit(1)
+	except Exception as e:
+		logger.error(e)
+		logger.error("ffmpegを実行できません。ffmpegがDisNOTEと同じフォルダにあるか確認してください。")
+		sys.exit(1)
+
+	# ffprobe起動確認
+	try:
+		subprocess.check_output("ffprobe -h")
+		logger.info("ffprobe 実行確認OK")
+	except FileNotFoundError as e:
+		logger.error(e)
+		logger.error("ffprobeが見つかりません。ffprobeがDisNOTEと同じフォルダにあるか確認してください。")
+		sys.exit(1)
+	except Exception as e:
+		logger.error(e)
+		logger.error("ffprobeを実行できません。ffprobeがDisNOTEと同じフォルダにあるか確認してください。")
 		sys.exit(1)
 
 	index = 1
