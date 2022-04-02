@@ -8,6 +8,7 @@ import hashlib
 DONE = "done"
 SYSTEM_CONF_FILE="DisNOTE.ini"
 SEG_TMP_AUDIO_LENGTH="seg_tmp_audio_length"
+IS_RECOGNIZE_NOIZE="is_recognize_noize"
 
 def getVersion():
 	return "v1.2.0"
@@ -18,8 +19,8 @@ def getSegTmpAudioLength():
 
 	try:
 		config = readSysConfig()
-		tmp_min = config['DEFAULT'].get(SEG_TMP_AUDIO_LENGTH)
-		min = int(tmp_min)
+		val = config['DEFAULT'].get(SEG_TMP_AUDIO_LENGTH)
+		min = int(val)
 		if min < 10: # 最低でも10分区切り
 			min = 10
 			
@@ -29,6 +30,21 @@ def getSegTmpAudioLength():
 		writeSysConfig(config)
 	
 	return min * 60 * 1000
+
+# ノイズっぽい音声を認識するかどうか
+def isRecognizeNoize():
+	ret = 0;
+	try:
+		config = readSysConfig()
+		val = config['DEFAULT'].get(IS_RECOGNIZE_NOIZE)
+		ret = int(val)
+
+	except: # 設定ファイルが読めなかったり(初回起動時)、値がおかしかったらデフォルトで保存
+		config.set('DEFAULT',IS_RECOGNIZE_NOIZE , str(ret))
+		writeSysConfig(config)
+	
+	return ret != 0;
+
 
 # システムconfig読み込み
 def readSysConfig():

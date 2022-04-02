@@ -34,6 +34,10 @@ def main(input_file):
 	index = 0
 
 	logger.info ("分析結果ファイル読み込み中…")
+	
+	isRecognizeNoize = common.isRecognizeNoize()
+	logger.info("ノイズ部分も認識対象にするかどうか：{}".format(isRecognizeNoize))
+	
 	while True:
 		seg_result_file = common.getSegResultFile(input_file, seg_resultfile_index)
 
@@ -66,8 +70,17 @@ def main(input_file):
 				start_time = float(segment[1]) * 1000 + float(common.getSegTmpAudioLength() * seg_resultfile_index)
 				end_time   = float(segment[2]) * 1000 + float(common.getSegTmpAudioLength() * seg_resultfile_index)
 
+				# 認識対象とするかどうか
+				isTarget = False
+				if (isRecognizeNoize): # 無音区間以外を認識対象とする
+					if (segment_label != 'noEnergy'):  # 無音区間以外なら認識対象とする（noiseなども対象）
+						isTarget = True
+				else:
+					if (segment_label == 'speech'):#  'speech' のみ認識対象とする
+						isTarget = True
 
-				if (segment_label != 'noEnergy'):  # 無音区間以外。noiseも捨てていいかも。 'speech' noEnergyで、startとendの間が1未満の場合は、前の項目と繋げていいかも。1回目のstartと2回目のendを採用する。
+				
+				if isTarget:  
 					if connect: # 1つ前と連結させる
 						prev = segmentation.pop()
 						start_time = prev[1]
