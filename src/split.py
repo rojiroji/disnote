@@ -142,7 +142,7 @@ def main(input_file):
 			if (index % 100) == 0 or (len(segmentation) == index): # 100行ごとか、最後の1行で進捗を出す
 				logger.info("　音声分割中… {}/{}".format(index, len(segmentation)))
 
-			if (segment_label != 'noEnergy'):  # 無音区間以外にする。noiseは捨てていいかも。 
+			if (segment_label != 'noEnergy'):  # 無音区間以外の部分だけを出力する
 
 				start_time = segment[1]
 				end_time = segment[2]
