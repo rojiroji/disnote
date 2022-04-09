@@ -63,7 +63,7 @@ def main(input_files):
 
 	# csvファイル出力
 	merged_csv_file = os.path.join(basedir, basefilename + ".csv")
-	logger.info("最終結果ファイル(csv)：{}".format(merged_csv_file))
+	logger.info("最終結果ファイル(csv)出力開始")
 
 	with open(merged_csv_file , "w", newline='' ) as f: # 変な改行が入るのを防ぐため newline='' 
 		writer = csv.writer(f, quoting=csv.QUOTE_ALL)
@@ -74,6 +74,7 @@ def main(input_files):
 	#merged_js_file = common.getMergedJsFile(input_files[0])
 	#logger.info("最終結果ファイル(json)：{}".format(merged_js_file))
 
+	logger.info("最終結果ファイル(html)出力開始")
 
 	# Craigのinfo.txtを探す
 	baseDate = None 
@@ -117,13 +118,17 @@ def main(input_files):
 	dir_util.copy_tree("src/htmlfiles", os.path.join(basedir, "htmlfiles"))
 
 	# プレイリスト作成(ファイルパスだけ書く)
+	logger.info("最終結果ファイル(m3u8)出力開始")
 	with codecs.open(os.path.join(basedir, basefilename + ".m3u8") , "w", "utf8", 'ignore') as f:
 		for line in l:
 			f.write(line[1])
 			f.write("\n")
 
-	logger.info(basefilename + ".htmlを出力しました。")
 	logger.info("すべての処理が完了しました！")
+	logger.info("【出力ファイル】")
+	logger.info("　{}.html".format(basefilename))
+	logger.info("　{}.csv".format(basefilename))
+	logger.info("　{}.m3u8".format(basefilename))
 
 
 # 直接起動した場合
