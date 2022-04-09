@@ -2,7 +2,6 @@ import os
 import sys
 from inaSpeechSegmenter import Segmenter
 from inaSpeechSegmenter.export_funcs import seg2csv, seg2textgrid
-import subprocess
 import common
 
 logger = common.getLogger(__file__)
@@ -26,8 +25,8 @@ def main(input_file):
 	
 	# 音声の長さを取得(ffprobe実行)
 	logger.info("音声ファイル読み込み中…")
-	res = subprocess.check_output("ffprobe -v error -show_entries format=duration -of default=noprint_wrappers=1:nokey=1 \"{}\"".format(input_file))
-	duration = float(res.strip()) * 1000 # 再生時間(ミリ秒)
+	res = common.runSubprocess("ffprobe -v error -show_entries format=duration -of default=noprint_wrappers=1:nokey=1 \"{}\"".format(input_file))
+	duration = float(res.stdout.strip()) * 1000 # 再生時間(ミリ秒)
 	logger.info("無音解析処理中… ({}sec)".format(int(duration/1000)))
 
 	# 一定時間ごとに分割
@@ -47,7 +46,7 @@ def main(input_file):
 		end_time = min(start_time + split_len, duration)
 		
 		# ffmpegで分割
-		res = subprocess.check_output("ffmpeg -i \"{}\" -ss {} -t {} -vn -acodec flac -y {}".format(input_file,start_time/1000, (end_time-start_time)/1000,tmp_audio_file))
+		res = common.runSubprocess("ffmpeg -i \"{}\" -ss {} -t {} -vn -acodec flac -y {}".format(input_file,start_time/1000, (end_time-start_time)/1000,tmp_audio_file))
 
 		# 区間検出実行
 		seg = Segmenter(vad_engine='smn', detect_gender=False)

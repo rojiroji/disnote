@@ -3,7 +3,6 @@ import sys
 from inaSpeechSegmenter import Segmenter
 from inaSpeechSegmenter.export_funcs import seg2csv, seg2textgrid
 from collections import deque
-import subprocess
 import common
 
 logger = common.getLogger(__file__)
@@ -150,7 +149,7 @@ def main(input_file):
 				filename = "{}{}.flac".format(audio_file_prefix , speech_segment_index)
 
 				# 分割結果をflacに出力
-				res = subprocess.check_output("ffmpeg -i \"{}\" -ss {} -t {} -vn -acodec flac -y \"{}\"".format(input_file,start_time/1000, (end_time-start_time)/1000,filename))
+				res = common.runSubprocess("ffmpeg -i \"{}\" -ss {} -t {} -vn -acodec flac -y \"{}\"".format(input_file,start_time/1000, (end_time-start_time)/1000,filename))
 
 
 				# 分割結果の時間やファイル名など

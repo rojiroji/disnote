@@ -7,7 +7,6 @@ import common
 import merge
 import traceback
 import requests
-import subprocess
 import json
 
 logger = common.getLogger(__file__)
@@ -23,7 +22,7 @@ try:
 	
 	# ffmpeg起動確認
 	try:
-		subprocess.check_output("ffmpeg -h")
+		common.runSubprocess("ffmpeg -h")
 		logger.info("ffmpeg 実行確認OK")
 	except FileNotFoundError as e:
 		logger.error(e)
@@ -34,9 +33,10 @@ try:
 		logger.error("ffmpegを実行できません。ffmpegがDisNOTEと同じフォルダにあるか確認してください。")
 		sys.exit(1)
 
+
 	# ffprobe起動確認
 	try:
-		subprocess.check_output("ffprobe -h")
+		common.runSubprocess("ffprobe -h")
 		logger.info("ffprobe 実行確認OK")
 	except FileNotFoundError as e:
 		logger.error(e)
@@ -57,13 +57,14 @@ try:
 		logger.info("---- 作業開始：{} ----".format(basename))
 		
 		# フォーマット確認
-		res = subprocess.run("ffprobe.exe -v error -show_streams -print_format json \"{}\"".format(input_file), capture_output=True, text=True)
-		if (res.returncode != 0):
+		try:
+			res = common.runSubprocess("ffprobe.exe -v error -show_streams -print_format json \"{}\"".format(input_file))
+		except Exception as e:
 			logger.error("フォーマット確認失敗。処理を中断します（{} は音声ファイルではないようです）。".format(input_file))
 			sys.exit(1)
 		
 		# f = json.loads(res.stdout)
-		# logger.info(f['streams'][0]['codec_name'])
+		# logger.info(f['streams'][0])
 
 		# 無音解析
 		try:

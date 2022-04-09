@@ -4,6 +4,7 @@ import logging
 import logging.handlers
 import configparser
 import hashlib
+import subprocess
 
 DONE = "done"
 SYSTEM_CONF_FILE="DisNOTE.ini"
@@ -11,7 +12,7 @@ SEG_TMP_AUDIO_LENGTH="seg_tmp_audio_length"
 IS_RECOGNIZE_NOIZE="is_recognize_noize"
 
 def getVersion():
-	return "v1.2.0"
+	return "v1.3.0"
 
 # 無音検出時に作るテンポラリファイルの音声の長さ（ミリ秒）
 def getSegTmpAudioLength():
@@ -176,3 +177,14 @@ def getLogger(srcfile):
 	logger.addHandler(handler2)
 	
 	return logger
+
+
+# サブプロセス実行（returncodeが非0の場合は標準エラー出力をログに吐いて例外を投げる。正常終了時、res.stdoutに標準出力）
+def runSubprocess(args):
+	res = subprocess.run(args, encoding='utf-8', stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+	if res.returncode != 0:
+		logger = getLogger(__file__)
+		logger.error(res.stderr)
+		raise RuntimeError(res.stderr)
+
+	return res
