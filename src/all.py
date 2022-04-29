@@ -49,18 +49,22 @@ try:
 		sys.exit(1)
 
 	# 入力ファイル一覧
-	input_files = copy.copy(sys.argv)
-	input_files.pop(0) # ドラッグしたファイルは第2引数以降なので1つ除く
+	arg_files = copy.copy(sys.argv)
+	arg_files.pop(0) # ドラッグしたファイルは第2引数以降なので1つ除く
 
 	# 与えたファイルが1つだけなら、そのファイルをオリジナル音源として扱う
 	org_audio_file = None 
+	if len(arg_files) == 1:
+		org_audio_file = arg_files[0] 
 
-	if len(input_files) == 1:
-		org_audio_file = input_files[0] 
-
-		# ファイルが1つの場合のみ、すべてのトラックを対象とする(最初のトラックは元のファイルを、それ以降のトラックはffmpegで抜き出して認識対象に追加する)
+	# すべてのトラックを認識するため、最初のトラックは元のファイルを、それ以降のトラックはffmpegで抜き出して認識対象に追加する
+	input_files = []
+	for arg_index, arg_file in enumerate(arg_files):
+		logger.info("---- トラック解析開始：{} ({}/{}) ----".format(os.path.basename(arg_file), arg_index + 1, len(arg_files)))
+		
+		# トラック情報取得
 		try:
-			ffprobe_result = common.getFileFormat(org_audio_file)
+			ffprobe_result = common.getFileFormat(arg_file)
 		except Exception as e:
 			logger.error("処理を中断します。")
 			sys.exit(1)
@@ -70,19 +74,19 @@ try:
 		
 		# トラックごとに音声ファイルで出力する
 		first_audio = True
-		logger.info("---- マルチトラックファイル処理開始 ----")
-		for index, stream in enumerate(streams['streams']):
-			logger.info("トラック分解：{}/{} {}({})".format(index + 1, len(streams['streams']), stream["codec_type"], stream["codec_name"]))
+		for stream_index, stream in enumerate(streams['streams']):
+			logger.info("トラック {}/{} {}({})".format(stream_index + 1, len(streams['streams']), stream["codec_type"], stream["codec_name"]))
 			if stream["codec_type"] != "audio":
 				continue
 				
-			if first_audio: # 最初のトラックは既に input_files に入っているのでスキップ
+			if first_audio: # 最初のトラックは抜き出さずに、元のファイルをinput_filesに入れる
 				first_audio = False
+				input_files.append(arg_file)
 				continue
 
 			# トラックごとに音声を分解する
-			basedir = os.path.dirname(org_audio_file) # 入力音声ファイルの置いてあるディレクトリ
-			base = common.getFileNameWithoutExtension(org_audio_file) # 入力音声ファイルの置いてあるディレクトリ
+			basedir = os.path.dirname(arg_file) # 入力音声ファイルの置いてあるディレクトリ
+			base = common.getFileNameWithoutExtension(arg_file) # 入力音声ファイルの置いてあるディレクトリ
 			# なければmkdir
 			try:
 				os.mkdir(os.path.join(basedir, base))
@@ -90,10 +94,10 @@ try:
 				pass
 
 			# フォーマットは変更したくなかったが、aacで出力すると変なことになることがあるのでflacに固定する
-			track_filename = os.path.join(basedir, base, "Track{}.{}".format(stream["index"], "flac"))
+			track_filename = os.path.join(basedir, base, "{}_Track{}.{}".format(base, stream["index"], "flac"))
 	
 			if os.path.exists(track_filename) == False:
-				common.runSubprocess("ffmpeg -i \"{}\" -map 0:{} -vn  -acodec flac \"{}\"".format(org_audio_file, stream["index"], track_filename))
+				common.runSubprocess("ffmpeg -i \"{}\" -map 0:{} -vn  -acodec flac \"{}\"".format(arg_file, stream["index"], track_filename))
 				logger.info("トラック出力：{}".format(track_filename))
 
 			input_files.append(track_filename)
@@ -102,7 +106,7 @@ try:
 	for index, input_file in enumerate(input_files):
 		basename = os.path.basename(input_file)
 		
-		logger.info("---- 作業開始：{} {}/{} ----".format(basename, index + 1, len(input_files)))
+		logger.info("---- 作業開始：{} ({}/{}) ----".format(basename, index + 1, len(input_files)))
 		
 		# フォーマット確認
 		try:
