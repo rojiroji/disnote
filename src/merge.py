@@ -17,7 +17,7 @@ logger = common.getLogger(__file__)
 
 CONFIG_WORK_KEY = 'merge'
 
-def main(input_files):
+def main(input_files, org_audio_file):
 
 	logger.info("4. 結果マージ開始")
 
@@ -38,10 +38,12 @@ def main(input_files):
 
 	# 出力するファイル名の決定
 	basefilename = ""
-	if len(input_files) <= 1: # ファイルが1つの場合はそのままのファイル名を使う
-		basefilename = common.getFileNameWithoutExtension(input_files[0]) + "_disnote"
+	if org_audio_file is not None: # 1つのファイルを元に解析されていた場合は、そのファイル名を使う
+		basefilename = common.getFileNameWithoutExtension(org_audio_file) + "_disnote"
+		basedir = os.path.dirname(org_audio_file) # 
 	else:
 		basefilename = project_hash[:8] + "_disnote" # ファイル名はハッシュ値の先頭8文字だけ採用（まあ被らないでしょう…）
+		basedir = os.path.dirname(input_files[0]) # 入力音声ファイルの置いてあるディレクトリ
 
 	# 認識結果ファイル(csv)を読み込んでマージする
 	l = list()
@@ -56,7 +58,6 @@ def main(input_files):
 	l.sort(key = lambda x:int(x[2])) # 3列目（発話タイミング）でソート
 
 	# ファイルパスを相対パスにする
-	basedir = os.path.dirname(input_files[0]) # 入力音声ファイルの置いてあるディレクトリ
 	for line in l:
 		p = pathlib.Path(line[1]);
 		line[1] = str(p.relative_to(basedir))
@@ -69,10 +70,6 @@ def main(input_files):
 		writer = csv.writer(f, quoting=csv.QUOTE_ALL)
 		writer.writerow(["話者","ファイル","時間（ミリ秒）","長さ(ミリ秒)","スコア","候補1","候補2","候補3","候補4","候補5"]); # ヘッダ
 		writer.writerows(l);
-
-	# json(形式のjsファイル)
-	#merged_js_file = common.getMergedJsFile(input_files[0])
-	#logger.info("最終結果ファイル(json)：{}".format(merged_js_file))
 
 	logger.info("最終結果ファイル(html)出力開始")
 

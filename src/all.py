@@ -8,6 +8,7 @@ import merge
 import traceback
 import requests
 import json
+import copy
 
 logger = common.getLogger(__file__)
 
@@ -47,25 +48,69 @@ try:
 		logger.error("ffprobeを実行できません。ffprobeがDisNOTEと同じフォルダにあるか確認してください。")
 		sys.exit(1)
 
-	index = 1
-	l = list()
+	# 入力ファイル一覧
+	input_files = copy.copy(sys.argv)
+	input_files.pop(0) # ドラッグしたファイルは第2引数以降なので1つ除く
 
-	while index < len(sys.argv):
-		input_file = sys.argv[index]
+	# 与えたファイルが1つだけなら、そのファイルをオリジナル音源として扱う
+	org_audio_file = None 
+
+	if len(input_files) == 1:
+		org_audio_file = input_files[0] 
+
+		# ファイルが1つの場合のみ、すべてのトラックを対象とする(最初のトラックは元のファイルを、それ以降のトラックはffmpegで抜き出して認識対象に追加する)
+		try:
+			ffprobe_result = common.getFileFormat(org_audio_file)
+		except Exception as e:
+			logger.error("処理を中断します。")
+			sys.exit(1)
+		
+		streams = json.loads(ffprobe_result)
+		
+		
+		# トラックごとに音声ファイルで出力する
+		first_audio = True
+		logger.info("---- マルチトラックファイル処理開始 ----")
+		for index, stream in enumerate(streams['streams']):
+			logger.info("トラック分解：{}/{} {}({})".format(index + 1, len(streams['streams']), stream["codec_type"], stream["codec_name"]))
+			if stream["codec_type"] != "audio":
+				continue
+				
+			if first_audio: # 最初のトラックは既に input_files に入っているのでスキップ
+				first_audio = False
+				continue
+
+			# トラックごとに音声を分解する
+			basedir = os.path.dirname(org_audio_file) # 入力音声ファイルの置いてあるディレクトリ
+			base = common.getFileNameWithoutExtension(org_audio_file) # 入力音声ファイルの置いてあるディレクトリ
+			# なければmkdir
+			try:
+				os.mkdir(os.path.join(basedir, base))
+			except FileExistsError:
+				pass
+
+			# フォーマットは変更したくなかったが、aacで出力すると変なことになることがあるのでflacに固定する
+			track_filename = os.path.join(basedir, base, "Track{}.{}".format(stream["index"], "flac"))
+	
+			if os.path.exists(track_filename) == False:
+				common.runSubprocess("ffmpeg -i \"{}\" -map 0:{} -vn  -acodec flac \"{}\"".format(org_audio_file, stream["index"], track_filename))
+				logger.info("トラック出力：{}".format(track_filename))
+
+			input_files.append(track_filename)
+
+	# ファイルそれぞれに対して音声認識
+	for index, input_file in enumerate(input_files):
 		basename = os.path.basename(input_file)
 		
-		logger.info("---- 作業開始：{} ----".format(basename))
+		logger.info("---- 作業開始：{} {}/{} ----".format(basename, index + 1, len(input_files)))
 		
 		# フォーマット確認
 		try:
-			res = common.runSubprocess("ffprobe.exe -v error -show_streams -print_format json \"{}\"".format(input_file))
+			common.getFileFormat(input_file)
 		except Exception as e:
-			logger.error("フォーマット確認失敗。処理を中断します（{} は音声ファイルではないようです）。".format(input_file))
+			logger.error("処理を中断します。")
 			sys.exit(1)
 		
-		# f = json.loads(res.stdout)
-		# logger.info(f['streams'][0])
-
 		# 無音解析
 		try:
 			seg.main(input_file)
@@ -93,12 +138,10 @@ try:
 			logger.error("{} の音声認識(3)に失敗しました({})。".format(input_file,e.with_traceback(tb)))
 			sys.exit(1)
 
-		index += 1
-		l.append(input_file)
 
 	# 結果マージ
 	try:
-		merge.main(l)
+		merge.main(input_files, org_audio_file)
 	except Exception as e:
 		tb = sys.exc_info()[2]
 		logger.error(traceback.format_exc())

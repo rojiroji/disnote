@@ -188,3 +188,13 @@ def runSubprocess(args):
 		raise RuntimeError(res.stderr)
 
 	return res
+
+# メディアファイルのフォーマットを返す
+def getFileFormat(input_file):
+	try:
+		res = runSubprocess("ffprobe.exe -v error -show_streams -print_format json \"{}\"".format(input_file))
+		return res.stdout
+	except Exception as e:
+		logger = getLogger(__file__)
+		logger.error("フォーマット確認失敗。{} は音声ファイルではないようです。".format(input_file))
+		pass
