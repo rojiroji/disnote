@@ -28,6 +28,7 @@ def main(input_file):
 	seg_resultfile_index = 0
 	segmentation = deque()
 	connect = False
+	prev_fixed = False
 	prev_noEnergy_length = 0 # 前回の無音部分の長さ
 	prev_length = 0 # 前回の長さ
 	index = 0
@@ -70,23 +71,24 @@ def main(input_file):
 				end_time   = float(segment[2]) * 1000 + float(common.getSegTmpAudioLength() * seg_resultfile_index)
 
 				# 認識対象とするかどうか
-				isTarget = False
+				is_target = False
 				if (isRecognizeNoize): # 無音区間以外を認識対象とする
 					if (segment_label != 'noEnergy'):  # 無音区間以外なら認識対象とする（noiseなども対象）
-						isTarget = True
+						is_target = True
 				else:
 					if (segment_label == 'speech'):#  'speech' のみ認識対象とする
-						isTarget = True
+						is_target = True
 
 				
-				if isTarget:  
+				if is_target:
 					if connect: # 1つ前と連結させる
 						prev = segmentation.pop()
 						start_time = prev[1]
-					else: # 今回が音がある部分の冒頭
+					else: # 今回が音がある部分の先頭
 						start_time -= min(prev_noEnergy_length, 500) # 前回の無音部分の0.5秒を頭に入れる
 					
 					connect = False
+					prev_fixed = False
 					prev_length = end_time - start_time
 					
 					mlength = 2 * 60 * 1000 # N分ごとに区切る(これ以上長いと音声認識がエラーを返す可能性がある)
@@ -109,10 +111,12 @@ def main(input_file):
 						if length < 1 * 1000 and length + prev_length < 5 * 1000: # 無音がX秒未満(息継ぎとかを無視したい)、Y秒未満の場合(長すぎにならないようにする)は、次の音声と接続させる
 							connect = True
 							logger.debug("connect. len:{}".format(length))
-						else:
+						elif prev_fixed == False:
 							prev = segmentation.pop() # 無音がX秒以上の場合は、前の音声が確定する。前の音声の終了時間を伸ばす（最後に無音がつく。最大5秒とする。5秒でいいかは微妙）⇒認識が遅くなるが、こっちの方が精度がいい
 							prev[2] += min(length, 5000) 
 							segmentation.append(prev) # push
+							prev_fixed = True # 何度も連結しないようにする
+							logger.debug("prev_fixed. {},{}".format(prev[1],prev[2]))
 
 		seg_resultfile_index += 1 # 次のファイルへ
 		if (segment_label != 'noEnergy'): # 音声ありの状態でファイルが閉じた場合、次のファイルと連結させるために長さ0の無音区間を作る
