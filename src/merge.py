@@ -49,7 +49,7 @@ def main(input_files, org_audio_file):
 	l = list()
 	for input_file in input_files:
 		recognize_result_file = common.getRecognizeResultFile(input_file)
-		logger.info("認識結果ファイル：{}".format(recognize_result_file))
+		logger.info("認識結果ファイル：{}".format(os.path.basename(recognize_result_file)))
 
 		with open(recognize_result_file , "r") as f:
 			rows = csv.reader(f)
@@ -84,11 +84,11 @@ def main(input_files, org_audio_file):
 					baseDate = parse(segment[1])
 					break
 	except ParserError:
-		logger.info("info.txtのStart time: parse失敗")
+		logger.info("　info.txtのStart time: parse失敗")
 	except FileNotFoundError:
-		logger.info("info.txtなし")
+		logger.info("　info.txtなし")
 	except :
-		logger.info("info.txtの読み込み失敗")
+		logger.info("　info.txtの読み込み失敗")
 	
 	# index.htmlのオリジナル読み込み
 	with open("src/index.html" , "r" ) as f:
