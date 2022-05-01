@@ -17,11 +17,12 @@ logger = common.getLogger(__file__)
 
 CONFIG_WORK_KEY = 'merge'
 
-def main(input_files, org_audio_file):
+def main(input_files, arg_files):
 
 	logger.info("4. 結果マージ開始")
 
 	personalData = {} # 話者情報
+	basedir = os.path.dirname(arg_files[0]) # 出力先のディレクトリ（＝入力音声ファイルの置いてあるディレクトリ）
 
 	# 出力ファイル用のハッシュ値を、入力ファイルから決定する
 	input_files.sort() # 入力ファイル名をソート（引数の順番だけ違う場合にファイル名を揃えるため）
@@ -38,12 +39,34 @@ def main(input_files, org_audio_file):
 
 	# 出力するファイル名の決定
 	basefilename = ""
-	if org_audio_file is not None: # 1つのファイルを元に解析されていた場合は、そのファイル名を使う
-		basefilename = common.getFileNameWithoutExtension(org_audio_file) + "_disnote"
-		basedir = os.path.dirname(org_audio_file) # 
+	if len(arg_files) == 1: # 1つのファイルを元に解析されていた場合は、そのファイルを使う
+		basefilename = common.getFileNameWithoutExtension(arg_files[0]) + "_disnote"
+		mixed_mediafile = arg_files[0]
 	else:
 		basefilename = project_hash[:8] + "_disnote" # ファイル名はハッシュ値の先頭8文字だけ採用（まあ被らないでしょう…）
-		basedir = os.path.dirname(input_files[0]) # 入力音声ファイルの置いてあるディレクトリ
+		
+	# MIXされたメディアファイルの作成
+	mixed_media_ismovie = False
+	if len(arg_files) == 1: # 1つのファイルを元に解析されていた場合は、そのファイルをそのまま使う
+		mixed_mediafile = arg_files[0]
+		try:
+			ffprobe_result = common.getFileFormat(mixed_mediafile)
+			streams = json.loads(ffprobe_result)
+			for stream_index, stream in enumerate(streams['streams']):
+				if stream["codec_type"] == "video": # 動画ファイルかどうかをチェック
+					mixed_media_ismovie = True
+					break
+		except Exception as e:
+			logger.info(e)
+			logger.log("{}のフォーマット確認中にエラー。".format(mixed_mediafile))
+
+	else: # 複数ファイルの場合はffmpegでmixする
+		mixed_mediafile = os.path.join(basedir, basefilename + ".mp3")
+		option_input = ""
+		for input_file in input_files:
+			option_input += " -i \"{}\" ".format(input_file)
+		
+		common.runSubprocess("ffmpeg {}  -y -filter_complex \"amix=inputs={}:duration=longest:dropout_transition=0:normalize=0\" \"{}\" ".format(option_input, len(input_files)  , mixed_mediafile)) 
 
 	# 認識結果ファイル(csv)を読み込んでマージする
 	l = list()
@@ -98,7 +121,9 @@ def main(input_files, org_audio_file):
 	merged_js =  "results = {};\n".format(json.dumps(l, indent=4, ensure_ascii=False));
 	merged_js += "personalData = {};\n".format(json.dumps(personalData, indent=4, ensure_ascii=False));
 	merged_js += "projectHash = \"{}\";\n".format(project_hash);
-	
+	merged_js += "mixedMediafile = \"{}\";\n".format(pathlib.Path(mixed_mediafile).relative_to(basedir));
+	merged_js += "mixedMediaIsMovie = {};\n".format("true" if mixed_media_ismovie else "false");
+
 	if(baseDate):
 		baseDate += relativedelta(hours=+9)
 		merged_js += "baseDate=new Date({},{},{},{},{},{});\n".format(baseDate.year, baseDate.month, baseDate.day, baseDate.hour, baseDate.minute, baseDate.second)

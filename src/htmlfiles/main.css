@@ -55,9 +55,28 @@ div.footer{
   position:fixed;
   bottom: 10px;
   left: 10px;
-  z-index: 100;
+  z-index: 99;
   text-align:center;
+  width:100%;
 }
+
+#foottable{
+  width: 100%;
+}
+
+#sound{
+  width: 300px;
+}
+
+div.footer tr td.check{
+  white-space: nowrap;
+}
+div.footer tr td.orgmedia,
+div.footer tr td.orgmedia audio{
+  width: 100%;
+}
+
+
 
 span.check{
   margin-bottom: 10px;
@@ -65,11 +84,11 @@ span.check{
 }
 div.loading{
   position:fixed;
-  bottom: 10px;
+  bottom: 5px;
   right: 10px;
   z-index: 100;
   background-color: #AAFFFFCC;
-  padding: 10px;
+  padding: 5px;
   font-family:monospace;
 }
 

@@ -52,11 +52,6 @@ try:
 	arg_files = copy.copy(sys.argv)
 	arg_files.pop(0) # ドラッグしたファイルは第2引数以降なので1つ除く
 
-	# 与えたファイルが1つだけなら、そのファイルをオリジナル音源として扱う
-	org_audio_file = None 
-	if len(arg_files) == 1:
-		org_audio_file = arg_files[0] 
-
 	# すべてのトラックを認識するため、最初のトラックは元のファイルを、それ以降のトラックはffmpegで抜き出して認識対象に追加する
 	input_files = []
 	for arg_index, arg_file in enumerate(arg_files):
@@ -145,7 +140,7 @@ try:
 
 	# 結果マージ
 	try:
-		merge.main(input_files, org_audio_file)
+		merge.main(input_files, arg_files)
 	except Exception as e:
 		tb = sys.exc_info()[2]
 		logger.error(traceback.format_exc())

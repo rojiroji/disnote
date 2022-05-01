@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
 	<meta charset="Shift-JIS">
-	<title>DisNOTE - TITLE</title>
+	<title>DisNOTE - マルチトラック動画_トラック1に全部の音_disnote</title>
 	<link href="htmlfiles/main.css" rel="stylesheet">
 	<link href="htmlfiles/jquery-ui.css" rel="stylesheet">
 	<script src="htmlfiles/jquery-3.6.0.min.js"></script>
@@ -167,6 +167,10 @@
 			// 再生中の行に色付け
 			if($currentTd ){
 				$currentTd.parent().addClass('current');
+				console.log(0 + $currentTd.parent().data('time'));
+				
+				$("#orgmedia")[0].currentTime = $currentTd.parent().data('time');
+				
 			}
 		}
 		
@@ -211,6 +215,14 @@
 					scrollToBottom($nextPlayTd, false);
 				}
 			}
+		});
+		
+		// 2つの音声を同時に再生できないようにする
+		$("#orgmedia").on("play", function(){
+			$("#sound")[0].pause();
+		});
+		$("#sound").on("play", function(){
+			$("#orgmedia")[0].pause();
 		});
 		
 		// ヘルプダイアログ設定
@@ -608,7 +620,7 @@
 				changeText($(this), 1);
 			});
 
-			$tr = $("<tr>").addClass("line").attr({"id": "tr_" + i }).data('playTd', $play).data('textTd', $textTd);
+			$tr = $("<tr>").addClass("line").attr({"id": "tr_" + i }).data('playTd', $play).data('textTd', $textTd).data('time',t / 1000);
 			pv = personalData[name];
 
 			$tableObj.append(
@@ -804,6 +816,9 @@
 		updateSearchResult();
 		updateTimeMode();
 		updateLineDisplay();
+		
+			$("#orgmedia").attr({"src": mixedMediafile });
+
 
 
 		// 認識結果行の追加を始める
@@ -870,18 +885,21 @@ RESULTS
 		</div>
 		<span id="search_result" ></span>
 
-		<div class="footer">
+		<div class="footer" >
 			<table id="foottable">
 				<tr>
-					<td>
+					<td >
 						<audio id="sound" class="sound" src="" controls></audio>
 					</td>
-					<td>
+					<td class="check">
 						<span class="check">
 							<label><input type="checkbox" id="notext"><span>認識できなかった行を表示(S)</span></label><br>
 							<label id="timelabel"><input type="checkbox" id="abstime" ><span>時刻表示(T)</span><br></label>
 							<label><input type="checkbox" id="autoplay"><span>連続再生(A)</span></label><br>
 						</span>
+					</td>
+					<td class="orgmedia">
+						<audio id="orgmedia" controls></audio>
 					</td>
 				</tr>
 			</table>
