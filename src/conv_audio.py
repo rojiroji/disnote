@@ -14,7 +14,7 @@ CONFIG_WORK_CONV_READY = 'speech_rec_conv_ready'
 # 音声ファイルをtxtファイルに出力された結果に従って分割
 def main(input_file):
 
-	logger.info("4.音声変換開始")
+	logger.info("4. 音声変換開始 - {}".format(os.path.basename(input_file)))
 
 	config = common.readConfig(input_file)
 	if config['DEFAULT'].get(CONFIG_WORK_KEY) == common.DONE:
@@ -25,13 +25,13 @@ def main(input_file):
 		return
 
 	# (元々の)入力の音声ファイルのパスを指定
-	logger.info("音声ファイル：{}".format(input_file))
+	logger.info("音声ファイル：{}".format(os.path.basename(input_file)))
 
 	base = os.path.splitext(os.path.basename(input_file))[0] # 拡張子なしのファイル名（話者）
 
 	# 分割結果ファイルの読み込み
 	split_result_file = common.getSplitResultFile(input_file)
-	logger.info("分割結果ファイル：{}".format(split_result_file))
+	logger.info("分割結果ファイル：{}".format(os.path.basename(split_result_file)))
 
 	split_result_queue = deque()
 	with open(split_result_file, "r") as f:
@@ -41,7 +41,7 @@ def main(input_file):
 
 	# 認識結果ファイルの読み込み
 	recognize_result_file = common.getRecognizeResultFile(input_file)
-	logger.info("認識結果ファイル：{}".format(recognize_result_file))
+	logger.info("認識結果ファイル：{}".format(os.path.basename(recognize_result_file)))
 
 	recognize_result_list = list()
 	with open(recognize_result_file, "r") as f:

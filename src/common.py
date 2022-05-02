@@ -165,7 +165,7 @@ def getLogger(srcfile):
 	#標準出力
 	handler1 = logging.StreamHandler(sys.stdout)
 	handler1.setLevel(logging.INFO)
-	handler1.setFormatter(logging.Formatter("%(asctime)s %(message)s"))
+	handler1.setFormatter(logging.Formatter("%(asctime)s [%(name)s] %(message)s"))
 
 	#ログファイル
 	handler2 = logging.handlers.RotatingFileHandler(filename="log/speechrec.log", maxBytes=1024 * 1024 * 10, backupCount=3)

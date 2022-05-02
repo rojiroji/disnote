@@ -10,7 +10,7 @@ CONFIG_WORK_KEY = 'seg'
 
 def main(input_file):
 
-	logger.info("1. 無音解析開始")
+	logger.info("1. 無音解析開始 - {}".format(os.path.basename(input_file)))
 
 	config = common.readConfig(input_file)
 	if config['DEFAULT'].get(CONFIG_WORK_KEY) == common.DONE:
@@ -21,7 +21,7 @@ def main(input_file):
 	# 音声ファイルを無音で分割して秒数とかを出力
 
 	# 入力の音声ファイルのパスを引数で指定
-	logger.info("音声ファイル：{}".format(input_file))
+	logger.info("音声ファイル：{}".format(os.path.basename(input_file)))
 	
 	# 音声の長さを取得(ffprobe実行)
 	logger.info("音声ファイル読み込み中…")
@@ -40,7 +40,7 @@ def main(input_file):
 
 		# 分析結果ファイル
 		seg_result_file = common.getSegResultFile(input_file, index)
-		logger.info("分析結果ファイル：{}".format(seg_result_file))
+		logger.info("分析結果ファイル：{}".format(os.path.basename(seg_result_file)))
 		logger.info("無音解析処理中… {}/{}".format(index + 1, int(duration/split_len) + 1))
 
 		end_time = min(start_time + split_len, duration)

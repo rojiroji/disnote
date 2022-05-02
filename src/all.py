@@ -96,7 +96,7 @@ try:
 	
 			if os.path.exists(track_filename) == False:
 				common.runSubprocess("ffmpeg -i \"{}\" -map 0:{} -vn  -acodec flac \"{}\"".format(arg_file, stream["index"], track_filename))
-				logger.info("トラック出力：{}".format(track_filename))
+				logger.info("トラック出力：{}".format(os.path.basename(track_filename)))
 
 			input_files.append(track_filename)
 

@@ -19,7 +19,7 @@ CONFIG_WORK_KEY = 'merge'
 
 def main(input_files, arg_files):
 
-	logger.info("4. 結果マージ開始")
+	logger.info("5. 結果マージ開始")
 
 	personalData = {} # 話者情報
 	basedir = os.path.dirname(arg_files[0]) # 出力先のディレクトリ（＝入力音声ファイルの置いてあるディレクトリ）
@@ -67,6 +67,7 @@ def main(input_files, arg_files):
 		for input_file in input_files:
 			option_input += " -i \"{}\" ".format(input_file)
 		
+		logger.info("最終結果ファイル(mp3)出力開始")
 		common.runSubprocess("ffmpeg {}  -y -filter_complex \"amix=inputs={}:duration=longest:dropout_transition=0:normalize=0\" \"{}\" ".format(option_input, len(input_files)  , mixed_mediafile)) 
 		created_mixed_media = True
 
@@ -74,7 +75,7 @@ def main(input_files, arg_files):
 	l = list()
 	for input_file in input_files:
 		recognize_result_file = common.getRecognizeResultFile(input_file)
-		logger.info("認識結果ファイル：{}".format(os.path.basename(recognize_result_file)))
+		# logger.info("認識結果ファイル：{}".format(os.path.basename(recognize_result_file)))
 
 		with open(recognize_result_file , "r") as f:
 			rows = csv.reader(f)

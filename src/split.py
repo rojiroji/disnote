@@ -11,7 +11,7 @@ CONFIG_WORK_KEY = 'split'
 
 def main(input_file):
 	# 音声ファイルをtxtファイルに出力された結果に従って分割
-	logger.info("2. 音声分割開始")
+	logger.info("2. 音声分割開始 - {}".format(os.path.basename(input_file)))
 
 	config = common.readConfig(input_file)
 	if config['DEFAULT'].get(CONFIG_WORK_KEY) == common.DONE:
@@ -20,7 +20,7 @@ def main(input_file):
 
 
 	# 入力の音声ファイルのパスを指定
-	logger.info("音声ファイル：{}".format(input_file))
+	logger.info("音声ファイル：{}".format(os.path.basename(input_file)))
 
 	type = os.path.splitext(os.path.basename(input_file))[1][1:] # 拡張子(読み込み時のフォーマット指定)
 
@@ -45,7 +45,7 @@ def main(input_file):
 		if os.path.exists(seg_result_file) == False:
 			break
 
-		logger.info("分析結果ファイル：{}({})".format(seg_result_file, seg_resultfile_index + 1))
+		logger.info("分析結果ファイル：{}({})".format(os.path.basename(seg_result_file), seg_resultfile_index + 1))
 
 		# 分析結果ファイル（タブ区切り）を開く
 		with open(seg_result_file , "r") as f:
@@ -146,7 +146,8 @@ def main(input_file):
 
 	# 音声を分割する
 	split_result_file = common.getSplitResultFile(input_file)
-	logger.info("分割結果ファイル：{}".format(split_result_file))
+	logger.info("分割結果ファイル：{}".format(os.path.basename(split_result_file)))
+	base = os.path.splitext(os.path.basename(input_file))[0] # 拡張子なしのファイル名（話者）
 
 	with open(split_result_file , "w") as f:# 分割結果ファイルに結果書き込み+音声書き込み
 		speech_segment_index = 1
@@ -166,7 +167,7 @@ def main(input_file):
 			# logger.debug ("音声分割中… {}/{}".format(index, len(segmentation)))
 			
 			if (index % 100) == 0 or (len(segmentation) == index): # 100行ごとか、最後の1行で進捗を出す
-				logger.info("　音声分割中… {}/{}".format(index, len(segmentation)))
+				logger.info("　音声分割中… {} {}/{}".format(base, index, len(segmentation)))
 
 			if (segment_label != 'noEnergy'):  # 無音区間以外の部分だけを出力する
 
