@@ -48,13 +48,14 @@ def main(input_file):
 		rows = csv.reader(f)
 		recognize_result_list.extend(rows)
 
-	logger.info("音声変換中… ")
+	logger.info("音声変換中… {}".format(os.path.basename(input_file)))
+
 	queuesize = len(split_result_queue)
 
 	# 分割して出力する音声ファイルのフォルダとプレフィックスまで指定
 	audio_file_prefix = common.getSplitAudioFilePrefix(input_file)
 
-	while len(split_result_queue) > 0:
+	while len(split_result_queue) > 0 and len(recognize_result_list) > 0:
 		# 分割結果ファイルの読み込み
 		split_result = split_result_queue.popleft() # ID,srcファイル名(flac),開始時間(冒頭無音あり),終了時間(末尾無音あり)の順 _split.txt
 		id = int(split_result[0])
@@ -83,7 +84,8 @@ def main(input_file):
 			continue
 
 		logger.debug("mp3_start")
-		common.runSubprocess("ffmpeg -i \"{}\" -ss {} -t {} -vn -y \"{}\"".format(src_audio_file,(start_time - org_start_time)/1000, (org_end_time-org_start_time)/1000,audio_file))
+		common.runSubprocess("ffmpeg -i \"{}\" -ss {} -t {} -vn -y \"{}\"".format(src_audio_file,(org_start_time - start_time)/1000, (org_end_time-org_start_time)/1000,audio_file))
+		logger.debug("ffmpeg -i \"{}\" -ss {} -t {} -vn -y \"{}\"".format(src_audio_file,(org_start_time - start_time)/1000, (org_end_time-org_start_time)/1000,audio_file))
 		logger.debug("mp3_end")
 
 		# 分析した音声にタグをつける
@@ -110,7 +112,8 @@ def main(input_file):
 	config.set('DEFAULT',CONFIG_WORK_KEY ,common.DONE)
 	common.writeConfig(input_file, config)
 
-	logger.info("音声変換終了！")
+	logger.info("音声変換終了！ {}".format(os.path.basename(input_file)))
+
 
 # 直接起動した場合
 if __name__ == "__main__":
