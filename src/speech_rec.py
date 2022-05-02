@@ -5,7 +5,7 @@ from collections import deque
 import common
 import traceback
 import codecs
-from mutagen.flac import FLAC
+from mutagen.easyid3 import EasyID3
 
 logger = common.getLogger(__file__)
 
@@ -58,23 +58,40 @@ def main(input_file):
 
 		logger.info("音声認識中… ")
 		queuesize = len(split_result_queue)
-		
+
+		# 分割して出力する音声ファイルのフォルダとプレフィックスまで指定
+		audio_file_prefix = common.getSplitAudioFilePrefix(input_file)
+
 		while len(split_result_queue) > 0:
 			split_result = split_result_queue.popleft() # ID,ファイル名,開始時間,終了時間の順
-			id = int(split_result[0]) + 1
-			audio_file = split_result[1]
+			id = int(split_result[0])
+			tmp_audio_file = split_result[1]
 			start_time = int(float(split_result[2]))
+			end_time = int(float(split_result[3]))
 			length = int(float(split_result[4]))
+
+			org_start_time = start_time
+			org_end_time = end_time
+
+			try:
+				org_start_time = int(float(split_result[5]))
+				org_end_time = int(float(split_result[6]))
+			except IndexError:
+				pass
 			
 			num += 1
 			
+			audio_file = "{}{}.mp3".format(audio_file_prefix , id)
+
 			if len(progress) > 0: # 中断データまでスキップ
 				if audio_file == progress:
 					progress = '' # 追いついたので、次の行から続き
 				continue
-			
+
+			logger.debug("recog_start")
+
 			try:
-				with sr.AudioFile(audio_file) as source:
+				with sr.AudioFile(tmp_audio_file) as source:
 					audio = r.record(source)
 			except FileNotFoundError:
 				break
@@ -96,31 +113,38 @@ def main(input_file):
 					for alt in alternative:
 						text = "\"" + alt["transcript"] + "\"," + text # ダブルクォーテーションで囲む
 						
-			except sr.UnknownValueError:
+			except sr.UnknownValueError: # 認識したが文字起こしできなかった場合
 				text = ""
 				confidence = 0
 			except:
 				logger.error(traceback.format_exc()) # 音声認識失敗。ログを吐いた後にファイル名だけわかるように再度例外を投げる
-				raise RuntimeError("音声認識に失敗したファイル … {}".format(audio_file))
-			
-			# 分析した音声にタグをつける
-			try:
-				audio = FLAC(audio_file)
-				
-				audio['artist'] = audio['album artist'] = audio['albumartist'] = audio['ensemble'] = base
-				audio['comment'] = audio['description'] = text
-				audio['title'] = "{:0=2}:{:0=2}:{:0=2} {}".format(int(start_time / 1000 / 60 / 60), int(start_time / 1000 / 60) % 60, int(start_time/ 1000) % 60, text)
-				audio.pprint()
-				audio.save()
-			except:
-				pass
+				raise RuntimeError("音声認識に失敗したファイル … {},{}".format(audio_file_prefix, id))
 
-			logger.debug("音声認識中… {},{},{}".format(id, int(confidence * 100), text))
+			logger.debug("recog_end")
+
+			# htmlファイルからの再生用に出力
+			logger.debug("mp3_start")
+			common.runSubprocess("ffmpeg -i \"{}\" -ss {} -t {} -vn -y \"{}\"".format(input_file,org_start_time/1000, (org_end_time-org_start_time)/1000,audio_file))
+			logger.debug("mp3_end")
+
+			# 分析した音声にタグをつける
+			logger.debug("tag_start")
+			try:
+				audio = EasyID3(audio_file)
+				
+				audio['artist'] = audio['albumartist'] = base
+				audio['title'] = "{:0=2}:{:0=2}:{:0=2} {}".format(int(org_start_time / 1000 / 60 / 60), int(org_start_time / 1000 / 60) % 60, int(org_start_time/ 1000) % 60, text)
+				audio.save()
+			except Exception as e:
+				logger.info(e)
+				pass
+			logger.debug("tag_end")
+
+			logger.debug("音声認識中… {}, {},{},{}".format(base, id, int(confidence * 100), text))
 			if (id % 10) == 0 or (len(split_result_queue) == 0): # 10行ごとか、最後の1行に進捗を出す
-				logger.info("　音声認識中… {}/{}".format(id , queuesize))
+				logger.info("　音声認識中… {} {}/{}".format(base, id , queuesize))
 			
-#			if len(text) > 0: # 認識結果が無くても追加することにした # ↓TODO：https://qiita.com/butada/items/33db39ced989c2ebf644
-			f.write("{},{},{},{},{},{}\n".format(base, audio_file, start_time, length, int(confidence * 100), text)) 
+			f.write("{},{},{},{},{},{}\n".format(base, audio_file, org_start_time, org_end_time-org_start_time, int(confidence * 100), text)) 
 			f.flush()
 			config.set('DEFAULT',CONFIG_WORK_PROGRESS ,audio_file) # ここまで完了した、と記録
 			common.writeConfig(input_file, config)

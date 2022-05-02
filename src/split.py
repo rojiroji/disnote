@@ -47,28 +47,27 @@ def main(input_file):
 
 		logger.info("分析結果ファイル：{}({})".format(seg_result_file, seg_resultfile_index + 1))
 
-		# 分割して出力する音声ファイルのフォルダとプレフィックスまで指定
-		audio_file_prefix = common.getSplitAudioFilePrefix(input_file)
-
-
 		# 分析結果ファイル（タブ区切り）を開く
 		with open(seg_result_file , "r") as f:
 
 			segment_label = ""
 			
 			f.readline() # ヘッダを読み捨て
+			
 			file_data = f.readlines()
 			for line in file_data:
 				segment = line.split("\t")
 				
 				index += 1
 				#logger.info ("分析結果ファイル読み込み中… {}".format(index))
-
+				
 				segment_label = segment[0]
 
 				# 区間の開始時刻の単位を秒からミリ秒に変換 + ファイル番号によって補正
 				start_time = float(segment[1]) * 1000 + float(common.getSegTmpAudioLength() * seg_resultfile_index)
 				end_time   = float(segment[2]) * 1000 + float(common.getSegTmpAudioLength() * seg_resultfile_index)
+				org_start_time = start_time
+				org_end_time = end_time
 
 				# 認識対象とするかどうか
 				is_target = False
@@ -83,7 +82,8 @@ def main(input_file):
 				if is_target:
 					if connect: # 1つ前と連結させる
 						prev = segmentation.pop()
-						start_time = prev[1]
+						start_time = prev["start_time"]
+						org_start_time = prev["org_start_time"]
 					else: # 今回が音がある部分の先頭
 						start_time -= min(prev_noEnergy_length, 500) # 前回の無音部分の0.5秒を頭に入れる
 					
@@ -96,11 +96,24 @@ def main(input_file):
 						length = end_time - start_time
 						
 						if length < mlength:
-							segmentation.append([segment_label, start_time, end_time ]) # push(末尾)
+							segmentation.append({
+								"segment_label"	: segment_label,
+								"start_time"	: start_time,
+								"end_time"		: end_time,
+								"org_start_time": org_start_time,
+								"org_end_time"	: org_end_time
+							}) # push(音声の末尾部分)
 							break
 						else:
-							segmentation.append([segment_label, start_time, start_time + mlength]) # push(N分)
+							segmentation.append({
+								"segment_label"	: segment_label,
+								"start_time"	: start_time,
+								"end_time"		: start_time + mlength,
+								"org_start_time": org_start_time,
+								"org_end_time"	: start_time + mlength
+							}) # push(N分)
 							start_time += mlength
+							org_start_time = start_time
 							logger.debug("length > mlength: length={}".format(length))
 
 				else: # 無音区間
@@ -113,15 +126,22 @@ def main(input_file):
 							logger.debug("connect. len:{}".format(length))
 						elif prev_fixed == False:
 							prev = segmentation.pop() # 無音がX秒以上の場合は、前の音声が確定する。前の音声の終了時間を伸ばす（最後に無音がつく。最大5秒とする。5秒でいいかは微妙）⇒認識が遅くなるが、こっちの方が精度がいい
-							prev[2] += min(length, 5000) 
+							prev["end_time"] += min(length, 5000) 
 							segmentation.append(prev) # push
 							prev_fixed = True # 何度も連結しないようにする
-							logger.debug("prev_fixed. {},{}".format(prev[1],prev[2]))
+							logger.debug("prev_fixed. {},{}".format(prev["start_time"],prev["end_time"]))
 
 		seg_resultfile_index += 1 # 次のファイルへ
 		if (segment_label != 'noEnergy'): # 音声ありの状態でファイルが閉じた場合、次のファイルと連結させるために長さ0の無音区間を作る
-			segmentation.append(['noEnergy', common.getSegTmpAudioLength() * seg_resultfile_index, common.getSegTmpAudioLength() * seg_resultfile_index ]) # push(末尾)
-			logger.debug("ファイルの区切りで無音追加：{}({})".format(seg_resultfile_index, common.getSegTmpAudioLength() * seg_resultfile_index))
+			t = common.getSegTmpAudioLength() * seg_resultfile_index
+			segmentation.append({
+				"segment_label"	: 'noEnergy',
+				"start_time"	: t,
+				"end_time"		: t,
+				"org_start_time": t,
+				"org_end_time"	: t
+			})
+			logger.debug("ファイルの区切りで無音追加：{}({})".format(seg_resultfile_index, t))
 
 
 	# 音声を分割する
@@ -129,15 +149,18 @@ def main(input_file):
 	logger.info("分割結果ファイル：{}".format(split_result_file))
 
 	with open(split_result_file , "w") as f:# 分割結果ファイルに結果書き込み+音声書き込み
-		speech_segment_index = 0
+		speech_segment_index = 1
 		index = 0
+
+		# 分割して出力する音声ファイルのフォルダとプレフィックスまで指定
+		audio_file_prefix = common.getSplitAudioFilePrefix(input_file)
 
 		logger.info ("音声分割中… ")
 		
 		for segment in segmentation:
 			# segmentはタプル
 			# タプルの第1要素が区間のラベル
-			segment_label = segment[0]
+			segment_label = segment['segment_label']
 
 			index = index + 1
 			# logger.debug ("音声分割中… {}/{}".format(index, len(segmentation)))
@@ -147,8 +170,10 @@ def main(input_file):
 
 			if (segment_label != 'noEnergy'):  # 無音区間以外の部分だけを出力する
 
-				start_time = segment[1]
-				end_time = segment[2]
+				start_time = segment["start_time"]
+				end_time = segment["end_time"]
+				org_start_time = segment["org_start_time"]
+				org_end_time = segment["org_end_time"]
 				
 				filename = "{}{}.flac".format(audio_file_prefix , speech_segment_index)
 
@@ -157,7 +182,7 @@ def main(input_file):
 
 
 				# 分割結果の時間やファイル名など
-				f.write("{}	{}	{}	{}	{}\n".format(speech_segment_index, filename, start_time, end_time, end_time - start_time))
+				f.write("{}	{}	{}	{}	{}	{}	{}\n".format(speech_segment_index, filename, start_time, end_time, end_time - start_time, org_start_time, org_end_time))
 				
 				speech_segment_index += 1
 
