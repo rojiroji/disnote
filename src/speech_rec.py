@@ -5,12 +5,12 @@ from collections import deque
 import common
 import traceback
 import codecs
-from mutagen.easyid3 import EasyID3
 
 logger = common.getLogger(__file__)
 
 CONFIG_WORK_KEY = 'speech_rec'
 CONFIG_WORK_PROGRESS = 'speech_rec_progress'
+CONFIG_WORK_CONV_READY = 'speech_rec_conv_ready'
 
 # 音声ファイルをtxtファイルに出力された結果に従って分割
 def main(input_file):
@@ -122,23 +122,6 @@ def main(input_file):
 
 			logger.debug("recog_end")
 
-			# htmlファイルからの再生用に出力
-			logger.debug("mp3_start")
-			common.runSubprocess("ffmpeg -i \"{}\" -ss {} -t {} -vn -y \"{}\"".format(input_file,org_start_time/1000, (org_end_time-org_start_time)/1000,audio_file))
-			logger.debug("mp3_end")
-
-			# 分析した音声にタグをつける
-			logger.debug("tag_start")
-			try:
-				audio = EasyID3(audio_file)
-				
-				audio['artist'] = audio['albumartist'] = base
-				audio['title'] = "{:0=2}:{:0=2}:{:0=2} {}".format(int(org_start_time / 1000 / 60 / 60), int(org_start_time / 1000 / 60) % 60, int(org_start_time/ 1000) % 60, text)
-				audio.save()
-			except Exception as e:
-				logger.info(e)
-				pass
-			logger.debug("tag_end")
 
 			logger.debug("音声認識中… {}, {},{},{}".format(base, id, int(confidence * 100), text))
 			if (id % 10) == 0 or (len(split_result_queue) == 0): # 10行ごとか、最後の1行に進捗を出す
@@ -159,6 +142,7 @@ def main(input_file):
 	# 終了したことをiniファイルに保存
 	config.set('DEFAULT',CONFIG_WORK_PROGRESS ,"")
 	config.set('DEFAULT',CONFIG_WORK_KEY ,common.DONE)
+	config.set('DEFAULT',CONFIG_WORK_CONV_READY ,"1") # 再生用に変換してもOK
 	common.writeConfig(input_file, config)
 
 	logger.info("音声認識終了！")

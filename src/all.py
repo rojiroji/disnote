@@ -3,6 +3,7 @@ import os
 import seg
 import split
 import speech_rec
+import conv_audio
 import common
 import merge
 import traceback
@@ -20,6 +21,7 @@ try:
 	if len(sys.argv) < 2:
 		logger.error("ファイルが指定されていません。")
 		sys.exit(1)
+	
 	
 	# ffmpeg起動確認
 	try:
@@ -48,6 +50,7 @@ try:
 		logger.error("ffprobeを実行できません。ffprobeがDisNOTEと同じフォルダにあるか確認してください。")
 		sys.exit(1)
 
+
 	# 入力ファイル一覧
 	arg_files = copy.copy(sys.argv)
 	arg_files.pop(0) # ドラッグしたファイルは第2引数以降なので1つ除く
@@ -55,7 +58,7 @@ try:
 	# すべてのトラックを認識するため、最初のトラックは元のファイルを、それ以降のトラックはffmpegで抜き出して認識対象に追加する
 	input_files = []
 	for arg_index, arg_file in enumerate(arg_files):
-		logger.info("---- トラック解析開始：{} ({}/{}) ----".format(os.path.basename(arg_file), arg_index + 1, len(arg_files)))
+		logger.info("---- トラック抜き出し開始：{} ({}/{}) ----".format(os.path.basename(arg_file), arg_index + 1, len(arg_files)))
 		
 		# トラック情報取得
 		try:
@@ -97,11 +100,13 @@ try:
 
 			input_files.append(track_filename)
 
+		logger.info("---- トラック抜き出し終了：{} ({}/{}) ----".format(os.path.basename(arg_file), arg_index + 1, len(arg_files)))
+
 	# ファイルそれぞれに対して音声認識
 	for index, input_file in enumerate(input_files):
 		basename = os.path.basename(input_file)
 		
-		logger.info("---- 作業開始：{} ({}/{}) ----".format(basename, index + 1, len(input_files)))
+		logger.info("---- 認識作業開始：{} ({}/{}) ----".format(basename, index + 1, len(input_files)))
 		
 		# フォーマット確認
 		try:
@@ -137,6 +142,16 @@ try:
 			logger.error("{} の音声認識(3)に失敗しました({})。".format(input_file,e.with_traceback(tb)))
 			sys.exit(1)
 
+		# 音声変換
+		try:
+			conv_audio.main(input_file)
+		except Exception as e:
+			tb = sys.exc_info()[2]
+			logger.error(traceback.format_exc())
+			logger.error("{} の音声変換(4)に失敗しました({})。".format(input_file,e.with_traceback(tb)))
+			sys.exit(1)
+
+		logger.info("---- 認識作業終了：{} ({}/{}) ----".format(basename, index + 1, len(input_files)))
 
 	# 結果マージ
 	try:
@@ -144,7 +159,7 @@ try:
 	except Exception as e:
 		tb = sys.exc_info()[2]
 		logger.error(traceback.format_exc())
-		logger.error("結果マージ(4)に失敗しました({})。".format(e.with_traceback(tb)))
+		logger.error("結果マージ(5)に失敗しました({})。".format(e.with_traceback(tb)))
 		sys.exit(1)
 
 finally: # バージョン確認する
@@ -159,10 +174,10 @@ finally: # バージョン確認する
 			
 			for i in range(3): # メジャー、マイナー、パッチ の順で数字で比較
 				if int(zipVersion[i]) > int(thisVersion[i]): # 公開されているzipの方が新しい
-					logger.info("----------------------------------------------------")
-					logger.info("  新しいDisNOTE({}) が公開されているようです".format(version) )
-					logger.info("  https://roji3.jpn.org/disnote/")
-					logger.info("----------------------------------------------------")
+					print("----------------------------------------------------")
+					print("  新しいDisNOTE({}) が公開されているようです".format(version) )
+					print("  https://roji3.jpn.org/disnote/")
+					print("----------------------------------------------------")
 					break
 				if int(zipVersion[i]) < int(thisVersion[i]): # 公開されているzipの方が古い（普通は無いはず）
 					break
