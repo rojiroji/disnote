@@ -106,6 +106,7 @@ def convert(recognizeThread):
 			raise
 
 
+# ここからメイン処理
 try:
 	if len(sys.argv) < 2:
 		logger.error("ファイルが指定されていません。")
@@ -189,6 +190,10 @@ try:
 				logger.info("トラック出力：{}".format(os.path.basename(track_filename)))
 
 			input_files.append(track_filename)
+
+		if first_audio: # 音声トラックがないファイルだった
+			logger.error("{}は音声ファイルではないようです。処理を中断します。".format(arg_file))
+			sys.exit(1)
 
 		logger.info("---- トラック抜き出し終了：{} ({}/{}) ----".format(os.path.basename(arg_file), arg_index + 1, len(arg_files)))
 
