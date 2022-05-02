@@ -47,6 +47,7 @@ def main(input_files, arg_files):
 		
 	# MIXされたメディアファイルの作成
 	mixed_media_ismovie = False
+	created_mixed_media = False
 	if len(arg_files) == 1: # 1つのファイルを元に解析されていた場合は、そのファイルをそのまま使う
 		mixed_mediafile = arg_files[0]
 		try:
@@ -67,6 +68,7 @@ def main(input_files, arg_files):
 			option_input += " -i \"{}\" ".format(input_file)
 		
 		common.runSubprocess("ffmpeg {}  -y -filter_complex \"amix=inputs={}:duration=longest:dropout_transition=0:normalize=0\" \"{}\" ".format(option_input, len(input_files)  , mixed_mediafile)) 
+		created_mixed_media = True
 
 	# 認識結果ファイル(csv)を読み込んでマージする
 	l = list()
@@ -151,6 +153,8 @@ def main(input_files, arg_files):
 	logger.info("　{}.html".format(basefilename))
 	logger.info("　{}.csv".format(basefilename))
 	logger.info("　{}.m3u8".format(basefilename))
+	if created_mixed_media:
+		logger.info("　{}.mp3".format(basefilename))
 
 
 # 直接起動した場合
