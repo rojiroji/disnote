@@ -56,7 +56,7 @@ def main(input_file):
 
 	with codecs.open(recognize_result_file , mode, "CP932", 'ignore') as f:
 
-		logger.info("音声認識中… ")
+		logger.info("音声認識中… {}".format(base))
 		queuesize = len(split_result_queue)
 
 		# 分割して出力する音声ファイルのフォルダとプレフィックスまで指定
@@ -145,7 +145,7 @@ def main(input_file):
 	config.set('DEFAULT',CONFIG_WORK_CONV_READY ,"1") # 再生用に変換してもOK
 	common.writeConfig(input_file, config)
 
-	logger.info("音声認識終了！")
+	logger.info("音声認識終了！ {}".format(os.path.basename(input_file)))
 
 # 直接起動した場合
 if __name__ == "__main__":

@@ -156,7 +156,7 @@ def main(input_file):
 		# 分割して出力する音声ファイルのフォルダとプレフィックスまで指定
 		audio_file_prefix = common.getSplitAudioFilePrefix(input_file)
 
-		logger.info ("音声分割中… ")
+		logger.info ("音声分割中… {}".format(base))
 		
 		for segment in segmentation:
 			# segmentはタプル
@@ -191,7 +191,8 @@ def main(input_file):
 	config.set('DEFAULT',CONFIG_WORK_KEY ,common.DONE)
 	common.writeConfig(input_file, config)
 
-	logger.info("音声分割終了！")
+	logger.info("音声分割終了！ {}".format(os.path.basename(input_file)))
+
 
 # 直接起動した場合
 if __name__ == "__main__":

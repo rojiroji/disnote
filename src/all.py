@@ -10,6 +10,9 @@ import traceback
 import requests
 import json
 import copy
+import time
+import threading
+from concurrent.futures import (ThreadPoolExecutor, wait)
 
 logger = common.getLogger(__file__)
 
@@ -17,6 +20,129 @@ logger.info("----------------------------------------")
 logger.info("             DisNOTE {}".format(common.getVersion()))
 logger.info("----------------------------------------")
 
+lock = threading.Lock()
+ready_mearge = False
+ready_recognize_list = list()
+ready_convert_list = list()
+
+# 音声認識のキューに積む
+def pushReadyRecognizeList(input_file):
+	global lock
+	global ready_recognize_list
+	with lock:
+		ready_recognize_list.append(input_file)
+
+# 音声認識のキューから取得（空の場合はNoneを返す）
+def popReadyRecognizeList():
+	global lock
+	global ready_recognize_list
+	with lock:
+		if len(ready_recognize_list) == 0:
+			return None
+		return ready_recognize_list.pop(0)
+
+# mp3変換のキューに積む
+def pushReadyConvertList(input_file):
+	global lock
+	global ready_convert_list
+	with lock:
+		ready_convert_list.append(input_file)
+
+# mp3変換のキューから取得（空の場合はNoneを返す）
+def popReadyConvertList():
+	global lock
+	global ready_convert_list
+	with lock:
+		if len(ready_convert_list) == 0:
+			return None
+		return ready_convert_list.pop(0)
+
+# 認識準備を行うスレッド
+def prepare(input_files):
+	global logger
+	for index, input_file in enumerate(input_files):
+		basename = os.path.basename(input_file)
+		
+		logger.info("認識準備開始：{} ({}/{})".format(basename, index + 1, len(input_files)))
+		
+		# フォーマット確認
+		try:
+			common.getFileFormat(input_file)
+		except Exception as e:
+			logger.error("処理を中断します。")
+			sys.exit(1)
+		
+		# 無音解析
+		try:
+			seg.main(input_file)
+		except Exception as e:
+			tb = sys.exc_info()[2]
+			logger.error(traceback.format_exc())
+			logger.error("{} の無音解析(1)に失敗しました({})。".format(input_file,e.with_traceback(tb)))
+			sys.exit(1)
+
+		# 音声分割
+		try:
+			split.main(input_file)
+		except Exception as e:
+			tb = sys.exc_info()[2]
+			logger.error(traceback.format_exc())
+			logger.error("{} の音声分割(2)に失敗しました({})。".format(input_file,e.with_traceback(tb)))
+			sys.exit(1)
+
+		# 音声認識スレッドに登録
+		pushReadyRecognizeList(input_file)
+
+		logger.info("認識準備終了：{} ({}/{})".format(basename, index + 1, len(input_files)))
+
+# 音声認識を行うスレッド
+def speechRecognize(prepareThread):
+	global ready_recognize_list
+	global logger
+	while True:
+		time.sleep(1)
+		logger.debug("スレッド待機中(speechRecognize). {}".format(len(ready_recognize_list)))
+		
+		input_file = popReadyRecognizeList()
+		if input_file is None:
+			if prepareThread.done(): # prepareThreadが終了していたら、もうリストに追加されることはないので終了する
+				return
+			continue
+		
+		# 音声認識
+		try:
+			speech_rec.main(input_file)
+		except Exception as e:
+			tb = sys.exc_info()[2]
+			logger.error(traceback.format_exc())
+			logger.error("{} の音声認識(3)に失敗しました({})。".format(input_file,e.with_traceback(tb)))
+			raise
+
+		pushReadyConvertList(input_file)
+
+
+# mp3への変換を行うスレッド
+def convert(recognizeThread):
+	global ready_convert_list
+	global logger
+	while True:
+		time.sleep(1)
+		logger.debug("スレッド待機中(convert). {}".format(len(ready_convert_list)))
+		
+		input_file = popReadyConvertList()
+		if input_file is None:
+			if recognizeThread.done(): # recognizeThreadが終了していたら、もうリストに追加されることはないので終了する
+				return
+			continue
+		
+		# 音声変換
+		try:
+			conv_audio.main(input_file)
+		except Exception as e:
+			tb = sys.exc_info()[2]
+			logger.error(traceback.format_exc())
+			logger.error("{} の音声変換(4)に失敗しました({})。".format(input_file,e.with_traceback(tb)))
+			raise
 try:
 	if len(sys.argv) < 2:
 		logger.error("ファイルが指定されていません。")
@@ -54,6 +180,7 @@ try:
 	# 入力ファイル一覧
 	arg_files = copy.copy(sys.argv)
 	arg_files.pop(0) # ドラッグしたファイルは第2引数以降なので1つ除く
+	arg_files.sort() # ファイル名をソート（引数の順番だけ違う場合にファイル名を揃えるため）
 
 	# すべてのトラックを認識するため、最初のトラックは元のファイルを、それ以降のトラックはffmpegで抜き出して認識対象に追加する
 	input_files = []
@@ -103,55 +230,26 @@ try:
 		logger.info("---- トラック抜き出し終了：{} ({}/{}) ----".format(os.path.basename(arg_file), arg_index + 1, len(arg_files)))
 
 	# ファイルそれぞれに対して音声認識
-	for index, input_file in enumerate(input_files):
-		basename = os.path.basename(input_file)
+	with ThreadPoolExecutor() as executor:
+		prepareThread = executor.submit(prepare, input_files) # 認識準備スレッド
+		recognizeThread = executor.submit(speechRecognize, prepareThread) # 音声認識スレッド
+
+		e = prepareThread.exception() # 認識準備スレッド終了待ち
+		if e is not None:
+			sys.exit(1)
+		logger.info("全ファイル認識準備終了")
+
+		convertThread = executor.submit(convert, recognizeThread) # mp3変換スレッド
 		
-		logger.info("---- 認識作業開始：{} ({}/{}) ----".format(basename, index + 1, len(input_files)))
-		
-		# フォーマット確認
-		try:
-			common.getFileFormat(input_file)
-		except Exception as e:
-			logger.error("処理を中断します。")
+		e = recognizeThread.exception() # 音声認識スレッド終了待ち
+		if e is not None:
 			sys.exit(1)
-		
-		# 無音解析
-		try:
-			seg.main(input_file)
-		except Exception as e:
-			tb = sys.exc_info()[2]
-			logger.error(traceback.format_exc())
-			logger.error("{} の無音解析(1)に失敗しました({})。".format(input_file,e.with_traceback(tb)))
-			sys.exit(1)
+		logger.info("全ファイル音声認識終了")
 
-		# 音声分割
-		try:
-			split.main(input_file)
-		except Exception as e:
-			tb = sys.exc_info()[2]
-			logger.error(traceback.format_exc())
-			logger.error("{} の音声分割(2)に失敗しました({})。".format(input_file,e.with_traceback(tb)))
+		e = convertThread.exception() # mp3変換スレッド終了待ち
+		if e is not None:
 			sys.exit(1)
-
-		# 音声認識
-		try:
-			speech_rec.main(input_file)
-		except Exception as e:
-			tb = sys.exc_info()[2]
-			logger.error(traceback.format_exc())
-			logger.error("{} の音声認識(3)に失敗しました({})。".format(input_file,e.with_traceback(tb)))
-			sys.exit(1)
-
-		# 音声変換
-		try:
-			conv_audio.main(input_file)
-		except Exception as e:
-			tb = sys.exc_info()[2]
-			logger.error(traceback.format_exc())
-			logger.error("{} の音声変換(4)に失敗しました({})。".format(input_file,e.with_traceback(tb)))
-			sys.exit(1)
-
-		logger.info("---- 認識作業終了：{} ({}/{}) ----".format(basename, index + 1, len(input_files)))
+		logger.info("全ファイル音声変換終了")
 
 	# 結果マージ
 	try:
