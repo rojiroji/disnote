@@ -11,7 +11,7 @@ import requests
 import json
 import copy
 import time
-import threading
+import thread
 from concurrent.futures import (ThreadPoolExecutor, wait)
 
 logger = common.getLogger(__file__)
@@ -19,43 +19,6 @@ logger = common.getLogger(__file__)
 logger.info("----------------------------------------")
 logger.info("             DisNOTE {}".format(common.getVersion()))
 logger.info("----------------------------------------")
-
-lock = threading.Lock()
-ready_mearge = False
-ready_recognize_list = list()
-ready_convert_list = list()
-
-# 音声認識のキューに積む
-def pushReadyRecognizeList(input_file):
-	global lock
-	global ready_recognize_list
-	with lock:
-		ready_recognize_list.append(input_file)
-
-# 音声認識のキューから取得（空の場合はNoneを返す）
-def popReadyRecognizeList():
-	global lock
-	global ready_recognize_list
-	with lock:
-		if len(ready_recognize_list) == 0:
-			return None
-		return ready_recognize_list.pop(0)
-
-# mp3変換のキューに積む
-def pushReadyConvertList(input_file):
-	global lock
-	global ready_convert_list
-	with lock:
-		ready_convert_list.append(input_file)
-
-# mp3変換のキューから取得（空の場合はNoneを返す）
-def popReadyConvertList():
-	global lock
-	global ready_convert_list
-	with lock:
-		if len(ready_convert_list) == 0:
-			return None
-		return ready_convert_list.pop(0)
 
 # 認識準備を行うスレッド
 def prepare(input_files):
@@ -91,19 +54,18 @@ def prepare(input_files):
 			sys.exit(1)
 
 		# 音声認識スレッドに登録
-		pushReadyRecognizeList(input_file)
+		thread.pushReadyRecognizeList(input_file)
 
 		logger.info("認識準備終了：{} ({}/{})".format(basename, index + 1, len(input_files)))
 
 # 音声認識を行うスレッド
 def speechRecognize(prepareThread):
-	global ready_recognize_list
 	global logger
 	while True:
 		time.sleep(1)
-		logger.debug("スレッド待機中(speechRecognize). {}".format(len(ready_recognize_list)))
+		logger.debug("スレッド待機中(speechRecognize)")
 		
-		input_file = popReadyRecognizeList()
+		input_file = thread.popReadyRecognizeList()
 		if input_file is None:
 			if prepareThread.done(): # prepareThreadが終了していたら、もうリストに追加されることはないので終了する
 				return
@@ -118,18 +80,17 @@ def speechRecognize(prepareThread):
 			logger.error("{} の音声認識(3)に失敗しました({})。".format(input_file,e.with_traceback(tb)))
 			raise
 
-		pushReadyConvertList(input_file)
+		thread.pushReadyConvertList(input_file)
 
 
 # mp3への変換を行うスレッド
 def convert(recognizeThread):
-	global ready_convert_list
 	global logger
 	while True:
 		time.sleep(1)
-		logger.debug("スレッド待機中(convert). {}".format(len(ready_convert_list)))
+		logger.debug("スレッド待機中(convert)")
 		
-		input_file = popReadyConvertList()
+		input_file = thread.popReadyConvertList()
 		if input_file is None:
 			if recognizeThread.done(): # recognizeThreadが終了していたら、もうリストに追加されることはないので終了する
 				return
@@ -143,6 +104,8 @@ def convert(recognizeThread):
 			logger.error(traceback.format_exc())
 			logger.error("{} の音声変換(4)に失敗しました({})。".format(input_file,e.with_traceback(tb)))
 			raise
+
+
 try:
 	if len(sys.argv) < 2:
 		logger.error("ファイルが指定されていません。")
@@ -231,25 +194,31 @@ try:
 
 	# ファイルそれぞれに対して音声認識
 	with ThreadPoolExecutor() as executor:
-		prepareThread = executor.submit(prepare, input_files) # 認識準備スレッド
-		recognizeThread = executor.submit(speechRecognize, prepareThread) # 音声認識スレッド
+		try:
+			prepareThread = executor.submit(prepare, input_files) # 認識準備スレッド
+			recognizeThread = executor.submit(speechRecognize, prepareThread) # 音声認識スレッド
 
-		e = prepareThread.exception() # 認識準備スレッド終了待ち
-		if e is not None:
-			sys.exit(1)
-		logger.info("全ファイル認識準備終了")
+			e = prepareThread.exception() # 認識準備スレッド終了待ち
+			if e is not None:
+				raise e
+			logger.info("全ファイル認識準備終了")
 
-		convertThread = executor.submit(convert, recognizeThread) # mp3変換スレッド
-		
-		e = recognizeThread.exception() # 音声認識スレッド終了待ち
-		if e is not None:
-			sys.exit(1)
-		logger.info("全ファイル音声認識終了")
+			convertThread = executor.submit(convert, recognizeThread) # mp3変換スレッド
+			
+			e = recognizeThread.exception() # 音声認識スレッド終了待ち
+			if e is not None:
+				raise e
+			logger.info("全ファイル音声認識終了")
 
-		e = convertThread.exception() # mp3変換スレッド終了待ち
-		if e is not None:
+			e = convertThread.exception() # mp3変換スレッド終了待ち
+			if e is not None:
+				raise e
+			logger.info("全ファイル音声変換終了")
+		except Exception as e:
+			tb = sys.exc_info()[2]
+			logger.error(traceback.format_exc())
+			logger.error("スレッド処理中にエラーが発生しました({})。".format(e.with_traceback(tb)))
 			sys.exit(1)
-		logger.info("全ファイル音声変換終了")
 
 	# 結果マージ
 	try:
