@@ -35,7 +35,6 @@ def main(input_file):
 	split_len = common.getSegTmpAudioLength()
 	tmp_audio_file = "log/tmp.flac" # 一時ファイル（面倒なので消さない）
 	logger.info("分割単位：{}min".format(int(split_len/60/1000)))
-	logger.info("分析結果ファイル：{}".format(os.path.basename(seg_result_file)))
 
 	base = os.path.splitext(os.path.basename(input_file))[0] # 拡張子なしのファイル名（話者）
 
@@ -43,6 +42,7 @@ def main(input_file):
 
 		# 分析結果ファイル
 		seg_result_file = common.getSegResultFile(input_file, index)
+		logger.info("分析結果ファイル：{}".format(os.path.basename(seg_result_file)))
 		logger.info("　無音解析処理中… {} {}/{}".format(base, index + 1, int(duration/split_len) + 1))
 
 		end_time = min(start_time + split_len, duration)
