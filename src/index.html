@@ -38,7 +38,17 @@
 				$(window).scrollTop(y - $(window).height());
 			}
 		}
-		
+
+		// 話者表示切替
+		function updateShowNameMode(){
+			$("th.name").css("display", $('#showname').prop('checked') ? "table-cell" : "none");
+			$("td.name").css("display", $('#showname').prop('checked') ? "table-cell" : "none");
+		}
+		$("#showname").change(function(){
+			updateShowNameMode();
+			saveConfig();
+		});
+
 		// 行の表示/非表示切り替え(特定話者)
 		function updatePersonLineDisplay($person){
 			var id = $person.attr("id");
@@ -47,7 +57,6 @@
 				if($('#notext').prop('checked')){ // 「認識できなかった行を表示」チェック
 					$(".textexists."+id).css("display", "table-row");
 					$(".notext."+id).css("display", "table-row");
-
 				}else{ //「認識できなかった行を表示」チェックされてない ⇒ 特定の話者 and notextでない行だけ表示
 					$(".textexists."+id).css("display", "table-row");
 					$(".notext."+id).css("display", "none");
@@ -75,10 +84,16 @@
 				}
 			});
 			
+			var show = 0;
+			var total = 0;
 			// 話者ごとの表示/非表示設定
 			$(".person_input").each( function( index, element ){
 				updatePersonLineDisplay($(element));
+				total++;
+				if($(element).val()!= "false"){ show++;}
 			});
+			$("#peoplecount").text("(" + show + "/" + total + ")");
+			
 
 			// 元のtrを先頭に表示するようにスクロール位置を調整
 			scrollToTop($toptr, true);
@@ -633,6 +648,11 @@
 				return true;
 			}
 				
+			if(e.code == "KeyQ"){ // Q,q（「話者表示」のチェック切り替え）
+				$target = $("#showname");
+				$target.prop("checked",!$target.prop("checked")).change();
+				return false;
+			}
 			if(e.code == "KeyS"){ // S,s（「認識できなかった行を表示」のチェック切り替え）
 				$target = $("#notext");
 				$target.prop("checked",!$target.prop("checked")).change();
@@ -708,6 +728,11 @@
 				}
 			}
 			
+			// 話者
+			pv = personalData[name];
+			$nameTd = $("<td>").text($("#person_namesetting_"  + pv["hash"]).val()).addClass("name").addClass("person_name_" + pv["hash"]);
+			$nameTd.css("display", $('#showname').prop('checked') ? "table-cell" : "none"); // updateShowNameMode と同じことをしている（が、ここでupdateShowNameModeを呼び出すとガタガタする）
+			
 			// 再生ボタン
 			var playTdId = "play_" + i;
 			$play = $("<td>").addClass("play").attr({"title": "" }).data('filename',data[i][1]).attr({"id": playTdId }).data('number', i).on("click", function(){
@@ -731,12 +756,11 @@
 			});
 
 			$tr = $("<tr>").addClass("line").attr({"id": "tr_" + i }).data('playTd', $play).data('textTd', $textTd).data('time',t / 1000);
-			pv = personalData[name];
 
 			$tableObj.append(
 				$tr
 					.append($timeTd) // 時間
-					.append($("<td>").text($("#person_namesetting_"  + pv["hash"]).val()).addClass("name").addClass("person_name_" + pv["hash"])) // 話者名
+					.append($nameTd) // 話者名
 					.append($play)
 					//.append($("<td>").text(data[i][3]).addClass("score")) // スコア
 					//.append($("<td>").attr({"id":"td1_" + i }).text(data[i][1]).hide()) // ファイル名
@@ -779,7 +803,7 @@
 
 			// 話者設定に従って表示非表示を切り替え
 			var personalId = "person_" + personalData[name]["hash"];
-			$tr.addClass(personalId)
+			$tr.addClass(personalId);
 			updatePersonLineDisplay($("#" + personalId));
 			
 			// 今回追加したtrが検索にヒットするかどうかを再検索
@@ -825,6 +849,7 @@
 		var CONFIG_KEY = "CONFIG";
 		function saveConfig(){
 			var config = new Object();
+			config["showname"] = $("#showname").prop("checked");
 			config["notext"] = $("#notext").prop("checked");
 			config["abstime"] = $("#abstime").prop("checked");
 			config["autoplay"] = $("#autoplay").prop("checked");
@@ -834,9 +859,12 @@
 		function loadConfig(){
 			var config = loadFromLocalStorage(CONFIG_KEY);
 			if(config){
+				if(config.showname){	$("#showname").prop("checked", true);	}
 				if(config.notext){	$("#notext").prop("checked", true);	}
 				if(config.abstime){	$("#abstime").prop("checked", true);	}
 				if(config.autoplay){	$("#autoplay").prop("checked", true);	}
+			}else{ // 初期設定
+				$("#showname").prop("checked", true);
 			}
 		}
 		
@@ -923,6 +951,7 @@
 		
 		loadConfig();
 		loadProjectSetting();
+		updateShowNameMode();
 		updateSearchResult();
 		updateTimeMode();
 		updateLineDisplay();
@@ -969,6 +998,7 @@ RESULTS
 					<td>H</td>    <td><div class="icon help"></div>この画面を表示</td></tr>
 					<td>P</td>    <td><div class="icon people"></div>話者設定</td></tr>
 					<td>F,F3</td> <td><div class="icon search"></div>検索</td></tr>
+					<td>Q</td>    <td><input type="checkbox" disabled checked>話者表示</td></tr>
 					<td>S</td>    <td><input type="checkbox" disabled checked>認識できなかった行を表示</td></tr>
 					<td>T</td>    <td><input type="checkbox" disabled checked>時刻表示 <span style="font-size:small">※時刻情報がある場合のみ</span></td></tr>
 					<td>A</td>    <td><input type="checkbox" disabled checked>連続再生</td></tr>
@@ -991,7 +1021,7 @@ RESULTS
 		
 		<div class="header">
 			<div id="open_help" class="push icon help" title="説明(H)" ></div>
-			<div id="open_peoplelist" class="push icon people" title="話者設定(P)" ></div>
+			<div id="open_peoplelist" class="push icon people" title="話者設定(P)" ></div><div id="peoplecount"></div>
 			<div id="search_icon" class="icon search"  ></div>
 			<div><input type="text" id="search"></div>
 			<div id="search_prev" class="push icon searchbutton"></div>
@@ -1007,8 +1037,9 @@ RESULTS
 					</td>
 					<td class="check">
 						<span class="check">
+							<label><input type="checkbox" id="showname" ><span>話者表示(Q)</span></label><br>
 							<label><input type="checkbox" id="notext"><span>認識できなかった行を表示(S)</span></label><br>
-							<label id="timelabel"><input type="checkbox" id="abstime" ><span>時刻表示(T)</span><br></label>
+							<label id="timelabel"><input type="checkbox" id="abstime" ><span>時刻表示(T)</span></label>
 							<label><input type="checkbox" id="autoplay"><span>連続再生(A)</span></label><br>
 						</span>
 					</td>
@@ -1030,7 +1061,7 @@ RESULTS
 			<thead>
 				<tr id="head">
 					<th >時間</th>
-					<th >話者</th>
+					<th class="name">話者</th>
 					<th ></th>
 					<th ></th>
 					<th ></th>

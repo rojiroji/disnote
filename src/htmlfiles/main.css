@@ -20,6 +20,12 @@ div.header div.push{
 div.header div,table.helptable tr td div.icon{
   float:left;
 }
+
+div.header div#peoplecount{
+  font-size: small;
+  padding: 3px;
+}
+
 div.icon{
   width:16px;
   height:16px;
@@ -62,6 +68,10 @@ div.footer{
 
 #foottable{
   width: 100%;
+}
+
+#foottable tr td{
+  vertical-align: bottom;
 }
 
 #sound{
