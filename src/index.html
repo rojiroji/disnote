@@ -155,7 +155,7 @@
 		$currentTd = undefined;
 		
 		// $tdを選択
-		function changeCurrentTd($td){
+		function changeCurrentTd($td, seekOrgMedia = true){
 			$(".current").removeClass('current');
 			if(!$td){		return;			}
 			
@@ -169,8 +169,10 @@
 				$currentTd.parent().addClass('current');
 				console.log(0 + $currentTd.parent().data('time'));
 				
-				$("#orgmedia")[0].currentTime = $currentTd.parent().data('time');
-				
+				if(seekOrgMedia){
+					$("#orgmedia")[0].currentTime = $currentTd.parent().data('time');
+					$("#movie")[0].currentTime = $currentTd.parent().data('time');
+				}
 			}
 		}
 		
@@ -220,11 +222,83 @@
 		// 2つの音声を同時に再生できないようにする
 		$("#orgmedia").on("play", function(){
 			$("#sound")[0].pause();
+			$("#movie")[0].pause();
 		});
 		$("#sound").on("play", function(){
 			$("#orgmedia")[0].pause();
+			$("#movie")[0].pause();
+		});
+		$("#movie").on("play", function(){
+			$("#orgmedia")[0].pause();
+			$("#sound")[0].pause();
 		});
 		
+		// オリジナル音源の時間が動いたときに、currentTdを移動する
+		function changeCurrentTdByMedia($m){
+			var t = $m[0].currentTime;
+			if(mixedMediaIsMovie){
+				$("#movieThumbnail")[0].currentTime = t; // 動画のサムネイルを追いつかせる
+			}
+			
+			defaultCurrentTd();
+			var currentT = $currentTd.parent().data('time');
+			
+			$targettd = undefined;
+			if(currentT < t){ // オリジナル音源にcurrentTdを追いつかせる
+				$targettd = $currentTd;
+				do{
+					$tmptd = nextTd($targettd,1);
+					if(!$tmptd){
+						break;
+					}
+					if($tmptd.parent().data('time') > t){ // 追い抜く直前まで進める
+						break;
+					}
+					$targettd = $tmptd;
+				}while($targettd);
+			}else{ // オリジナル音源までcurrentTdを戻す
+				$targettd = $currentTd;
+				while($targettd){
+					if($targettd.parent().data('time') <= t){ // オリジナル音源の前まで戻る
+						break;
+					}
+					$targettd = nextTd($targettd,-1);
+				}
+			}
+			
+			if($targettd && $targettd != $currentTd){ // currentTd移動（0の移動をさせるとそこからまたイベントが走るのでそれを防ぐ）
+				changeCurrentTd($targettd, false); // シークしない
+				scrollToTop($currentTd, false);
+			}
+		}
+		$("#orgmedia").on("timeupdate ", function(){
+			changeCurrentTdByMedia($("#orgmedia"))
+		});
+		$("#movie").on("timeupdate ", function(){
+			changeCurrentTdByMedia($("#movie"))
+		});
+		
+		// 動画サムネイルクリックで動画ダイアログを開く
+		$("#movieThumbnail").on("click", function(){
+			$("#movieDialogue").dialog("open");
+			$("#orgmedia")[0].pause();
+			$("#orgmedia").css("display", "none"); // audioとサムネは隠す
+			$("#movieThumbnail").css("display", "none");
+		});
+		$("#movieDialogue").dialog({ // 動画ダイアログ
+			autoOpen: false, width:"400",
+			closeOnEscape:true ,
+			resize: function() {
+				$(this).css("overflow", "hidden"); // リサイズ時のスクロールバー消し
+			},
+		});
+		
+		$("#movieDialogue").on("dialogclose", function(){
+			$("#orgmedia").css("display", "inline");
+			$("#movieThumbnail").css("display", "inline");
+			$("#movie")[0].pause();
+		});
+
 		// ヘルプダイアログ設定
 		$("#help").dialog({ autoOpen: false, modal: true , title:"ショートカットキー", closeOnEscape:true, width:"630"});
 		$( "#open_help" ).click(function() {
@@ -817,9 +891,13 @@
 		updateTimeMode();
 		updateLineDisplay();
 		
-			$("#orgmedia").attr({"src": mixedMediafile });
-
-
+		$("#orgmedia").attr({"src": mixedMediafile });
+		if(mixedMediaIsMovie){
+			$("#movieThumbnail").attr({"src": mixedMediafile });
+			$("#movie").attr({"src": mixedMediafile });
+		}else{
+			$(".movieThumbnail").css("display", "none")
+		}
 
 		// 認識結果行の追加を始める
 		addTr(data, 0);
@@ -903,6 +981,13 @@ RESULTS
 					</td>
 				</tr>
 			</table>
+		</div>
+
+		<div class="movieThumbnail">
+			<video id="movieThumbnail"></video >
+		</div>
+		<div id="movieDialogue" style="display:none">
+			<video id="movie" controls></video >
 		</div>
 
 		<table id="table" class="thead main">

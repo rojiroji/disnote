@@ -188,6 +188,23 @@ table#peopletable p.orgfile{
   overflow: hidden;
   width: 230px;
 }
+
+div.movieThumbnail{
+  position:fixed;
+  bottom: 70px;
+  right: 10px;
+  z-index: 99;
+  text-align:center;
+}
+video#movieThumbnail{
+  width:100px;
+  cursor:pointer;
+}
+video#movie{
+  width:100%;
+  height:100%
+}
+
 table#peopletable td.name input{
   width: 180px;
 }
