@@ -80,6 +80,9 @@ def main(input_files, arg_files):
 		with open(recognize_result_file , "r") as f:
 			rows = csv.reader(f)
 			l.extend(rows)
+			if rows.line_num == 0: # 発言がない人物は話者一覧から外す
+				key = common.getFileNameWithoutExtension(input_file)
+				personalData.pop(key)
 
 	l.sort(key = lambda x:int(x[2])) # 3列目（発話タイミング）でソート
 
