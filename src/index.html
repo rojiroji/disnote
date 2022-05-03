@@ -279,6 +279,24 @@
 			changeCurrentTdByMedia($("#movie"))
 		});
 		
+		// ウィンドウスクロール時、ダイアログの位置を追随させる
+		$(window).on('scroll', function() {
+			[$("#movieDialogue"), $("#help"), $("#peoplelist") ].forEach(function($t){
+				$p = $t.parent();
+				if($p.css('display') != 'none') {
+					var top = $(window).scrollTop() + $p.data('objectTop');
+					$p.offset({ top: top});
+				}
+			});
+		}).trigger('scroll');
+		
+		// ダイアログの位置を覚える（ウィンドウがスクロールしたときに追随するため）
+		function saveDialoguePos($t){
+			$p = $t.parent();
+			var top = $p.offset().top  - $(window).scrollTop();
+			$p.data('objectTop',top);
+		}
+		
 		// 動画サムネイルクリックで動画ダイアログを開く
 		$("#movieThumbnail").on("click", function(){
 			$("#movieDialogue").dialog("open");
@@ -289,9 +307,14 @@
 		$("#movieDialogue").dialog({ // 動画ダイアログ
 			autoOpen: false, width:"400",
 			closeOnEscape:true ,
+			position: {my: "right", at: "right"},
+			collision: "flipfit",
 			resize: function() {
 				$(this).css("overflow", "hidden"); // リサイズ時のスクロールバー消し
 			},
+			open: function() {					saveDialoguePos($(this));		},
+			resizeStop: function() {		saveDialoguePos($(this));		},
+			dragStop: function() {			saveDialoguePos($(this));		},
 		});
 		
 		$("#movieDialogue").on("dialogclose", function(){
@@ -301,7 +324,15 @@
 		});
 
 		// ヘルプダイアログ設定
-		$("#help").dialog({ autoOpen: false, modal: true , title:"ショートカットキー", closeOnEscape:true, width:"630"});
+		$("#help").dialog({
+			autoOpen: false,
+			modal: true ,
+			title:"ショートカットキー", closeOnEscape:true,
+			width:"630",
+			open: function() {					saveDialoguePos($(this));		},
+			resizeStop: function() {		saveDialoguePos($(this));		},
+			dragStop: function() {			saveDialoguePos($(this));		},
+		});
 		$( "#open_help" ).click(function() {
 			$("#help").dialog("open");
 		}); 
@@ -331,8 +362,11 @@
 				updateLineDisplay(); // 表示/非表示切り替え
 				saveProjectSetting(); // 話者設定保存
 			},
-			width:"500"}
-		);
+			width:"500",
+			open: function() {					saveDialoguePos($(this));		},
+			resizeStop: function() {		saveDialoguePos($(this));		},
+			dragStop: function() {			saveDialoguePos($(this));		},
+		});
 		$( "#open_peoplelist" ).click(function() {
 			$("#peoplelist").dialog("open");
 		}); 
@@ -361,7 +395,7 @@
 				}
 				$prevtr = $(element);
 			});
-			if($toptr){ // 決定+スクロール調整
+			if($toptr){ // 位置調整(進んで戻す)
 				$currentTd = $toptr.data('playTd');
 				scrollToTop($currentTd, false);
 				scrollToBottom($currentTd, false);
