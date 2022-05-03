@@ -269,6 +269,7 @@
 			if($targettd && $targettd != $currentTd){ // currentTd移動（0の移動をさせるとそこからまたイベントが走るのでそれを防ぐ）
 				changeCurrentTd($targettd, false); // シークしない
 				scrollToTop($currentTd, false);
+				scrollToBottom($currentTd, false);
 			}
 		}
 		$("#orgmedia").on("timeupdate ", function(){
@@ -360,9 +361,10 @@
 				}
 				$prevtr = $(element);
 			});
-			if($toptr){ // 位置調整
-				$currentTd = nextTd($toptr.data('playTd'),  1);
-				$currentTd = nextTd($currentTd, -1);
+			if($toptr){ // 決定+スクロール調整
+				$currentTd = $toptr.data('playTd');
+				scrollToTop($currentTd, false);
+				scrollToBottom($currentTd, false);
 			}
 		}
 		
