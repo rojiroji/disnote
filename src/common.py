@@ -12,7 +12,7 @@ SEG_TMP_AUDIO_LENGTH="seg_tmp_audio_length"
 IS_RECOGNIZE_NOIZE="is_recognize_noize"
 
 def getVersion():
-	return "v1.5.0"
+	return "v2.0.0"
 
 # 無音検出時に作るテンポラリファイルの音声の長さ（ミリ秒）
 def getSegTmpAudioLength():
