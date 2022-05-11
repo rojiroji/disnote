@@ -296,7 +296,7 @@
 		
 		// ウィンドウスクロール時、ダイアログの位置を追随させる
 		$(window).on('scroll', function() {
-			[$("#movieDialogue"), $("#help"), $("#peoplelist") ].forEach(function($t){
+			[$("#movieDialogue"), $("#help"), $("#peoplelist"), $("#download") ].forEach(function($t){
 				$p = $t.parent();
 				if($p.css('display') != 'none') {
 					var top = $(window).scrollTop() + $p.data('objectTop');
@@ -354,6 +354,86 @@
 		$("#close_help").on("click", function(){
 			$("#help").dialog( "close" );
 		});
+		
+		// ダウンロードダイアログ設定
+		$("#download").dialog({
+			autoOpen: false,
+			modal: true ,
+			title:"ダウンロード",
+			closeOnEscape:true,
+			width:"500",
+			open: function() {					saveDialoguePos($(this));		},
+			resizeStop: function() {		saveDialoguePos($(this));		},
+			dragStop: function() {			saveDialoguePos($(this));		},
+			close: function(){					saveConfig();},
+		});
+		$( "#open_download" ).click(function() {
+			$("#download").dialog("open");
+		}); 
+		
+		function getDownloadStr(filter, isCSV, isHeader){ // ダウンロードするファイルの内容を文字列で返す
+			var str = data.map(function (orgLine, index) {
+				var line = orgLine.slice(); // 以下の処理で配列を破壊するので、ここで配列を値コピー
+				var name = line[0];
+				$tr = $("#tr_" + index);
+				line[0] = $("#person_namesetting_"  + personalData[name]["hash"]).val(); // 名前を表示名に変更
+				line[2] = $tr.find("td.time").find($('#abstime').prop('checked') ? "span.abstime" : "span.reltime").text(); // 相対時間か時刻か
+				
+				// 候補（現在選択中のものを先頭にもってくる）
+				$target = $tr.data('textTd');
+				var current = 0 + $target.data('current');
+				var len = $target.data('textlen');
+				for(var i = 0; i < len; i++){
+					line[5 + i] = $target.data('text' + (current + i) % len);
+				}
+				
+	
+				return line.filter(function (cell, index){
+					return filter[index < filter.length ? index : filter.length - 1]; // 設定に沿って出力列を決定(候補3以降は、候補2と同じ設定)
+				}).map(function (cell){
+					return isCSV ? "\"" + cell + "\"" : cell; // CSV形式の場合は " で囲む
+				}).join(isCSV ? ',' : "\t");
+			}).filter(function (line, index) {
+				return $("#tr_" + index).css("display") != "none"; // 表示している行だけ出力する(先にfilterするとindexがずれるので最後にfilterする)
+			}).join('\r\n');
+			
+			if(isHeader){ // ヘッダ
+				var header = ["話者","ファイル名","時間","長さ","スコア","候補"];
+				var headerStr = header.filter(function (cell, index){
+					return filter[index < filter.length ? index : filter.length - 1]; // 設定に沿って出力列を決定(候補3以降は、候補2と同じ設定)
+				}).join(isCSV ? ',' : "\t");
+				str = headerStr + '\r\n' + str;
+			}
+			return str;
+		}
+		function downloadStr(str, type, filename){ // 文字列のファイルをダウンロードする
+			var bom = new Uint8Array([0xEF, 0xBB, 0xBF]);
+			var blob = new Blob([bom, str], { type: type });
+			var url = (window.URL || window.webkitURL).createObjectURL(blob);
+			$a = $("#download_dummy" );
+			$a.attr("download", filename);
+			$a.attr("href",url);
+			$a[0].click();
+		}
+		$( "#download_ymm4" ).click(function() { // ダウンロード処理(ゆっくりムービーメーカー4台本ファイル)
+			var filter = [true,false,false,false,false,true,false]; // 出力フィルタ（名前、ファイル名（出力しない）、時間（出力しない）、長さ（出力しない）、スコア（出力しない）、候補1、候補2～（出力しない）
+			var str = getDownloadStr(filter, true);
+			var filename = window.location.href.split('/').pop().split('.').shift();
+
+			downloadStr(str, 'text/csv', filename + '_ymm4.csv', false);
+		}); 
+		$( "#download_custom" ).click(function() { // ダウンロード処理
+			var filter = [true,true,true,false,false,true,false]; // 出力フィルタ（名前、ファイル名、時間、長さ（出力しない）、スコア（出力しない）、候補1、候補2～
+			filter[0] = $("#download_people").prop('checked');
+			filter[1] = $("#download_filename").prop('checked');
+			filter[2] = $("#download_time").prop('checked');
+			filter[6] = ($("input[name='download_text']:checked").val() == "all");
+			var isCSV = ($("input[name='download_type']:checked").val() == "csv");
+			var str = getDownloadStr(filter, isCSV, $("#download_header").prop('checked'));
+			var filename = window.location.href.split('/').pop().split('.').shift();
+
+			downloadStr(str, isCSV ? 'text/csv' : 'text/plain', filename  + (isCSV ? 'csv' : 'txt'));
+		}); 
 
 		// 話者表示切替ダイアログ設定
 		$("#peoplelist").dialog({
@@ -393,6 +473,7 @@
 		$( document ).on( "click", ".ui-widget-overlay", function(){
 			$("#help").dialog( "close" );
 			$("#peoplelist").dialog( "close" );
+			$("#download").dialog( "close" );
 		});
 		
 		// 選択行を適当に決める
@@ -521,7 +602,7 @@
 		
 		// キーボード入力
 		$(document).on("keydown", function(e) {
-			if($("#help").dialog("isOpen")){ // 話者選択ダイアログ表示中
+			if($("#help").dialog("isOpen") || $("#download").dialog("isOpen")){ // ダイアログ表示中
 				return true;
 			}
 			
@@ -666,6 +747,10 @@
 			if(e.code == "KeyA"){ // A,a（連続再生のチェック切り替え）
 				$target = $("#autoplay");
 				$target.prop("checked",!$target.prop("checked")).change();
+				return false;
+			}
+			if(e.code == "KeyD"){ // D,d（ダウンロード）
+				$("#download").dialog("open");
 				return false;
 			}
 			if(e.code == "KeyP"){ // P,p（話者設定）
@@ -853,6 +938,13 @@
 			config["notext"] = $("#notext").prop("checked");
 			config["abstime"] = $("#abstime").prop("checked");
 			config["autoplay"] = $("#autoplay").prop("checked");
+			config["download_people"] = $("#download_people").prop('checked');
+			config["download_filename"] = $("#download_filename").prop('checked');
+			config["download_time"] = $("#download_time").prop('checked');
+			config["download_text"] = $("input[name='download_text']:checked").val();
+			config["download_header"] = $("#download_header").prop('checked');
+			config["download_type"] = $("input[name='download_type']:checked").val();
+
 			saveToLocalStorage(CONFIG_KEY, config);
 		}
 		// 設定読み込み（DisNOTE全体の設定）
@@ -863,8 +955,19 @@
 				if(config.notext){	$("#notext").prop("checked", true);	}
 				if(config.abstime){	$("#abstime").prop("checked", true);	}
 				if(config.autoplay){	$("#autoplay").prop("checked", true);	}
+				if(config.download_people){	$("#download_people").prop("checked", true);	}
+				if(config.download_filename){	$("#download_filename").prop("checked", true);	}
+				if(config.download_time){	$("#download_time").prop("checked", true);	}
+				if(config.download_text){	$("input[name='download_text']").val([config.download_text]);	}
+				if(config.download_header){	$("#download_header").prop("checked", true);	}
+				if(config.download_type){	$("input[name='download_type']").val([config.download_type]);	}
+
 			}else{ // 初期設定
 				$("#showname").prop("checked", true);
+				$("#download_people").prop("checked", true);
+				$("#download_filename").prop("checked", true);
+				$("#download_time").prop("checked", true);
+				$("#download_header").prop("checked", true);
 			}
 		}
 		
@@ -993,39 +1096,106 @@ RESULTS
 			<div>
 				<span class="caption">通常ショートカット</span>
 				<table class="helptable">
-					<th>Key</th><th>説明</th></tr>
-					<td>Enter</td><td>選択モードON</td></tr>
-					<td>H</td>    <td><div class="icon help"></div>この画面を表示</td></tr>
-					<td>P</td>    <td><div class="icon people"></div>話者設定</td></tr>
-					<td>F,F3</td> <td><div class="icon search"></div>検索</td></tr>
-					<td>Q</td>    <td><input type="checkbox" disabled checked>話者表示</td></tr>
-					<td>S</td>    <td><input type="checkbox" disabled checked>認識できなかった行を表示</td></tr>
-					<td>T</td>    <td><input type="checkbox" disabled checked>時刻表示 <span style="font-size:small">※時刻情報がある場合のみ</span></td></tr>
-					<td>A</td>    <td><input type="checkbox" disabled checked>連続再生</td></tr>
+					<tr><th>Key</th><th>説明</th></tr>
+					<tr><td>Enter</td><td>選択モードON</td></tr>
+					<tr><td>D</td>    <td><div class="icon download"></div>ダウンロード</td></tr>
+					<tr><td>P</td>    <td><div class="icon people"></div>話者設定</td></tr>
+					<tr><td>F,F3</td> <td><div class="icon search"></div>検索</td></tr>
+					<tr><td>H</td>    <td><div class="icon help"></div>この画面を表示</td></tr>
+					<tr><td>Q</td>    <td><input type="checkbox" disabled checked>話者表示</td></tr>
+					<tr><td>S</td>    <td><input type="checkbox" disabled checked>認識できなかった行を表示</td></tr>
+					<tr><td>T</td>    <td><input type="checkbox" disabled checked>時刻表示 <span style="font-size:small">※時刻情報がある場合のみ</span></td></tr>
+					<tr><td>A</td>    <td><input type="checkbox" disabled checked>連続再生</td></tr>
 				</table>
 			</div>
 
 			<div>
 				<span class="caption">選択モードON状態のみ</span>
 				<table class="helptable">
-					<th>Key</th><th>説明</th></tr>
-					<td>ESC</td> <td>選択モードOFF</td></tr>
-					<td>↑↓</td><td>行選択</td></tr>
-					<td>←→</td><td>候補選択</td></tr>
-					<td>Space</td><td>再生/停止</td></tr>
-					<td>C</td><td>コピー</td></tr>
+					<tr><th>Key</th><th>説明</th></tr>
+					<tr><td>ESC</td> <td>選択モードOFF</td></tr>
+					<tr><td>↑↓</td><td>行選択</td></tr>
+					<tr><td>←→</td><td>候補選択</td></tr>
+					<tr><td>Space</td><td>再生/停止</td></tr>
+					<tr><td>C</td><td>コピー</td></tr>
 				</table>
 			</div>
-
 		</div>
+
+		<div id="download" style="display:none">
+			<div class="dlgroup">
+				<div>
+					<span class="caption">ゆっくりMovieMaker4台本形式 ダウンロード</span>
+				</div>
+				<div class="dlbtn">
+					<span id="download_ymm4" class="download">
+						<span href="javascript:void(0)">ダウンロード</span>
+					</span>
+				</div>
+			</div>
+			<div class="dlgroup">
+				<div>
+					<span class="caption">カスタムダウンロード</span>
+				
+					<table class="helptable">
+						<tr>
+							<td>話者</td>
+							<td>
+								<label><input id="download_people" type="checkbox">出力する</label>
+							</td>
+						</tr>
+						<tr>
+							<td>ファイル名</td>
+							<td>
+								<label><input id="download_filename" type="checkbox">出力する</label>
+							</td>
+						</tr>
+						<tr>
+							<td>時間</td>
+							<td>
+								<label><input id="download_time"   type="checkbox">出力する</label>
+							</td>
+						</tr>
+						<tr>
+							<td>候補</td>
+							<td>
+								<label><input name="download_text" type="radio" value="one">表示中の候補のみ出力する</label><br>
+								<label><input name="download_text" type="radio" value="all" checked>すべての候補を出力する</label>
+							</td>
+						</tr>
+						<tr>
+							<td>ヘッダ行</td>
+							<td>
+								<label><input id="download_header"   type="checkbox" >出力する</label>
+							</td>
+						</tr>
+						<tr>
+							<td>出力形式</td>
+							<td>
+								<label><input name="download_type" type="radio" value="csv" checked>CSV</label><br>
+								<label><input name="download_type" type="radio" value="txt">タブ区切りtext</label>
+							</td>
+						</tr>
+					</table>
+				</div>
+				<div class="dlbtn">
+					<span id="download_custom" class="download">
+						<span href="javascript:void(0)">ダウンロード</span>
+					</span>
+				</div>
+			</div>
+			<a id="download_dummy" style="display:none" >dummy</a>
+		</div>
+
 		
 		<div class="header">
-			<div id="open_help" class="push icon help" title="説明(H)" ></div>
+			<div id="open_download" class="push icon download" title="ダウンロード(D)" ></div>
 			<div id="open_peoplelist" class="push icon people" title="話者設定(P)" ></div><div id="peoplecount"></div>
 			<div id="search_icon" class="icon search"  ></div>
 			<div><input type="text" id="search"></div>
 			<div id="search_prev" class="push icon searchbutton"></div>
 			<div id="search_next" class="push icon searchbutton"></div>
+			<div id="open_help" class="push icon help" title="説明(H)" ></div>
 		</div>
 		<span id="search_result" ></span>
 
