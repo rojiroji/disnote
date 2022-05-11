@@ -344,7 +344,7 @@
 			modal: true ,
 			title:"ショートカットキー", closeOnEscape:true,
 			width:"630",
-			open: function() {					saveDialoguePos($(this));		},
+			open: function() {					saveDialoguePos($(this));	$("#aboutlink").blur();	},
 			resizeStop: function() {		saveDialoguePos($(this));		},
 			dragStop: function() {			saveDialoguePos($(this));		},
 		});
@@ -1058,6 +1058,7 @@
 		updateSearchResult();
 		updateTimeMode();
 		updateLineDisplay();
+		$("#version").text(version);
 		
 		$("#orgmedia").attr({"src": mixedMediafile });
 		if(mixedMediaIsMovie){
@@ -1119,6 +1120,10 @@ RESULTS
 					<tr><td>Space</td><td>再生/停止</td></tr>
 					<tr><td>C</td><td>コピー</td></tr>
 				</table>
+				
+			</div>
+			<div class="about">
+				<a href="https://roji3.jpn.org/disnote/" target="_blank" id="aboutlink">DisNOTE <span id="version"></span></a>
 			</div>
 		</div>
 

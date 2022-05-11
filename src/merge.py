@@ -129,6 +129,8 @@ def main(input_files, arg_files):
 	merged_js += "projectHash = \"{}\";\n".format(project_hash);
 	merged_js += "mixedMediafile = \"{}\";\n".format(pathlib.Path(mixed_mediafile).relative_to(basedir));
 	merged_js += "mixedMediaIsMovie = {};\n".format("true" if mixed_media_ismovie else "false");
+	merged_js += "version = \"{}\";\n".format(common.getVersion());
+	
 
 	if(baseDate):
 		baseDate += relativedelta(hours=+9)

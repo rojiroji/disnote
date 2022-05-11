@@ -228,6 +228,12 @@ div#help div{
   float:left;
   margin: 0px 15px;
 }
+div#help div.about{
+  position:absolute;
+  bottom:5px;
+  right:10px;
+}
+
 span.caption{
   font-weight:bold;
   font-size:large;
