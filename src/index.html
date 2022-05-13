@@ -355,7 +355,7 @@
 			$("#help").dialog( "close" );
 		});
 		
-		// ダウンロードダイアログ設定
+		// ダウンロードダイアログ設定(ロードが完了するまでopenできない)
 		$("#download").dialog({
 			autoOpen: false,
 			modal: true ,
@@ -367,9 +367,6 @@
 			dragStop: function() {			saveDialoguePos($(this));		},
 			close: function(){					saveConfig();},
 		});
-		$( "#open_download" ).click(function() {
-			$("#download").dialog("open");
-		}); 
 		
 		function getDownloadStr(filter, isCSV, isHeader){ // ダウンロードするファイルの内容を文字列で返す
 			var str = data.map(function (orgLine, index) {
@@ -418,7 +415,7 @@
 		$( "#download_ymm4" ).click(function() { // ダウンロード処理(ゆっくりムービーメーカー4台本ファイル)
 			var filter = [true,false,false,false,false,true,false]; // 出力フィルタ（名前、ファイル名（出力しない）、時間（出力しない）、長さ（出力しない）、スコア（出力しない）、候補1、候補2～（出力しない）
 			var str = getDownloadStr(filter, true);
-			var filename = window.location.href.split('/').pop().split('.').shift();
+			var filename = decodeURI(window.location.href.split('/').pop().split('.').shift());
 
 			downloadStr(str, 'text/csv', filename + '_ymm4.csv', false);
 		}); 
@@ -430,7 +427,7 @@
 			filter[6] = ($("input[name='download_text']:checked").val() == "all");
 			var isCSV = ($("input[name='download_type']:checked").val() == "csv");
 			var str = getDownloadStr(filter, isCSV, $("#download_header").prop('checked'));
-			var filename = window.location.href.split('/').pop().split('.').shift();
+			var filename = decodeURI(window.location.href.split('/').pop().split('.').shift());
 
 			downloadStr(str, isCSV ? 'text/csv' : 'text/plain', filename  + (isCSV ? 'csv' : 'txt'));
 		}); 
@@ -904,6 +901,11 @@
 				$('#loading').text("complete! 100%");
 				var $table = $('table');
 				search(true);
+				
+				$( "#open_download" ).click(function() { // ロードが完了したので、ダウンロードのダイアログを開けるようにする
+					$("#download").dialog("open");
+				}); 
+				$( "#open_download" ).css("opacity","1").css("cursor","pointer").attr("title","ダウンロード(D)");
 			}
 			//$("#table").floatThead({ // ヘッダ固定を試したけどしなくてもいいかな
 			//	position: 'absolute'
@@ -1194,7 +1196,7 @@ RESULTS
 
 		
 		<div class="header">
-			<div id="open_download" class="push icon download" title="ダウンロード(D)" ></div>
+			<div id="open_download" class="push icon download" title="ダウンロード(D) (※ロードが完了するまでお待ちください)" style="opacity:0.5;cursor: auto;"></div>
 			<div id="open_peoplelist" class="push icon people" title="話者設定(P)" ></div><div id="peoplecount"></div>
 			<div id="search_icon" class="icon search"  ></div>
 			<div><input type="text" id="search"></div>
