@@ -11,8 +11,8 @@ PATHを通した先に[ffmpeg](https://ffmpeg.org/)を配置しておくこと�
 
 # 使い道
 動画での説明（どちらも内容は同じ）
-* [ニコ動](https://www.nicovideo.jp/watch/sm40607027))
-* [Youtube](https://www.youtube.com/watch?v=D29kyC-2mNk))
+* [ニコ動](https://www.nicovideo.jp/watch/sm40607027)
+* [Youtube](https://www.youtube.com/watch?v=D29kyC-2mNk)
 
 # フリーソフトとして
 プログラミングの知識がない人向けに、PyInstallerでバイナリにしたものをWindows用フリーソフトとして公開している。
