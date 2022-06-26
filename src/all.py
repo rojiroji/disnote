@@ -108,6 +108,8 @@ def convert(recognizeThread):
 
 # ここからメイン処理
 try:
+	common.writeDefaultSysConfig() # とりあえず設定ファイルを読んで未設定の値を書き込こむ
+	
 	if len(sys.argv) < 2:
 		logger.error("ファイルが指定されていません。")
 		sys.exit(1)
