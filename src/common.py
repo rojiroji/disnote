@@ -10,9 +10,17 @@ DONE = "done"
 SYSTEM_CONF_FILE="DisNOTE.ini"
 SEG_TMP_AUDIO_LENGTH="seg_tmp_audio_length"
 IS_RECOGNIZE_NOIZE="is_recognize_noize"
+WIT_AI_SERVER_ACCESS_TOKEN="wit_ai_server_access_token"
+RECOGNIZE_GOOGLE_LANGUAGE="recognize_google_language"
 
 def getVersion():
 	return "v2.1.1"
+
+# 共通設定iniファイルの設定値を一通り読み込み（設定値がなければ初期値が書き込まれる）
+def writeDefaultSysConfig():
+	getSegTmpAudioLength()
+	isRecognizeNoize()
+	getRecognizeGoogleLanguage()
 
 # 無音検出時に作るテンポラリファイルの音声の長さ（ミリ秒）
 def getSegTmpAudioLength():
@@ -46,7 +54,24 @@ def isRecognizeNoize():
 	
 	return ret != 0;
 
-
+# GoogleAPIで認識する際の言語
+def getRecognizeGoogleLanguage():
+	try:
+		config = readSysConfig()
+		val = config['DEFAULT'].get(RECOGNIZE_GOOGLE_LANGUAGE)
+		if val is not None:
+			val = val.strip()
+			if(len(val) > 0):
+				return val
+			
+	except: # 設定ファイルが読めなかったり(初回起動時)、値がおかしかったらデフォルトで保存
+		pass
+		
+	config.set('DEFAULT',RECOGNIZE_GOOGLE_LANGUAGE , "ja-JP")
+	writeSysConfig(config)
+	
+	return ""
+	
 # システムconfig読み込み
 def readSysConfig():
 	config = configparser.ConfigParser()
@@ -139,13 +164,23 @@ def getSplitResultFile(input_file):
 
 	return os.path.join(outputdir, output_file)
 
-# 認識結果ファイル
+# 認識結果ファイル(Google)
 def getRecognizeResultFile(input_file):
 	base = getFileNameWithoutExtension(input_file)
 	basedir = os.path.dirname(input_file) # 入力音声ファイルの置いてあるディレクトリ
 	outputdir = os.path.join(basedir, base) # 各種ファイルの出力先ディレクトリ
 
 	output_file = "_{}.csv".format(base)
+
+	return os.path.join(outputdir, output_file)
+
+# 認識結果ファイル(wit.ai)
+def getRecognizeResultFileWitAI(input_file):
+	base = getFileNameWithoutExtension(input_file)
+	basedir = os.path.dirname(input_file) # 入力音声ファイルの置いてあるディレクトリ
+	outputdir = os.path.join(basedir, base) # 各種ファイルの出力先ディレクトリ
+
+	output_file = "_{}_witai.csv".format(base)
 
 	return os.path.join(outputdir, output_file)
 

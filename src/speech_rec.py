@@ -59,6 +59,10 @@ def main(input_file):
 	with codecs.open(recognize_result_file , mode, "CP932", 'ignore') as f:
 
 		logger.info("音声認識中(Google)… {}".format(base))
+		
+		language = common.getRecognizeGoogleLanguage()
+		logger.info("認識言語：{}".format(language))
+
 		queuesize = len(split_result_queue)
 
 		# 分割して出力する音声ファイルのフォルダとプレフィックスまで指定
@@ -102,7 +106,7 @@ def main(input_file):
 			confidence = 0
 
 			try:
-				result = r.recognize_google(audio, language='ja-JP', show_all=True)
+				result = r.recognize_google(audio, language=language, show_all=True)
 				if len(result) > 0:
 					alternative = result["alternative"]
 					
