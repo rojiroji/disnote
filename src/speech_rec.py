@@ -5,6 +5,7 @@ from collections import deque
 import common
 import traceback
 import codecs
+import time
 
 logger = common.getLogger(__file__)
 
@@ -15,7 +16,8 @@ CONFIG_WORK_CONV_READY = 'speech_rec_conv_ready'
 # 音声ファイルをtxtファイルに出力された結果に従って分割
 def main(input_file):
 
-	logger.info("3. 音声認識開始 - {}".format(os.path.basename(input_file)))
+	logger.info("3. 音声認識開始(Google) - {}".format(os.path.basename(input_file)))
+	func_in_time = time.time()
 
 	config = common.readConfig(input_file)
 	if config['DEFAULT'].get(CONFIG_WORK_KEY) == common.DONE:
@@ -56,7 +58,7 @@ def main(input_file):
 
 	with codecs.open(recognize_result_file , mode, "CP932", 'ignore') as f:
 
-		logger.info("音声認識中… {}".format(base))
+		logger.info("音声認識中(Google)… {}".format(base))
 		queuesize = len(split_result_queue)
 
 		# 分割して出力する音声ファイルのフォルダとプレフィックスまで指定
@@ -118,7 +120,7 @@ def main(input_file):
 				confidence = 0
 			except:
 				logger.error(traceback.format_exc()) # 音声認識失敗。ログを吐いた後にファイル名だけわかるように再度例外を投げる
-				raise RuntimeError("音声認識に失敗したファイル … {},{}".format(audio_file_prefix, id))
+				raise RuntimeError("音声認識に失敗したファイル(Google) … {},{}".format(audio_file_prefix, id))
 
 			logger.debug("recog_end")
 
@@ -145,7 +147,8 @@ def main(input_file):
 	config.set('DEFAULT',CONFIG_WORK_CONV_READY ,"1") # 再生用に変換してもOK
 	common.writeConfig(input_file, config)
 
-	logger.info("音声認識終了！ {}".format(os.path.basename(input_file)))
+	func_out_time = time.time()
+	logger.info("音声認識終了！(Google) {} ({:.2f}min)".format(os.path.basename(input_file), (func_out_time - func_in_time) / 60))
 
 # 直接起動した場合
 if __name__ == "__main__":
