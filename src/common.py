@@ -12,6 +12,7 @@ SEG_TMP_AUDIO_LENGTH="seg_tmp_audio_length"
 IS_RECOGNIZE_NOIZE="is_recognize_noize"
 WIT_AI_SERVER_ACCESS_TOKEN="wit_ai_server_access_token"
 RECOGNIZE_GOOGLE_LANGUAGE="recognize_google_language"
+REMOVE_TEMP_SPLIT_FLAC="remove_temp_split_flac"
 
 def getVersion():
 	return "v2.1.1"
@@ -22,6 +23,7 @@ def writeDefaultSysConfig():
 	isRecognizeNoize()
 	getWitAiServerAccessToken()
 	getRecognizeGoogleLanguage()
+	isRemoveTempSplitFlac()
 
 # 無音検出時に作るテンポラリファイルの音声の長さ（ミリ秒）
 def getSegTmpAudioLength():
@@ -71,7 +73,7 @@ def getWitAiServerAccessToken():
 	
 	return ""
 
-# GoogleAPIで認識する際の言語
+# GoogleAPIで認識する際の言語（デフォルトは日本語(ja-JP)）
 def getRecognizeGoogleLanguage():
 	try:
 		config = readSysConfig()
@@ -88,7 +90,22 @@ def getRecognizeGoogleLanguage():
 	writeSysConfig(config)
 	
 	return ""
+
+# 音声認識にかけたflacファイルを最後に削除するかどうか(デフォルトはTrue)
+def isRemoveTempSplitFlac():
+	ret = 1;
+	try:
+		config = readSysConfig()
+		val = config['DEFAULT'].get(REMOVE_TEMP_SPLIT_FLAC)
+		ret = int(val)
+
+	except: # 設定ファイルが読めなかったり(初回起動時)、値がおかしかったらデフォルトで保存
+		config.set('DEFAULT',REMOVE_TEMP_SPLIT_FLAC , str(ret))
+		writeSysConfig(config)
 	
+	return ret != 0;
+
+
 # システムconfig読み込み
 def readSysConfig():
 	config = configparser.ConfigParser()

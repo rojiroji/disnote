@@ -11,7 +11,7 @@ logger = common.getLogger(__file__)
 CONFIG_WORK_KEY = 'conv_audio'
 CONFIG_WORK_CONV_READY = 'speech_rec_conv_ready'
 
-# 音声ファイルをtxtファイルに出力された結果に従って分割
+# 音声ファイルをtxtファイルに出力された結果に従ってmp3に変換（htmlから再生する用）
 def main(input_file):
 
 	logger.info("4. 音声変換開始 - {}".format(os.path.basename(input_file)))
@@ -28,6 +28,10 @@ def main(input_file):
 	logger.info("音声ファイル：{}".format(os.path.basename(input_file)))
 
 	base = os.path.splitext(os.path.basename(input_file))[0] # 拡張子なしのファイル名（話者）
+	
+	# 最後にflacファイルを消すかどうか
+	is_remove_temp_split_flac = common.isRemoveTempSplitFlac()
+	logger.info("テンポラリファイル削除：{}".format(is_remove_temp_split_flac))
 
 	# 分割結果ファイルの読み込み
 	split_result_file = common.getSplitResultFile(input_file)
@@ -57,7 +61,7 @@ def main(input_file):
 
 	while len(split_result_queue) > 0 and len(recognize_result_list) > 0:
 		# 分割結果ファイルの読み込み
-		split_result = split_result_queue.popleft() # ID,srcファイル名(flac),開始時間(冒頭無音あり),終了時間(末尾無音あり)の順 _split.txt
+		split_result = split_result_queue.popleft() # ID,srcファイル名(flac),開始時間(冒頭無音あり),終了時間(末尾無音あり),長さ(無音あり),開始時間(冒頭無音なし),長さ(末尾無音なし)の順 _split.txt
 		id = int(split_result[0])
 		src_audio_file = split_result[1]
 		start_time = int(float(split_result[2]))
@@ -84,6 +88,16 @@ def main(input_file):
 			continue
 
 		logger.debug("mp3_start")
+		if os.path.exists(audio_file): # dstファイル(mp3)が存在する場合
+			src_audio_file_mttime = os.stat(src_audio_file).st_mtime
+			audio_file_mttime = os.stat(audio_file).st_mtime
+			if (audio_file_mttime > src_audio_file_mttime): # ソースより後に作られたファイルならOK
+				logger.debug("変換後のファイルが存在しているためスキップ:{}".format(audio_file))
+				continue
+
+			logger.debug("変換後のファイルが存在しているが、古いので作り直す:{}".format(audio_file))
+		
+		# 無音部分を省いてmp3に変換
 		common.runSubprocess("ffmpeg -i \"{}\" -ss {} -t {} -vn -y \"{}\"".format(src_audio_file,(org_start_time - start_time)/1000, (org_end_time-org_start_time)/1000,audio_file))
 		logger.debug("ffmpeg -i \"{}\" -ss {} -t {} -vn -y \"{}\"".format(src_audio_file,(org_start_time - start_time)/1000, (org_end_time-org_start_time)/1000,audio_file))
 		logger.debug("mp3_end")
@@ -101,8 +115,10 @@ def main(input_file):
 			pass
 		logger.debug("tag_end")
 		
-		# 変換が終わったのでsrcファイル(flac)を削除する
-		os.remove(src_audio_file)
+		# 変換が終わったのでsrcファイル(flac)を削除する 
+		if is_remove_temp_split_flac: 
+			logger.debug("remove:{}".format(src_audio_file))
+			os.remove(src_audio_file)
 
 		# 100行ごとか、最後の1行に進捗を出す
 		if (id % 100) == 0 or (len(split_result_queue) == 0):
