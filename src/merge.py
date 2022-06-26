@@ -67,8 +67,11 @@ def main(input_files, arg_files):
 		for input_file in input_files:
 			option_input += " -i \"{}\" ".format(input_file)
 		
-		logger.info("最終結果ファイル(mp3)出力開始")
-		common.runSubprocess("ffmpeg {}  -y -filter_complex \"amix=inputs={}:duration=longest:dropout_transition=0:normalize=0\" \"{}\" ".format(option_input, len(input_files)  , mixed_mediafile)) 
+		if os.path.exists(mixed_mediafile):
+			logger.info("最終結果ファイル(mp3)出力（既に存在するためスキップ）")
+		else:
+			logger.info("最終結果ファイル(mp3)出力開始")
+			common.runSubprocess("ffmpeg {}  -y -filter_complex \"amix=inputs={}:duration=longest:dropout_transition=0:normalize=0\" \"{}\" ".format(option_input, len(input_files)  , mixed_mediafile)) 
 		created_mixed_media = True
 
 	# 認識結果ファイル(csv)を読み込んでマージする
