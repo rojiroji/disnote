@@ -9,6 +9,7 @@ import subprocess
 DONE = "done"
 SYSTEM_CONF_FILE="DisNOTE.ini"
 SEG_TMP_AUDIO_LENGTH="seg_tmp_audio_length"
+SEG_FILTER_STRENGTH="seg_filter_strength"
 IS_RECOGNIZE_NOIZE="is_recognize_noize"
 WIT_AI_SERVER_ACCESS_TOKEN="wit_ai_server_access_token"
 RECOGNIZE_GOOGLE_LANGUAGE="recognize_google_language"
@@ -20,12 +21,13 @@ def getVersion():
 # 共通設定iniファイルの設定値を一通り読み込み（設定値がなければ初期値が書き込まれる）
 def writeDefaultSysConfig():
 	getSegTmpAudioLength()
+	getSegFilterStrength()
 	isRecognizeNoize()
 	getWitAiServerAccessToken()
 	getRecognizeGoogleLanguage()
 	isRemoveTempSplitFlac()
 
-# 無音検出時に作るテンポラリファイルの音声の長さ（ミリ秒）
+# 無音解析出時に作るテンポラリファイルの音声の長さ（ミリ秒）
 def getSegTmpAudioLength():
 	min = 30 # 30分ごとに分割（デフォルト）
 
@@ -43,6 +45,21 @@ def getSegTmpAudioLength():
 	
 	return min * 60 * 1000
 
+# 無音解析時にかけるノイズフィルタの強さ(0以下だとフィルタをかけない)
+def getSegFilterStrength():
+	ret = 0.1
+	
+	try:
+		config = readSysConfig()
+		val = config['DEFAULT'].get(SEG_FILTER_STRENGTH)
+		ret = float(val)
+			
+	except: # 設定ファイルが読めなかったり(初回起動時)、値がおかしかったらデフォルトで保存
+		config.set('DEFAULT',SEG_FILTER_STRENGTH , str(ret))
+		writeSysConfig(config)
+	
+	return ret
+	
 # ノイズっぽい音声を認識するかどうか
 def isRecognizeNoize():
 	ret = 0;

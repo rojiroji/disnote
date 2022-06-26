@@ -3,6 +3,7 @@ import sys
 from inaSpeechSegmenter import Segmenter
 from inaSpeechSegmenter.export_funcs import seg2csv, seg2textgrid
 import common
+import time
 
 logger = common.getLogger(__file__)
 
@@ -11,6 +12,7 @@ CONFIG_WORK_KEY = 'seg'
 def main(input_file):
 
 	logger.info("1. 無音解析開始 - {}".format(os.path.basename(input_file)))
+	func_in_time = time.time()
 
 	config = common.readConfig(input_file)
 	if config['DEFAULT'].get(CONFIG_WORK_KEY) == common.DONE:
@@ -27,7 +29,7 @@ def main(input_file):
 	logger.info("音声ファイル読み込み中…")
 	res = common.runSubprocess("ffprobe -v error -show_entries format=duration -of default=noprint_wrappers=1:nokey=1 \"{}\"".format(input_file))
 	duration = float(res.stdout.strip()) * 1000 # 再生時間(ミリ秒)
-	logger.info("無音解析処理中… ({}sec)".format(int(duration/1000)))
+	logger.info("無音解析処理中… (duration:{}sec)".format(int(duration/1000)))
 
 	# 一定時間ごとに分割
 	index = 0
@@ -37,6 +39,13 @@ def main(input_file):
 	logger.info("分割単位：{}min".format(int(split_len/60/1000)))
 
 	base = os.path.splitext(os.path.basename(input_file))[0] # 拡張子なしのファイル名（話者）
+
+	# ノイズフィルタの設定
+	filter = ""
+	if common.getSegFilterStrength() > 0: # anlmdnフィルタをかける
+		filter = "-af anlmdn=s={}".format(common.getSegFilterStrength())
+	
+	logger.info("ノイズフィルタ：{}".format("なし" if len(filter) == 0 else filter ))
 
 	while start_time < duration:
 
@@ -48,7 +57,7 @@ def main(input_file):
 		end_time = min(start_time + split_len, duration)
 		
 		# ffmpegで分割
-		res = common.runSubprocess("ffmpeg -i \"{}\" -ss {} -t {} -vn -acodec flac -y {}".format(input_file,start_time/1000, (end_time-start_time)/1000,tmp_audio_file))
+		res = common.runSubprocess("ffmpeg -i \"{}\" -ss {} -t {} {} -vn -acodec flac -y {}".format(input_file,start_time/1000, (end_time-start_time)/1000,filter,tmp_audio_file))
 
 		# 区間検出実行
 		seg = Segmenter(vad_engine='smn', detect_gender=False)
@@ -64,7 +73,8 @@ def main(input_file):
 	config.set('DEFAULT',CONFIG_WORK_KEY ,common.DONE)
 	common.writeConfig(input_file, config)
 
-	logger.info("無音解析終了！ {}".format(os.path.basename(input_file)))
+	func_out_time = time.time()
+	logger.info("無音解析終了！ {} ({:.2f}min)".format(os.path.basename(input_file), (func_out_time - func_in_time) / 60))
 
 
 # 直接起動した場合
