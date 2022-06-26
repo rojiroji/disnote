@@ -20,6 +20,7 @@ def getVersion():
 def writeDefaultSysConfig():
 	getSegTmpAudioLength()
 	isRecognizeNoize()
+	getWitAiServerAccessToken()
 	getRecognizeGoogleLanguage()
 
 # 無音検出時に作るテンポラリファイルの音声の長さ（ミリ秒）
@@ -53,6 +54,22 @@ def isRecognizeNoize():
 		writeSysConfig(config)
 	
 	return ret != 0;
+
+# wit.aiのServer Access Token(未設定時(空文字列)はwit.aiでの認識をスキップする)
+def getWitAiServerAccessToken():
+	try:
+		config = readSysConfig()
+		val = config['DEFAULT'].get(WIT_AI_SERVER_ACCESS_TOKEN)
+		if val is not None:
+			return val.strip()
+			
+	except: # 設定ファイルが読めなかったり(初回起動時)、値がおかしかったらデフォルトで保存
+		pass
+		
+	config.set('DEFAULT',WIT_AI_SERVER_ACCESS_TOKEN , "")
+	writeSysConfig(config)
+	
+	return ""
 
 # GoogleAPIで認識する際の言語
 def getRecognizeGoogleLanguage():
