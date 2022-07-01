@@ -113,12 +113,13 @@ def convert(recognizeThreadGoogle, recognizeThreadWitAI):
 	global logger
 	while True:
 		time.sleep(1)
-		logger.debug("スレッド待機中(convert)")
+		recognize_done = recognizeThreadGoogle.done() and recognizeThreadWitAI.done() # 音声認識スレッドがすべて終了しているかどうか
+
+		logger.debug("スレッド待機中(convert) 音声認識全て終了：{}".format(recognize_done))
 		
-		input_file = thread.popReadyConvertList() # TODO:最も大きいキューの数も返す
+		input_file = thread.popReadyConvertList(pop_and = (not recognize_done)) # 音声認識スレッドが終了していなかったらandを取る。終了していたらorで妥協する（何らかの原因でandが空だった場合に永遠に終了しないため）。
 		if input_file is None:
-			if recognizeThreadGoogle.done() and recognizeThreadWitAI.done(): # 音声認識が終了していたら、もうリストに追加されることはないので終了する
-				# TODO：音声認識のスレッドが終わってるのにキューのサイズが両方からになっていなかったら何かがおかしい
+			if recognize_done: # 音声認識が終了していたら、もうリストに追加されることはないので終了する
 				return
 			continue
 		

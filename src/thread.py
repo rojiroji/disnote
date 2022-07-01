@@ -50,18 +50,29 @@ def pushReadyConvertListWitAI(input_file):
 	with lock:
 		ready_convert_list_witai.append(input_file)
 
-# すべての音声認識が完了した要素を返す（該当の要素がない場合はNoneを返す）
-def popReadyConvertList():
+# 音声認識が完了した要素を返す。pop_andがTrueなら、すべての音声認識が完了している場合のみ（該当の要素がない場合はNoneを返す）
+def popReadyConvertList(pop_and):
 	global lock
 	global ready_convert_list_google
 	global ready_convert_list_witai
 	with lock:
-		set_and = set(ready_convert_list_google) & set(ready_convert_list_witai) # 共通の要素
+		if pop_and:
+			pop_elem = set(ready_convert_list_google) & set(ready_convert_list_witai) # 共通の要素
+		else:
+			pop_elem = set(ready_convert_list_google) | set(ready_convert_list_witai) # どちらかにはいっていればよい
 
-		if len(set_and) == 0:
+		if len(pop_elem) == 0:
 			return None
 		
-		ret = set_and.pop()
-		ready_convert_list_google.remove(ret)
-		ready_convert_list_witai.remove(ret)
+		ret = pop_elem.pop()
+		try:
+			ready_convert_list_google.remove(ret)
+		except ValueError:
+			pass
+
+		try:
+			ready_convert_list_witai.remove(ret)
+		except ValueError:
+			pass
+			
 		return ret
