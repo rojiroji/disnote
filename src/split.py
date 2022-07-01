@@ -10,12 +10,12 @@ logger = common.getLogger(__file__)
 CONFIG_WORK_KEY = 'split'
 
 def main(input_file):
-	# 音声ファイルをtxtファイルに出力された結果に従って分割
-	logger.info("2. 音声分割開始 - {}".format(os.path.basename(input_file)))
+	# txtファイルに出力された無音検出結果から、音声ファイルをどのように分割するかを決定する（実際に分割はしない）
+	logger.info("2-1. 音声分割設定開始 - {}".format(os.path.basename(input_file)))
 
 	config = common.readConfig(input_file)
 	if config['DEFAULT'].get(CONFIG_WORK_KEY) == common.DONE:
-		logger.info("完了済みのためスキップ(音声分割)")
+		logger.info("完了済みのためスキップ(音声分割設定)")
 		return
 
 
@@ -156,7 +156,7 @@ def main(input_file):
 		# 分割して出力する音声ファイルのフォルダとプレフィックスまで指定
 		audio_file_prefix = common.getSplitAudioFilePrefix(input_file)
 
-		logger.info ("音声分割中… {}".format(base))
+		logger.debug ("音声分割設定中… {}".format(base))
 		
 		for segment in segmentation:
 			# segmentはタプル
@@ -178,11 +178,8 @@ def main(input_file):
 				
 				filename = "{}{}.flac".format(audio_file_prefix , speech_segment_index)
 
-				# 分割結果をflacに出力
-				res = common.runSubprocess("ffmpeg -i \"{}\" -ss {} -t {} -vn -acodec flac -y \"{}\"".format(input_file,start_time/1000, (end_time-start_time)/1000,filename))
-
-
 				# 分割結果の時間やファイル名など
+				# ID,分割した音声ファイル名(flac),開始時間(冒頭無音あり),終了時間(末尾無音あり),長さ(無音あり),開始時間(冒頭無音なし),長さ(末尾無音なし)の順
 				f.write("{}	{}	{}	{}	{}	{}	{}\n".format(speech_segment_index, filename, start_time, end_time, end_time - start_time, org_start_time, org_end_time))
 				
 				speech_segment_index += 1
@@ -191,7 +188,7 @@ def main(input_file):
 	config.set('DEFAULT',CONFIG_WORK_KEY ,common.DONE)
 	common.writeConfig(input_file, config)
 
-	logger.info("音声分割終了！ {}".format(os.path.basename(input_file)))
+	logger.info("音声分割設定終了！ {}".format(os.path.basename(input_file)))
 
 
 # 直接起動した場合

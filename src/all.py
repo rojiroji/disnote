@@ -2,6 +2,7 @@ import sys
 import os
 import seg
 import split
+import split_audio
 import speech_rec
 import speech_rec_wit
 import conv_audio
@@ -45,13 +46,22 @@ def prepare(input_files):
 			logger.error("{} の無音解析(1)に失敗しました({})。".format(input_file,e.with_traceback(tb)))
 			sys.exit(1)
 
-		# 音声分割
+		# 音声分割設定
 		try:
 			split.main(input_file)
 		except Exception as e:
 			tb = sys.exc_info()[2]
 			logger.error(traceback.format_exc())
-			logger.error("{} の音声分割(2)に失敗しました({})。".format(input_file,e.with_traceback(tb)))
+			logger.error("{} の音声分割設定(2-1)に失敗しました({})。".format(input_file,e.with_traceback(tb)))
+			sys.exit(1)
+
+		# 音声分割
+		try:
+			split_audio.main(input_file)
+		except Exception as e:
+			tb = sys.exc_info()[2]
+			logger.error(traceback.format_exc())
+			logger.error("{} の音声分割(2-2)に失敗しました({})。".format(input_file,e.with_traceback(tb)))
 			sys.exit(1)
 
 		# 音声認識スレッドに登録
