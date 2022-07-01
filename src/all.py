@@ -35,7 +35,7 @@ def prepare(input_files):
 			common.getFileFormat(input_file)
 		except Exception as e:
 			logger.error("処理を中断します。")
-			sys.exit(1)
+			raise
 		
 		# 無音解析
 		try:
@@ -44,7 +44,7 @@ def prepare(input_files):
 			tb = sys.exc_info()[2]
 			logger.error(traceback.format_exc())
 			logger.error("{} の無音解析(1)に失敗しました({})。".format(input_file,e.with_traceback(tb)))
-			sys.exit(1)
+			raise
 
 		# 音声分割設定
 		try:
@@ -53,7 +53,7 @@ def prepare(input_files):
 			tb = sys.exc_info()[2]
 			logger.error(traceback.format_exc())
 			logger.error("{} の音声分割設定(2-1)に失敗しました({})。".format(input_file,e.with_traceback(tb)))
-			sys.exit(1)
+			raise
 
 		# 音声分割
 		try:
@@ -62,7 +62,7 @@ def prepare(input_files):
 			tb = sys.exc_info()[2]
 			logger.error(traceback.format_exc())
 			logger.error("{} の音声分割(2-2)に失敗しました({})。".format(input_file,e.with_traceback(tb)))
-			sys.exit(1)
+			raise
 
 		# 音声認識スレッドに登録
 		thread.pushReadyRecognizeList(input_file)
