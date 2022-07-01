@@ -158,7 +158,7 @@ def main(input_file):
 
 
 			logger.debug("音声認識中… {}, {},{},{}".format(base, id, int(confidence * 100), text))
-			if (id % 10) == 0 or (len(split_result_queue) == 0): # 10行ごとか、最後の1行に進捗を出す
+			if (id % 5) == 0 or (len(split_result_queue) == 0): # 5行ごとか、最後の1行に進捗を出す
 				logger.info("　音声認識中… {} {}/{}".format(base, id , queuesize))
 			
 			f.write("{},{},{},{},{},{}\n".format(base, audio_file, org_start_time, org_end_time-org_start_time, int(confidence * 100), text)) 
