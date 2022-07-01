@@ -250,13 +250,13 @@
 		
 		// オリジナル音源の時間が動いたときに、currentTdを移動する
 		function changeCurrentTdByMedia($m){
-			var t = $m[0].currentTime;
+			var t = $m[0].currentTime.toFixed(2); // 桁数の違いにより数値の比較がおかしくなることがあるので桁数を揃える
 			if(mixedMediaIsMovie){
 				$("#movieThumbnail")[0].currentTime = t; // 動画のサムネイルを追いつかせる
 			}
 			
 			defaultCurrentTd();
-			var currentT = $currentTd.parent().data('time');
+			var currentT = $currentTd.parent().data('time').toFixed(2); // 桁数の違いにより数値の比較がおかしくなることがあるので桁数を揃える
 			
 			$targettd = undefined;
 			if(currentT < t){ // オリジナル音源にcurrentTdを追いつかせる
