@@ -101,7 +101,10 @@ def main(input_file):
 					audio = r.record(source)
 			except FileNotFoundError:
 				break
-			
+			except:
+				logger.error(traceback.format_exc()) # 音声認識失敗。ログを吐いた後にファイル名だけわかるように再度例外を投げる
+				raise RuntimeError("音声認識に失敗したファイル(Google) … {},{},{}".format(audio_file_prefix, id, tmp_audio_file))
+
 			text = ""
 			confidence = 0
 

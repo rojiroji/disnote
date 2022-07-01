@@ -107,7 +107,12 @@ def main(input_file):
 			count = 1
 			
 			tmp_witai_basefile = "log/tmp_wit_base.wav" # wit.aiが読めるように変換
-			common.runSubprocess("ffmpeg -i \"{}\"  -ar 16000 -ac 1 -bits_per_raw_sample 16 -sample_fmt s16 -y \"{}\"".format(tmp_audio_file,tmp_witai_basefile))
+			
+			try:
+				common.runSubprocess("ffmpeg -i \"{}\"  -ar 16000 -ac 1 -bits_per_raw_sample 16 -sample_fmt s16 -y \"{}\"".format(tmp_audio_file,tmp_witai_basefile))
+			except:
+				logger.error(traceback.format_exc()) # 音声認識失敗。ログを吐いた後にファイル名だけわかるように再度例外を投げる
+				raise RuntimeError("音声認識に失敗したファイル(wit.ai) … {},{},{}".format(audio_file_prefix, id, tmp_audio_file))
 
 			while checkNext:
 				checkNext = False
