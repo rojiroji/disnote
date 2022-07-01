@@ -3,6 +3,7 @@ import os
 import seg
 import split
 import speech_rec
+import speech_rec_wit
 import conv_audio
 import common
 import merge
@@ -58,16 +59,16 @@ def prepare(input_files):
 
 		logger.info("認識準備終了：{} ({}/{})".format(basename, index + 1, len(input_files)))
 
-# 音声認識を行うスレッド
-def speechRecognize(prepareThread):
+# 音声認識を行うスレッド(Google音声認識)
+def speechRecognizeGoogle(prepareThread):
 	global logger
 	while True:
 		time.sleep(1)
-		logger.debug("スレッド待機中(speechRecognize)")
+		logger.debug("スレッド待機中(speechRecognizeGoogle)")
 		
-		input_file = thread.popReadyRecognizeList()
+		input_file = thread.popReadyRecognizeListGoogle()
 		if input_file is None:
-			if prepareThread.done(): # prepareThreadが終了していたら、もうリストに追加されることはないので終了する
+			if prepareThread.done(): # 仕事リストが空＆prepareThreadが終了していたら、もうリストに追加されることはないので終了する
 				return
 			continue
 		
@@ -80,19 +81,44 @@ def speechRecognize(prepareThread):
 			logger.error("{} の音声認識(3)に失敗しました({})。".format(input_file,e.with_traceback(tb)))
 			raise
 
-		thread.pushReadyConvertList(input_file)
+		thread.pushReadyConvertListGoogle(input_file)
+
+# 音声認識を行うスレッド(wit.ai音声認識)
+def speechRecognizeWitAI(prepareThread):
+	global logger
+	while True:
+		time.sleep(1)
+		logger.debug("スレッド待機中(speechRecognizeWitAI)")
+		
+		input_file = thread.popReadyRecognizeListWitAI()
+		if input_file is None:
+			if prepareThread.done(): # 仕事リストが空＆prepareThreadが終了していたら、もうリストに追加されることはないので終了する
+				return
+			continue
+		
+		# 音声認識
+		try:
+			speech_rec_wit.main(input_file)
+		except Exception as e:
+			tb = sys.exc_info()[2]
+			logger.error(traceback.format_exc())
+			logger.error("{} の音声認識(3)に失敗しました({})。".format(input_file,e.with_traceback(tb)))
+			raise
+
+		thread.pushReadyConvertListWitAI(input_file)
 
 
 # mp3への変換を行うスレッド
-def convert(recognizeThread):
+def convert(recognizeThreadGoogle, recognizeThreadWitAI):
 	global logger
 	while True:
 		time.sleep(1)
 		logger.debug("スレッド待機中(convert)")
 		
-		input_file = thread.popReadyConvertList()
+		input_file = thread.popReadyConvertList() # TODO:最も大きいキューの数も返す
 		if input_file is None:
-			if recognizeThread.done(): # recognizeThreadが終了していたら、もうリストに追加されることはないので終了する
+			if recognizeThreadGoogle.done() and recognizeThreadWitAI.done(): # 音声認識が終了していたら、もうリストに追加されることはないので終了する
+				# TODO：音声認識のスレッドが終わってるのにキューのサイズが両方からになっていなかったら何かがおかしい
 				return
 			continue
 		
@@ -203,19 +229,25 @@ try:
 	with ThreadPoolExecutor() as executor:
 		try:
 			prepareThread = executor.submit(prepare, input_files) # 認識準備スレッド
-			recognizeThread = executor.submit(speechRecognize, prepareThread) # 音声認識スレッド
+			recognizeThreadGoogle = executor.submit(speechRecognizeGoogle, prepareThread) # 音声認識スレッド(Google)
+			recognizeThreadWitAI  = executor.submit(speechRecognizeWitAI , prepareThread) # 音声認識スレッド(wit.ai)
 
 			e = prepareThread.exception() # 認識準備スレッド終了待ち
 			if e is not None:
 				raise e
 			logger.info("全ファイル認識準備終了")
 
-			convertThread = executor.submit(convert, recognizeThread) # mp3変換スレッド
+			convertThread = executor.submit(convert, recognizeThreadGoogle, recognizeThreadWitAI) # mp3変換スレッド
 			
-			e = recognizeThread.exception() # 音声認識スレッド終了待ち
+			e = recognizeThreadGoogle.exception() # 音声認識スレッド終了待ち(Google)
 			if e is not None:
 				raise e
-			logger.info("全ファイル音声認識終了")
+			logger.info("全ファイル音声認識終了(Google)")
+
+			e = recognizeThreadWitAI.exception() # 音声認識スレッド終了待ち(wit.ai)
+			if e is not None:
+				raise e
+			logger.info("全ファイル音声認識終了(witai)")
 
 			e = convertThread.exception() # mp3変換スレッド終了待ち
 			if e is not None:

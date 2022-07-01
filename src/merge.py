@@ -75,18 +75,22 @@ def main(input_files, arg_files):
 		created_mixed_media = True
 
 	# 認識結果ファイル(csv)を読み込んでマージする
-	l = list()
+	resultMap = dict()
 	for input_file in input_files:
+		count = 0
 		recognize_result_file = common.getRecognizeResultFile(input_file)
-		# logger.info("認識結果ファイル：{}".format(os.path.basename(recognize_result_file)))
+		count += mergeRecognizeResult(recognize_result_file, resultMap,"G")
 
-		with open(recognize_result_file , "r") as f:
-			rows = csv.reader(f)
-			l.extend(rows)
-			if rows.line_num == 0: # 発言がない人物は話者一覧から外す
-				key = common.getFileNameWithoutExtension(input_file)
-				personalData.pop(key)
+		recognize_result_file = common.getRecognizeResultFileWitAI(input_file)
+		count += mergeRecognizeResult(recognize_result_file, resultMap,"W")
 
+		# 発言がない人物は話者一覧から外す
+		if count <= 0:
+			key = common.getFileNameWithoutExtension(input_file)
+			personalData.pop(key)
+			continue
+
+	l = list(resultMap.values())
 	l.sort(key = lambda x:int(x[2])) # 3列目（発話タイミング）でソート
 
 	# ファイルパスを相対パスにする
@@ -100,7 +104,7 @@ def main(input_files, arg_files):
 
 	with open(merged_csv_file , "w", newline='' ) as f: # 変な改行が入るのを防ぐため newline='' 
 		writer = csv.writer(f, quoting=csv.QUOTE_ALL)
-		writer.writerow(["話者","ファイル","時間（ミリ秒）","長さ(ミリ秒)","スコア","候補1","候補2","候補3","候補4","候補5"]); # ヘッダ
+		writer.writerow(["話者","ファイル","時間（ミリ秒）","長さ(ミリ秒)","音声認識エンジン","候補1","候補2","候補3","候補4","候補5","候補6"]); # ヘッダ
 		writer.writerows(l);
 
 	logger.info("最終結果ファイル(html)出力開始")
@@ -165,6 +169,36 @@ def main(input_files, arg_files):
 	if created_mixed_media:
 		logger.info("　{}.mp3".format(basefilename))
 
+# 認識結果ファイル(csv)を読み込んでマージする(行数を返す)
+def mergeRecognizeResult(recognize_result_file, resultMap, engine):
+	TEXT_INDEX = 5
+	try:
+		logger.debug("認識結果ファイル：{}".format(os.path.basename(recognize_result_file)))
+		with open(recognize_result_file , "r") as f:
+			rows = csv.reader(f)
+
+			for row in rows:
+				audio_file = row[1] # 2列目（音声ファイル名(分割したmp3）をキーにする）
+				engineStr = engine * (len(row) - TEXT_INDEX)
+				
+				if audio_file in resultMap.keys():
+					if len(row[TEXT_INDEX]) <= 0:
+						continue
+					del row[0:TEXT_INDEX] # 認識結果は6列目以降にある。認識結果以外の要素を削除
+
+					dst_result = resultMap[audio_file]
+					dst_result[TEXT_INDEX:TEXT_INDEX] = row # 認識結果を混ぜる
+					dst_result[4] = engineStr + dst_result[4]
+				else:
+					row[4] = engineStr
+					resultMap[audio_file] = row
+
+			return rows.line_num
+
+	except FileNotFoundError:
+		logger.info("認識結果ファイルなし（スキップ）：{}".format(os.path.basename(recognize_result_file)))
+
+	return 0
 
 # 直接起動した場合
 if __name__ == "__main__":
