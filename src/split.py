@@ -167,7 +167,7 @@ def main(input_file):
 			# logger.debug ("音声分割中… {}/{}".format(index, len(segmentation)))
 			
 			if (index % 100) == 0 or (len(segmentation) == index): # 100行ごとか、最後の1行で進捗を出す
-				logger.info("　音声分割中… {} {}/{}".format(base, index, len(segmentation)))
+				logger.debug("　音声分割設定中… {} {}/{}".format(base, index, len(segmentation)))
 
 			if (segment_label != 'noEnergy'):  # 無音区間以外の部分だけを出力する
 
