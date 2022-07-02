@@ -178,20 +178,22 @@ def mergeRecognizeResult(recognize_result_file, resultMap, engine):
 			rows = csv.reader(f)
 
 			for row in rows:
-				audio_file = row[1] # 2列目（音声ファイル名(分割したmp3）をキーにする）
+				audio_file = row[1] # 2列目（音声ファイル名(分割したファイル）をキーにする。バージョンによって拡張子が異なるので拡張子以降は省略）
+				ppos = audio_file.rfind('.')
+				key = audio_file[0:ppos]
 				engineStr = engine * (len(row) - TEXT_INDEX)
 				
-				if audio_file in resultMap.keys():
+				if key in resultMap.keys():
 					if len(row[TEXT_INDEX]) <= 0:
 						continue
 					del row[0:TEXT_INDEX] # 認識結果は6列目以降にある。認識結果以外の要素を削除
 
-					dst_result = resultMap[audio_file]
+					dst_result = resultMap[key]
 					dst_result[TEXT_INDEX:TEXT_INDEX] = row # 認識結果を混ぜる
 					dst_result[4] = engineStr + dst_result[4]
 				else:
 					row[4] = engineStr
-					resultMap[audio_file] = row
+					resultMap[key] = row
 
 			return rows.line_num
 
