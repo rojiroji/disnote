@@ -11,15 +11,15 @@ PATHを通した先に[ffmpeg](https://ffmpeg.org/)を配置しておくこと�
 
 # 使い道
 動画での説明（どちらも内容は同じ）
-* [ニコ動](https://www.nicovideo.jp/watch/sm39257003)
-* [Youtube](https://youtu.be/pCebMJgtVBM)
+* [ニコ動](https://www.nicovideo.jp/watch/sm40607027)
+* [Youtube](https://www.youtube.com/watch?v=D29kyC-2mNk)
 
 # フリーソフトとして
-プログラミングの知識がない人向けにWindows用フリーソフトとして公開している。
+プログラミングの知識がない人向けに、PyInstallerでバイナリにしたものをWindows用フリーソフトとして公開している。
 
 [公開先](https://roji3.jpn.org/disnote/)
 
-Pythonとffmpegを用意した上で、DisNOTE.batに音声ファイルをドラッグ＆ドロップすることで起動する。
+ffmpegを用意した上で、DisNOTE.batに音声ファイルをドラッグ＆ドロップすることで起動する。
 インストール方法などは上記の動画で説明している。
 
 Readme.txtはフリーソフトとしてのDisNOTEのReadme、README.md（このファイル）は開発者向けのReadmeである。
