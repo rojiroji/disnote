@@ -16,7 +16,7 @@ RECOGNIZE_GOOGLE_LANGUAGE="recognize_google_language"
 REMOVE_TEMP_SPLIT_FLAC="remove_temp_split_flac"
 
 def getVersion():
-	return "v2.1.1"
+	return "v2.2.0"
 
 # 共通設定iniファイルの設定値を一通り読み込み（設定値がなければ初期値が書き込まれる）
 def writeDefaultSysConfig():
