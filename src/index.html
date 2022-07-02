@@ -182,7 +182,7 @@
 			// 再生中の行に色付け
 			if($currentTd ){
 				$currentTd.parent().addClass('current');
-				console.log(0 + $currentTd.parent().data('time'));
+				//console.log(0 + $currentTd.parent().data('time'));
 				
 				if(seekOrgMedia){
 					$("#orgmedia")[0].currentTime = $currentTd.parent().data('time');
@@ -194,7 +194,7 @@
 		// 次の行へ(d=1),前の行へ(d=-1)
 		function nextTd($td, d){
 			if(!$td){	return;}
-			var next_id = $td.data('number'); // 最後の空白時間を飛ばしたいが難しいか
+			var next_id = $td.data('number'); 
 			$nextPlayTd = null;
 			
 			do{ // 次の行を探す（非表示の場合はスキップ）
