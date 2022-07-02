@@ -121,7 +121,7 @@ def main(input_file):
 					tmp_witai_file = "log/tmp_wit.wav"
 					
 					split_begin = time.time()
-					common.runSubprocess("ffmpeg  -ss {} -i \"{}\" -ss 0 -y \"{}\"".format( ss/1000 ,tmp_witai_basefile,tmp_witai_file))
+					common.runSubprocess("ffmpeg  -ss {} -i \"{}\" -ss 0 -t 20 -y \"{}\"".format( ss/1000 ,tmp_witai_basefile,tmp_witai_file)) # wit.aiにかけられる音声は 最大20秒
 					split_end  = time.time()
 					logger.debug("split {:.3f}".format(split_end - split_begin))
 					
