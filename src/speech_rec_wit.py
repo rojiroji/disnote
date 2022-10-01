@@ -162,9 +162,9 @@ def main(input_file):
 			logger.debug("recog_end.count={}".format(count))
 
 
-			logger.debug("音声認識中… {}, {},{},{}".format(base, id, int(confidence * 100), text))
+			logger.debug("音声認識中(wit.ai)… {}, {},{},{}".format(base, id, int(confidence * 100), text))
 			if (id % 5) == 0 or (len(split_result_queue) == 0): # 5行ごとか、最後の1行に進捗を出す
-				logger.info("　音声認識中… {} {}/{}".format(base, id , queuesize))
+				logger.info("　音声認識中(wit.ai)… {} {}/{}".format(base, id , queuesize))
 			
 			f.write("{},{},{},{},{},{}\n".format(base, audio_file, org_start_time, org_end_time-org_start_time, int(confidence * 100), text)) 
 			f.flush()
