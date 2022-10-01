@@ -75,6 +75,8 @@ def main(input_files, arg_files):
 		created_mixed_media = True
 
 	# 認識結果ファイル(csv)を読み込んでマージする
+	whispermodelname = common.getWhisperModel()
+
 	resultMap = dict()
 	for input_file in input_files:
 		count = 0
@@ -83,6 +85,9 @@ def main(input_files, arg_files):
 
 		recognize_result_file = common.getRecognizeResultFileWitAI(input_file)
 		count += mergeRecognizeResult(recognize_result_file, resultMap,"W")
+		
+		recognize_result_file = common.getRecognizeResultFileWhisper(input_file)
+		count += mergeRecognizeResult(recognize_result_file, resultMap,whispermodelname[0]) # tiny,base,small,medium,largeのいずれかの先頭1文字（小文字）
 
 		# 発言がない人物は話者一覧から外す
 		if count <= 0:

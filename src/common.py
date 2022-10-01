@@ -14,6 +14,8 @@ IS_RECOGNIZE_NOIZE="is_recognize_noize"
 WIT_AI_SERVER_ACCESS_TOKEN="wit_ai_server_access_token"
 RECOGNIZE_GOOGLE_LANGUAGE="recognize_google_language"
 REMOVE_TEMP_SPLIT_FLAC="remove_temp_split_flac"
+WHISPER_MODEL="whisper_model"
+WHISPER_LANG="recognize_whisper_language"
 
 def getVersion():
 	return "v2.2.0"
@@ -26,6 +28,8 @@ def writeDefaultSysConfig():
 	getWitAiServerAccessToken()
 	getRecognizeGoogleLanguage()
 	isRemoveTempSplitFlac()
+	getWhisperModel()
+	getWhisperLanguage()
 
 # 無音解析出時に作るテンポラリファイルの音声の長さ（ミリ秒）
 def getSegTmpAudioLength():
@@ -122,6 +126,43 @@ def isRemoveTempSplitFlac():
 	
 	return ret != 0;
 
+# Whisperのモデル名
+def getWhisperModel():
+	try:
+		config = readSysConfig()
+		val = config['DEFAULT'].get(WHISPER_MODEL)
+		if val is not None:
+			return val.strip()
+			
+	except: # 設定ファイルが読めなかったり(初回起動時)、値がおかしかったらデフォルトで保存
+		pass
+
+	ret = "medium"
+	config.set('DEFAULT',WHISPER_MODEL , ret)
+	writeSysConfig(config)
+	
+	return ret
+
+# Whisperのモデル名が有効かどうか
+def isValidWhisperModel():
+	return getWhisperModel() in ["tiny","base","small","medium","large","tiny.en","base.en","small.en","medium.en"]
+
+# Whisperの言語
+def getWhisperLanguage():
+	try:
+		config = readSysConfig()
+		val = config['DEFAULT'].get(WHISPER_LANG)
+		if val is not None:
+			return val.strip()
+			
+	except: # 設定ファイルが読めなかったり(初回起動時)、値がおかしかったらデフォルトで保存
+		pass
+
+	ret = "ja"
+	config.set('DEFAULT',WHISPER_LANG , ret)
+	writeSysConfig(config)
+	
+	return ret
 
 # システムconfig読み込み
 def readSysConfig():
@@ -232,6 +273,16 @@ def getRecognizeResultFileWitAI(input_file):
 	outputdir = os.path.join(basedir, base) # 各種ファイルの出力先ディレクトリ
 
 	output_file = "_{}_witai.csv".format(base)
+
+	return os.path.join(outputdir, output_file)
+
+# 認識結果ファイル(whisper)
+def getRecognizeResultFileWhisper(input_file):
+	base = getFileNameWithoutExtension(input_file)
+	basedir = os.path.dirname(input_file) # 入力音声ファイルの置いてあるディレクトリ
+	outputdir = os.path.join(basedir, base) # 各種ファイルの出力先ディレクトリ
+
+	output_file = "_{}_whisper.csv".format(base)
 
 	return os.path.join(outputdir, output_file)
 

@@ -5,6 +5,7 @@ import split
 import split_audio
 import speech_rec
 import speech_rec_wit
+import speech_rec_whisper
 import conv_audio
 import common
 import merge
@@ -79,6 +80,7 @@ def speechRecognizeGoogle(prepareThread):
 		input_file = thread.popReadyRecognizeListGoogle()
 		if input_file is None:
 			if prepareThread.done(): # 仕事リストが空＆prepareThreadが終了していたら、もうリストに追加されることはないので終了する
+				logger.info("全ファイル音声認識終了(Google)")
 				return
 			continue
 		
@@ -103,6 +105,7 @@ def speechRecognizeWitAI(prepareThread):
 		input_file = thread.popReadyRecognizeListWitAI()
 		if input_file is None:
 			if prepareThread.done(): # 仕事リストが空＆prepareThreadが終了していたら、もうリストに追加されることはないので終了する
+				logger.info("全ファイル音声認識終了(wit.ai)")
 				return
 			continue
 		
@@ -117,13 +120,42 @@ def speechRecognizeWitAI(prepareThread):
 
 		thread.pushReadyConvertListWitAI(input_file)
 
+# 音声認識を行うスレッド(whisper音声認識)
+def speechRecognizeWhisper(prepareThread):
+	global logger
+	
+	while True:
+		time.sleep(1)
+		logger.debug("スレッド待機中(speechRecognizeWhisper)")
+		
+		input_file = thread.popReadyRecognizeListWhisper() 
+		if input_file is None:
+			if prepareThread.done(): # 仕事リストが空＆prepareThreadが終了していたら、もうリストに追加されることはないので終了する
+				logger.info("全ファイル音声認識終了(Whisper)")
+				return
+			continue
+		
+		# 音声認識
+		try:
+			speech_rec_whisper.main(input_file)
+		except Exception as e:
+			tb = sys.exc_info()[2]
+			logger.error(traceback.format_exc())
+			logger.error("{} の音声認識(3)に失敗しました({})。".format(input_file,e.with_traceback(tb)))
+			raise
+
+		thread.pushReadyConvertListWhisper(input_file) 
+
 
 # mp3への変換を行うスレッド
-def convert(recognizeThreadGoogle, recognizeThreadWitAI):
+def convert(recognizeThreads):
 	global logger
 	while True:
 		time.sleep(1)
-		recognize_done = recognizeThreadGoogle.done() and recognizeThreadWitAI.done() # 音声認識スレッドがすべて終了しているかどうか
+		
+		recognize_done = True
+		for t in recognizeThreads:
+			recognize_done &= t.done() # 音声認識スレッドがすべて終了しているかどうか
 
 		logger.debug("スレッド待機中(convert) 音声認識全て終了：{}".format(recognize_done))
 		
@@ -240,25 +272,23 @@ try:
 	with ThreadPoolExecutor() as executor:
 		try:
 			prepareThread = executor.submit(prepare, input_files) # 認識準備スレッド
-			recognizeThreadGoogle = executor.submit(speechRecognizeGoogle, prepareThread) # 音声認識スレッド(Google)
-			recognizeThreadWitAI  = executor.submit(speechRecognizeWitAI , prepareThread) # 音声認識スレッド(wit.ai)
+			recognizeThreads = list()
+			recognizeThreads.append(executor.submit(speechRecognizeGoogle , prepareThread))  # 音声認識スレッド(Google)
+			recognizeThreads.append(executor.submit(speechRecognizeWitAI  , prepareThread))  # 音声認識スレッド(wit.ai)
+			recognizeThreads.append(executor.submit(speechRecognizeWhisper, prepareThread)) # 音声認識スレッド(Whisper)
+
 
 			e = prepareThread.exception() # 認識準備スレッド終了待ち
 			if e is not None:
 				raise e
 			logger.info("全ファイル認識準備終了")
 
-			convertThread = executor.submit(convert, recognizeThreadGoogle, recognizeThreadWitAI) # mp3変換スレッド
+			convertThread = executor.submit(convert, recognizeThreads) # mp3変換スレッド
 			
-			e = recognizeThreadGoogle.exception() # 音声認識スレッド終了待ち(Google)
-			if e is not None:
-				raise e
-			logger.info("全ファイル音声認識終了(Google)")
-
-			e = recognizeThreadWitAI.exception() # 音声認識スレッド終了待ち(wit.ai)
-			if e is not None:
-				raise e
-			logger.info("全ファイル音声認識終了(witai)")
+			for t in recognizeThreads: # 音声認識スレッド終了待ち
+				e = t.exception()
+				if e is not None:
+					raise e
 
 			e = convertThread.exception() # mp3変換スレッド終了待ち
 			if e is not None:
