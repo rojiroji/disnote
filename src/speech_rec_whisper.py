@@ -7,6 +7,7 @@ import codecs
 import json
 import time
 import whisper
+import torch
 
 class RequestError(Exception): pass
 
@@ -23,6 +24,8 @@ def main(input_file):
 	global model
 	
 	logger.info("3. 音声認識開始(whisper) - {}".format(os.path.basename(input_file)))
+	logger.info("Cuda.available:{}".format(torch.cuda.is_available()))
+	
 	func_in_time = time.time()
 
 	modelname = common.getWhisperModel()
