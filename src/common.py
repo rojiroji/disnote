@@ -5,6 +5,10 @@ import logging.handlers
 import configparser
 import hashlib
 import subprocess
+import threading
+
+input_file_config_lock = threading.Lock()
+
 
 DONE = "done"
 SYSTEM_CONF_FILE="DisNOTE.ini"
@@ -184,7 +188,7 @@ def getConfigFile(input_file):
 	ini_file = "_{}.ini".format(base)
 	return os.path.join(outputdir, ini_file)
 
-# config読み込み
+# 認識する音声ファイルのconfig読み込み
 def readConfig(input_file):
 	ini_file = getConfigFile(input_file)
 
@@ -201,11 +205,18 @@ def readConfig(input_file):
 	
 	return config
 
-# config書き込み
-def writeConfig(input_file, config):
-	ini_file = getConfigFile(input_file)
-	with open(ini_file, "w", encoding="utf-8") as configfile:
-		config.write(configfile)
+# 認識する音声ファイルのconfig更新
+def updateConfig(input_file, difference):
+	global input_file_config_lock
+	
+	with input_file_config_lock:
+		config = readConfig(input_file)
+		for key, val in difference.items():
+			config.set('DEFAULT',key ,val)
+
+		ini_file = getConfigFile(input_file)
+		with open(ini_file, "w", encoding="utf-8") as configfile:
+			config.write(configfile)
 
 # 元になる音声のhash値
 def inputFileHash(input_file):

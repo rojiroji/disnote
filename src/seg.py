@@ -70,8 +70,9 @@ def main(input_file):
 		index = index + 1
 
 	# 終了したことをiniファイルに保存
-	config.set('DEFAULT',CONFIG_WORK_KEY ,common.DONE)
-	common.writeConfig(input_file, config)
+	common.updateConfig(input_file, {
+		CONFIG_WORK_KEY :common.DONE
+	})
 
 	func_out_time = time.time()
 	logger.info("無音解析終了！ {} ({:.2f}min)".format(os.path.basename(input_file), (func_out_time - func_in_time) / 60))

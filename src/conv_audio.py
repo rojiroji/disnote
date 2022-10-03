@@ -125,8 +125,9 @@ def main(input_file):
 			logger.info("　音声変換中… {} {}/{}".format(base, id , queuesize))
 
 	# 終了したことをiniファイルに保存
-	config.set('DEFAULT',CONFIG_WORK_KEY ,common.DONE)
-	common.writeConfig(input_file, config)
+	common.updateConfig(input_file, {
+		CONFIG_WORK_KEY :common.DONE
+	})
 
 	logger.info("音声変換終了！ {}".format(os.path.basename(input_file)))
 

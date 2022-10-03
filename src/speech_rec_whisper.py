@@ -133,22 +133,27 @@ def main(input_file):
 			
 			f.write("{},{},{},{},{},{}\n".format(base, audio_file, org_start_time, org_end_time-org_start_time, int(confidence * 100), text)) 
 			f.flush()
-			config.set('DEFAULT',CONFIG_WORK_PROGRESS ,audio_file) # ここまで完了した、と記録
-			config.set('DEFAULT',CONFIG_WORK_MODEL ,modelname) # モデルを記録しておく
-			common.writeConfig(input_file, config)
+
+			# ここまで完了した、と記録
+			common.updateConfig(input_file, {
+				CONFIG_WORK_PROGRESS : audio_file,
+				CONFIG_WORK_MODEL:modelname # モデルを記録しておく
+			})
 
 
 	if len(progress) > 0: # 中断したまま終わってしまった
-		config.set('DEFAULT',CONFIG_WORK_PROGRESS ,"")
-		common.writeConfig(input_file, config)
+		common.updateConfig(input_file, {
+			CONFIG_WORK_PROGRESS : ""
+		})
 		raise RuntimeError("音声認識再開失敗。再度実行してください。")
 		return
 		
 	# 終了したことをiniファイルに保存
-	config.set('DEFAULT',CONFIG_WORK_PROGRESS ,"")
-	config.set('DEFAULT',CONFIG_WORK_KEY ,common.DONE)
-	config.set('DEFAULT',CONFIG_WORK_CONV_READY ,"1") # 再生用に変換してもOK
-	common.writeConfig(input_file, config)
+	common.updateConfig(input_file, {
+		CONFIG_WORK_PROGRESS : "",
+		CONFIG_WORK_KEY : common.DONE,
+		CONFIG_WORK_CONV_READY : "1"  # 再生用に変換してもOK
+	})
 
 	func_out_time = time.time()
 	logger.info("音声認識終了！(whisper) {} ({:.2f}min)".format(os.path.basename(input_file), (func_out_time - func_in_time) / 60))

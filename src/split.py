@@ -185,8 +185,9 @@ def main(input_file):
 				speech_segment_index += 1
 
 	# 終了したことをiniファイルに保存
-	config.set('DEFAULT',CONFIG_WORK_KEY ,common.DONE)
-	common.writeConfig(input_file, config)
+	common.updateConfig(input_file, {
+		CONFIG_WORK_KEY : common.DONE
+	})
 
 	logger.info("音声分割設定終了！ {}".format(os.path.basename(input_file)))
 
