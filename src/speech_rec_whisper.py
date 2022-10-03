@@ -41,9 +41,12 @@ def main(input_file):
 		logger.info("完了済みのためスキップ(音声認識)")
 		return
 	
-	if not common.isValidWhisperModel():
-		logger.info("モデル未指定のためスキップ(音声認識)：{}".format(modelname))
+	if modelname == common.WHISPER_MODEL_NONE:
+		logger.info("whisperを使用しない設定のためスキップ")
 		return
+	
+	if not common.isValidWhisperModel():
+		raise ValueError("whisperのモデル名が不正({})：DisNOTE.iniの{}の設定を確認してください".format(modelname,common.WHISPER_MODEL))
 	
 
 	# whisperモデル読み込み（読み込みを1回にするためにglobalに保持）
@@ -77,7 +80,7 @@ def main(input_file):
 	logger.info("分割結果ファイル：{}".format(os.path.basename(split_result_file)))
 
 	recognize_result_file = common.getRecognizeResultFileWhisper(input_file)
-	logger.info("認識結果ファイル(Whisper)：{}".format(os.path.basename(recognize_result_file)))
+	logger.info("認識結果ファイル(whisper)：{}".format(os.path.basename(recognize_result_file)))
 
 	split_result_queue = deque()
 

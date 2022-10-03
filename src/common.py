@@ -9,8 +9,8 @@ import threading
 
 input_file_config_lock = threading.Lock()
 
-
 DONE = "done"
+
 SYSTEM_CONF_FILE="DisNOTE.ini"
 SEG_TMP_AUDIO_LENGTH="seg_tmp_audio_length"
 SEG_FILTER_STRENGTH="seg_filter_strength"
@@ -20,6 +20,8 @@ RECOGNIZE_GOOGLE_LANGUAGE="recognize_google_language"
 REMOVE_TEMP_SPLIT_FLAC="remove_temp_split_flac"
 WHISPER_MODEL="whisper_model"
 WHISPER_LANG="recognize_whisper_language"
+
+WHISPER_MODEL_NONE="none"
 
 def getVersion():
 	return "v2.2.0"
@@ -141,7 +143,7 @@ def getWhisperModel():
 	except: # 設定ファイルが読めなかったり(初回起動時)、値がおかしかったらデフォルトで保存
 		pass
 
-	ret = "medium"
+	ret = WHISPER_MODEL_NONE
 	config.set('DEFAULT',WHISPER_MODEL , ret)
 	writeSysConfig(config)
 	
