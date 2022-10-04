@@ -8,6 +8,8 @@ import time
 logger = common.getLogger(__file__)
 
 CONFIG_WORK_KEY = 'seg'
+CONFIG_WORK_PROGRESS = 'seg_progress'
+CONFIG_SEG_SPLIT = 'seg_split'
 
 def main(input_file):
 
@@ -19,6 +21,15 @@ def main(input_file):
 		logger.info("完了済みのためスキップ(無音解析)")
 		return
 
+	progress = config['DEFAULT'].getint(CONFIG_WORK_PROGRESS,0)
+	
+	if progress > 0:
+		prev_split_len = config['DEFAULT'].getint(CONFIG_SEG_SPLIT)  # ミリ秒で管理する
+		if prev_split_len != common.getSegTmpAudioLength():
+			logger.info("無音解析途中のデータがあったが、分割単位が異なるため最初({},{},{})".format(progress, prev_split_len, common.getSegTmpAudioLength()))
+			progress = 0 # 区切り単位が異なっていたら最初からやりなおし
+		else:
+			logger.info("無音解析途中のデータがあったため再開({})".format(progress))
 
 	# 音声ファイルを無音で分割して秒数とかを出力
 
@@ -32,10 +43,11 @@ def main(input_file):
 	logger.info("無音解析処理中… (duration:{}sec)".format(int(duration/1000)))
 
 	# 一定時間ごとに分割
-	index = 0
-	start_time = 0
+	index = progress
 	split_len = common.getSegTmpAudioLength()
+	start_time = split_len * index
 	tmp_audio_file = "log/tmp.flac" # 一時ファイル（面倒なので消さない）
+
 	logger.info("分割単位：{}min".format(int(split_len/60/1000)))
 
 	base = os.path.splitext(os.path.basename(input_file))[0] # 拡張子なしのファイル名（話者）
@@ -69,9 +81,17 @@ def main(input_file):
 		start_time += split_len
 		index = index + 1
 
+		# ここまで完了した、と記録
+		common.updateConfig(input_file, {
+			CONFIG_WORK_PROGRESS : str(index),
+			CONFIG_SEG_SPLIT : str(split_len)
+		})
+
 	# 終了したことをiniファイルに保存
 	common.updateConfig(input_file, {
-		CONFIG_WORK_KEY :common.DONE
+		CONFIG_WORK_KEY : common.DONE,
+		CONFIG_WORK_PROGRESS : "",
+		CONFIG_SEG_SPLIT : str(split_len)
 	})
 
 	func_out_time = time.time()

@@ -4,6 +4,7 @@ from inaSpeechSegmenter import Segmenter
 from inaSpeechSegmenter.export_funcs import seg2csv, seg2textgrid
 from collections import deque
 import common
+import seg
 
 logger = common.getLogger(__file__)
 
@@ -38,6 +39,10 @@ def main(input_file):
 	isRecognizeNoize = common.isRecognizeNoize()
 	logger.info("ノイズ部分も認識対象にするかどうか：{}".format(isRecognizeNoize))
 	
+	split_len = config['DEFAULT'].getint(seg.CONFIG_SEG_SPLIT, common.getSegTmpAudioLength()) # 分割単位(バージョンによっては音声のiniに書いていないので、commonから取得)
+	logger.info("分割単位：{}min".format(int(split_len/60/1000)))
+
+	
 	while True:
 		seg_result_file = common.getSegResultFile(input_file, seg_resultfile_index)
 
@@ -64,8 +69,8 @@ def main(input_file):
 				segment_label = segment[0]
 
 				# 区間の開始時刻の単位を秒からミリ秒に変換 + ファイル番号によって補正
-				start_time = float(segment[1]) * 1000 + float(common.getSegTmpAudioLength() * seg_resultfile_index)
-				end_time   = float(segment[2]) * 1000 + float(common.getSegTmpAudioLength() * seg_resultfile_index)
+				start_time = float(segment[1]) * 1000 + float(split_len * seg_resultfile_index)
+				end_time   = float(segment[2]) * 1000 + float(split_len * seg_resultfile_index)
 				org_start_time = start_time
 				org_end_time = end_time
 
@@ -133,7 +138,7 @@ def main(input_file):
 
 		seg_resultfile_index += 1 # 次のファイルへ
 		if (segment_label != 'noEnergy'): # 音声ありの状態でファイルが閉じた場合、次のファイルと連結させるために長さ0の無音区間を作る
-			t = common.getSegTmpAudioLength() * seg_resultfile_index
+			t = split_len * seg_resultfile_index
 			segmentation.append({
 				"segment_label"	: 'noEnergy',
 				"start_time"	: t,
