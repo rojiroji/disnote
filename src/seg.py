@@ -69,15 +69,23 @@ def main(input_file):
 		end_time = min(start_time + split_len, duration)
 		
 		# ffmpegで分割
-		res = common.runSubprocess("ffmpeg -i \"{}\" -ss {} -t {} {} -vn -acodec flac -y {}".format(input_file,start_time/1000, (end_time-start_time)/1000,filter,tmp_audio_file))
+		filter_start_time = time.time()
+		res = common.runSubprocess("ffmpeg -ss {} -t {} -i \"{}\" {} -vn -acodec flac -y {}".format(start_time/1000, (end_time-start_time)/1000,input_file,filter,tmp_audio_file))
+		filter_end_time = time.time()
+		logger.debug("　フィルタ処理 {:.2f}min".format( (filter_end_time - filter_start_time) / 60))
 
 		# 区間検出実行
+		seg_start_time = time.time()
 		seg = Segmenter(vad_engine='smn', detect_gender=False)
 		segmentation = seg(tmp_audio_file)
+		seg_end_time = time.time()
 
 		# csv(という名のタブ)出力
 		seg2csv(segmentation, seg_result_file)
+		seg2sv_end_time = time.time()
 		
+		logger.debug("　無音解析処理 {:.2f}min+{:.2f}min".format( (seg_end_time - seg_start_time) / 60, (seg2sv_end_time - seg_end_time) / 60))
+
 		start_time += split_len
 		index = index + 1
 
