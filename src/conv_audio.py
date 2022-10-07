@@ -5,6 +5,7 @@ import common
 import traceback
 from mutagen.easyid3 import EasyID3
 import csv
+import shutil
 
 logger = common.getLogger(__file__)
 
@@ -97,15 +98,16 @@ def main(input_file):
 
 			logger.debug("変換後のファイルが存在しているが、古いので作り直す:{}".format(audio_file))
 		
-		# 無音部分を省いてmp3に変換
-		common.runSubprocess("ffmpeg -i \"{}\" -ss {} -t {} -vn -y \"{}\"".format(src_audio_file,(org_start_time - start_time)/1000, (org_end_time-org_start_time)/1000,audio_file))
-		logger.debug("ffmpeg -i \"{}\" -ss {} -t {} -vn -y \"{}\"".format(src_audio_file,(org_start_time - start_time)/1000, (org_end_time-org_start_time)/1000,audio_file))
+		# 無音部分を省いてmp3に変換。いったんテンポラリファイルに吐く（ffmpegの処理中にプロセスが落ちると中途半端なファイルが残ってしまうのを防ぐ）
+		tmp_audio_file = common.getTemporaryFile(input_file, __file__, "mp3")
+		common.runSubprocess("ffmpeg -ss {} -t {} -i \"{}\" -vn -y \"{}\"".format((org_start_time - start_time)/1000, (org_end_time-org_start_time)/1000,src_audio_file,tmp_audio_file))
+		logger.debug("ffmpeg -ss {} -t {} -i \"{}\" -vn -y \"{}\"".format((org_start_time - start_time)/1000, (org_end_time-org_start_time)/1000,src_audio_file,tmp_audio_file))
 		logger.debug("mp3_end")
 
 		# 分析した音声にタグをつける
 		logger.debug("tag_start")
 		try:
-			audio = EasyID3(audio_file)
+			audio = EasyID3(tmp_audio_file)
 			
 			audio['artist'] = audio['albumartist'] = base
 			audio['title'] = "{:0=2}:{:0=2}:{:0=2} {}".format(int(org_start_time / 1000 / 60 / 60), int(org_start_time / 1000 / 60) % 60, int(org_start_time/ 1000) % 60, text)
@@ -114,6 +116,10 @@ def main(input_file):
 			logger.info(e)
 			pass
 		logger.debug("tag_end")
+		
+		
+		# テンポラリファイルからリネーム、上書き
+		shutil.move(tmp_audio_file, audio_file)
 		
 		# 変換が終わったのでsrcファイル(flac)を削除する 
 		if is_remove_temp_split_flac: 

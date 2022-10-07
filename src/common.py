@@ -299,6 +299,18 @@ def getRecognizeResultFileWhisper(input_file):
 
 	return os.path.join(outputdir, output_file)
 
+# テンポラリファイル
+def getTemporaryFile(input_file,srcfile,extension):
+	base = getFileNameWithoutExtension(input_file)
+	basedir = os.path.dirname(input_file) # 入力音声ファイルの置いてあるディレクトリ
+	outputdir = os.path.join(basedir, base) # 各種ファイルの出力先ディレクトリ
+
+	prefix = os.path.splitext(os.path.basename(srcfile))[0] # ソースファイル名（拡張子を取る）
+	output_file = "_{}.{}".format(prefix, extension)
+
+	return os.path.join(outputdir, output_file)
+	
+
 # logger
 def getLogger(srcfile):
 	name = os.path.splitext(os.path.basename(srcfile))[0] # ソースファイル名（拡張子を取る）

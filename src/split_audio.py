@@ -4,6 +4,7 @@ import common
 import speech_rec
 import speech_rec_wit
 import speech_rec_whisper
+import shutil
 
 logger = common.getLogger(__file__)
 
@@ -66,7 +67,12 @@ def main(input_file):
 
 				logger.debug("変換後のファイルが存在しているが、古いので作り直す:{}".format(filename))
 
-			res = common.runSubprocess("ffmpeg -i \"{}\" -ss {} -t {} -vn -acodec flac -y \"{}\"".format(input_file,start_time/1000, (end_time-start_time)/1000,filename))
+			# いったんテンポラリファイルに吐く（ffmpegの処理中にプロセスが落ちると中途半端なファイルが残ってしまうのを防ぐ）
+			tmp_audio_file = common.getTemporaryFile(input_file, __file__, "flac")
+			res = common.runSubprocess("ffmpeg -ss {} -t {} -i \"{}\" -vn -acodec flac -y \"{}\"".format(start_time/1000, (end_time-start_time)/1000,input_file,tmp_audio_file))
+
+			# テンポラリファイルからリネーム、上書き
+			shutil.move(tmp_audio_file, filename)
 
 
 	logger.info("音声分割終了！ {}".format(os.path.basename(input_file)))
