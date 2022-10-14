@@ -155,7 +155,28 @@
 			$("#" + textId + "_r").attr({"title": title });
 			
 			var number = $td.data('number');
-			selection[number] = String(Number.isInteger(current) ? current : 0);
+			current = Number.isInteger(current) ? current : 0
+			selection[number] = String(current);
+			
+			var engines = $target.data('engines');
+			//console.log("engines=" + engines )
+
+			var engine = engines[current];
+			selection_engine[number] = engine;
+
+			$target.attr('title',getEnginName(engine));
+			
+			num = 0;
+			for(var i = 0;i < current; i++){
+				if(engines[i] == engine){
+					num++;
+				}
+			}
+			selection_engine_num[number] = String(num);
+			
+			//console.log("current=" + current + ", engine=" + engine + " engine_num=" + num)
+			//console.log("current=" + selection[number] + ", engine=" + selection_engine[number]  + " engine_num=" + selection_engine_num[number])
+			
 			saveProjectSelection();
 		}
 		
@@ -865,12 +886,31 @@
 			}
 			var textlen = k - textBase;
 			var current = parseInt(selection[i]); // どの候補を表示するかを設定から読み込む
+			var engines = data[i][textBase - 1];
+			//console.log("current=" + current + ", engine=" + selection_engine[i]  + " engine_num=" + selection_engine_num[i])
+
+			if(selection_engine[i] && selection_engine[i] != " "){ // このエンジンの何番目、という情報があったらそちらを優先
+				var engine_num = parseInt(selection_engine_num[i]);
+				if(!engine_num){ engine_num = 0;} // 何か変な文字が入ってたら0にする
+				
+				for(var n = 0;n < engines.length;n++){
+					if(engines[n] == selection_engine[i]){ // このエンジンの何番目
+						if(engine_num <= 0){
+							current = n;
+							break;
+						}
+						engine_num--;
+					}
+				}
+			}
 			if(!current){ current = 0;} // 何か変な文字が入ってたら0にする
 			if(current >= textlen){current = 0;} // 外にあふれていても0にする
 			
 			$textTd.text(data[i][textBase + current]) // 候補を表示
 			$textTd.data('textlen', textlen);
 			$textTd.data('current', current);
+			$textTd.data('engines', engines);
+			$textTd.attr('title',getEnginName(engines[current]));
 
 			// ボタンに、いまどの候補を表示しているかを出す
 			$left.attr( {"title": (current + 1) + "/" + textlen });
@@ -913,7 +953,26 @@
 
 		}
 		
+		// IDから音声認識エンジン名を返す
+		function getEnginName(engine){
+			switch(engine){
+				case "G":	return "Google Speech API";
+				case "W": return "Wit.ai";
+				case "t": return "Whisper(tiny)";
+				case "b": return "Whisper(base)";
+				case "s": return "Whisper(small)";
+				case "m": return "Whisper(medium)";
+				case "l": return "Whisper(large)";
+			}
+			return "";
+		}
+		
 		// localStrageに保存(保存できるサイズの上限はブラウザ依存だが、5MB上限の環境が多いようなので保存できると信じる)
+		function saveToLocalStorages(keys, values){
+			for(i = 0; i < keys.length; i++){
+				saveToLocalStorage(keys[i], values[i]);
+			}
+		}
 		function saveToLocalStorage(key, value){
 			try{
 				saveVal = JSON.stringify(value);
@@ -1004,15 +1063,21 @@
 		
 		// 行ごとの候補選択設定保存（操作のたびに保存すると保存頻度が高くなるので、最後の操作からN秒後に保存するようにする）
 		var PROJECT_SELECTION_KEY= projectHash + "_SELECTION";
-		var selectionTimeoutId = undefined;
+		var PROJECT_SELECTION_ENGINE_KEY= projectHash + "_ENGINE_SELECTION";
+		var PROJECT_SELECTION_ENGINE_NUM_KEY= projectHash + "_ENGINE_NUM_SELECTION";
+		
+ 		var selectionTimeoutId = undefined;
 		function saveProjectSelection(){
 			if (typeof selectionTimeoutId === 'number') {
 				clearTimeout(selectionTimeoutId);
 			}
-			selectionTimeoutId = setTimeout(saveToLocalStorage, 10 * 1000, PROJECT_SELECTION_KEY,{"selection":selection.join("")});
+			selectionTimeoutId = setTimeout(saveToLocalStorages, 10 * 1000, 
+				[PROJECT_SELECTION_ENGINE_KEY,PROJECT_SELECTION_ENGINE_NUM_KEY],
+				[{"selection_engine":selection_engine.join("")},{"selection_engine_num":selection_engine_num.join("")}]
+			);
 		}
 		// 行ごとの候補選択設定読み込み
-		function loadProjectSelection(){
+		function loadProjectSelection(){ // 何番目の候補を表示しているか（旧バージョンでの記録方法）
 			var s = loadFromLocalStorage(PROJECT_SELECTION_KEY);
 			var s2;
 			if(s && s["selection"]){
@@ -1026,11 +1091,40 @@
 			}
 			return s2;
 		}
-		
+		function loadProjectSelectionEngine(){ // どのエンジンの結果を表示しているか
+			var s = loadFromLocalStorage(PROJECT_SELECTION_ENGINE_KEY);
+			var s2;
+			if(s && s["selection_engine"]){
+				s2 = s["selection_engine"].split(""); // 文字列で入っているので、1文字ずつの配列にする
+			}else{
+				s2 = new Array();
+			}
+			
+			for(var i = s2.length; i < data.length; i++){ // 未定義部分に" "を詰める
+				s2.push(" ");
+			}
+			return s2;
+		}
+		function loadProjectSelectionEngineNum(){ // エンジンの中の、何番目の候補を表示しているか
+			var s = loadFromLocalStorage(PROJECT_SELECTION_ENGINE_NUM_KEY);
+			var s2;
+			if(s && s["selection_engine_num"]){
+				s2 = s["selection_engine_num"].split(""); // 文字列で入っているので、1文字ずつの配列にする
+			}else{
+				s2 = new Array();
+			}
+			
+			for(var i = s2.length; i < data.length; i++){ // 未定義部分に" "を詰める
+				s2.push("0");
+			}
+			return s2;
+		}
 		// --- ここからページ読み込み終了時の処理 ---
 		var data = results;
 		$tableObj = $("#tbody");
-		var selection =loadProjectSelection();
+		var selection = loadProjectSelection();
+		var selection_engine = loadProjectSelectionEngine();
+		var selection_engine_num = loadProjectSelectionEngineNum();
 
 		if(typeof baseDate === "undefined"){ // craigの開始時間情報がない場合、時刻表示のcheckbox表示しない
 			$("#abstime").prop("disabled", true);
