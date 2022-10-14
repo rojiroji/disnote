@@ -5,7 +5,6 @@ import csv
 import json
 import pathlib
 import shutil
-from distutils import dir_util
 from dateutil.parser import parse
 from dateutil.parser import ParserError
 from dateutil.relativedelta import relativedelta
@@ -157,7 +156,7 @@ def main(input_files, arg_files):
 
 	# htmlファイルなどをコピー
 	# shutil.copyfile("src/index.html", os.path.join(basedir, "index.html"))
-	dir_util.copy_tree("src/htmlfiles", os.path.join(basedir, "htmlfiles"))
+	shutil.copytree("src/htmlfiles", os.path.join(basedir, "htmlfiles"),dirs_exist_ok=True)
 
 	# プレイリスト作成(ファイルパスだけ書く)
 	logger.info("最終結果ファイル(m3u8)出力開始")
