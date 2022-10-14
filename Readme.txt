@@ -1,6 +1,6 @@
 ----------------------------------------------
 【   ソフト名   】DisNOTE
-【  バージョン  】v2.3.0
+【  バージョン  】v2.4.0
 【     種別     】フリーソフト
 【   動作環境   】Windows10（7以降なら多分動きますが試していません）
                   GoogleChrome（他のブラウザでも動くかもしれませんが試していません）
@@ -29,14 +29,21 @@ https://roji3.jpn.org/disnote/
 配置したファイル・フォルダを削除してください。
 
 【音声認識について】
-DisNOTEは、音声認識にGoogle Cloud Speech APIとWit.aiを使用しています。
-ただし、Wit.aiを使用するには事前設定が必要です。以下に設定方法を書いたので参照してください。
+DisNOTEは、以下の3つの音声認識エンジンを採用しています。
+・Google Cloud Speech API
+・Wit.ai
+・Whisper
+
+Google Cloud Speech APIは最初から使用できます。
+Google Cloud Speech APIだけで十分という方や、とりあえずDisNOTEを使ってみたいという方は他のエンジンの設定は不要です。
+
+Wit.aiを使用するには事前設定が必要です。以下に設定方法が書いてあるので参照してください。
 https://roji3.jpn.org/disnote/witai.html
 
-事前設定をしない場合はGoogle Cloud Speech APIのみで認識します。
-事前設定をした場合は両方で認識します。
+Whisperは設定ファイルを編集することで使用できるようになります。以下に設定方法が書いてあるので参照してください。
+https://roji3.jpn.org/disnote/whisper.html
 
-Google Cloud Speech APIだけで十分という方や、とりあえずDisNOTEを使ってみたいという方は設定不要です。
+
 
 【著作権/再配布に関して】
 本ソフトウェアはフリーウェアですが、著作権は放棄しておらず、「ろじろじ」が保有しています。
@@ -48,7 +55,7 @@ Google Cloud Speech APIの利用規約に、
 「You and any API Client you create may only access this API for your own development and personal uses.」
 とあります。上記に反しない範囲でDisNOTEを使用してください。
 
-【ソフトの改変について】
+【ソースコードについて】
 ソースコードはgithubで公開しています。改良案のある方はpull requestを投げてみてください。
 https://github.com/rojiroji/disnote
 
@@ -68,8 +75,10 @@ https://github.com/rojiroji/disnote
 バグ報告も同じようにしてもらえると対応するかもしれません。
 
 【更新履歴】
-2022/10/08 v2.3.0 [RECOGNIZE]Whisperによる音声認識機能を追加
-                  [RECOGNIZE]無音検出中に中断すると、次回起動時に続きから再開するようにした
+2022/10/14 v2.4.0 [RECOGNIZE]Whisperによる音声認識機能を追加
+                  [UI]選択行の保存方法を変更
+                  [UI]候補の上にマウスを乗せると、どのエンジンで認識した結果なのかを表示するようにした
+2022/10/08 v2.3.0 [RECOGNIZE]無音検出中に中断すると、次回起動時に続きから再開するようにした
                   [RECOGNIZE/BUGFIX]無音解析の処理時間が異常に長くなる不具合を修正
                   [RECOGNIZE/BUGFIX]Wit.aiを使用しているときに、音声認識の進捗がリセットされてしまうことがある不具合を修正
                   [RECOGNIZE/BUGFIX]中断タイミングによって、再開後の音声認識やhtml上での音声再生がおかしくなることがある不具合を修正
