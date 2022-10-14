@@ -8,6 +8,7 @@ import json
 import time
 import whisper
 import torch
+import shutil
 
 class RequestError(Exception): pass
 
@@ -51,6 +52,18 @@ def main(input_file):
 
 	# whisperモデル読み込み（読み込みを1回にするためにglobalに保持）
 	if model is None:
+		# pyinstallerでバイナリを作った場合、whisperのassetsが存在しないためコピーする
+		if os.path.exists("whisper/assets"): # assetsフォルダがある場合
+			assetsdir = os.path.join(os.path.dirname(whisper.__file__), "assets")
+			logger.debug("assetsdir:{}".format(assetsdir))
+			if os.path.exists(assetsdir): # 通常であればここにassetsディレクトリがあるはず
+				logger.debug("whisperのディレクトリにassetsディレクトリあり")
+			else:
+				logger.info("assetsディレクトリをコピー")
+				shutil.copytree("whisper/assets",assetsdir)
+		else:
+			logger.debug("currentにassetsなし")
+
 		logger.info("whisperモデル読み込み開始：{}".format(modelname))
 		model = whisper.load_model(modelname)
 		logger.info("whisperモデル読み込み完了：{}".format(modelname))
