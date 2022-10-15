@@ -20,6 +20,7 @@ RECOGNIZE_GOOGLE_LANGUAGE="recognize_google_language"
 REMOVE_TEMP_SPLIT_FLAC="remove_temp_split_flac"
 WHISPER_MODEL="whisper_model"
 WHISPER_LANG="recognize_whisper_language"
+WHISPER_TMP_AUDIO_LENGTH="whisper_tmp_audio_length"
 
 WHISPER_MODEL_NONE="none"
 
@@ -36,8 +37,9 @@ def writeDefaultSysConfig():
 	isRemoveTempSplitFlac()
 	getWhisperModel()
 	getWhisperLanguage()
+	getWhisperTmpAudioLength()
 
-# 無音解析出時に作るテンポラリファイルの音声の長さ（ミリ秒）
+# 無音解析時に作るテンポラリファイルの音声の長さ（iniファイルでは分単位だが、ミリ秒に変換して返す）
 def getSegTmpAudioLength():
 	min = 30 # 30分ごとに分割（デフォルト）
 
@@ -169,6 +171,25 @@ def getWhisperLanguage():
 	writeSysConfig(config)
 	
 	return ret
+
+# Whisper解析時に作るテンポラリファイルの音声の長さ（iniファイルでは分単位だが、ミリ秒に変換して返す）
+def getWhisperTmpAudioLength():
+	min = 10 # 10分ごとに分割（デフォルト）
+
+	try:
+		config = readSysConfig()
+		val = config['DEFAULT'].get(WHISPER_TMP_AUDIO_LENGTH)
+		min = int(val)
+		if min < 5: # 最低でも5分区切り
+			min = 5
+			
+	except: # 設定ファイルが読めなかったり(初回起動時)、値がおかしかったらデフォルトで保存
+		min = 10
+		config.set('DEFAULT',WHISPER_TMP_AUDIO_LENGTH , str(min))
+		writeSysConfig(config)
+	
+	return min * 60 * 1000
+
 
 # システムconfig読み込み
 def readSysConfig():
