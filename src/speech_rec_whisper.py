@@ -182,28 +182,61 @@ def main(input_file):
 			logger.info("　音声認識スキップ… {} {}/{}".format(base, cuttime_index + 1 , len(cuttime_list)))
 			continue
 
-		# 音声認識
-		logger.info("　音声認識中… {} {}/{}".format(base, cuttime_index + 1 , len(cuttime_list)))
 
+		# 音声認識用に分割
 		tmp_audio_file = common.getTemporaryFile(input_file, __file__, "flac")
 		res = common.runSubprocess("ffmpeg -ss {} -t {} -i \"{}\" -vn -acodec flac -y \"{}\"".format(cuttime["start_time"]/1000, cuttime["duration"]/1000,input_file,tmp_audio_file))
 		#logger.info("ffmpeg -ss {} -t {} -i \"{}\" -vn -acodec flac -y \"{}\"".format(cuttime["start_time"]/1000, cuttime["duration"]/1000,input_file,tmp_audio_file))
 
-		result = model.transcribe(tmp_audio_file, language=language) # , verbose=True
+		
+		# 音声認識
+		# Whisperは音声認識結果が時々おかしくなる（同じ認識結果を繰り返すのと、認識時間が1000の倍数）ので、おかしかったらリトライする。
+		# Whisperのバージョンが上がれば状況が変わるかもしれない。
+		# リトライ回数は適当
+		rec_is_ok = None
+
+		for retry in range(5): 
+			logger.info("　音声認識中 {} {}/{}(リトライ回数：{})".format(base, cuttime_index + 1 , len(cuttime_list),retry))
+			result = model.transcribe(tmp_audio_file, language=language) # , verbose=True
+
+			logger.debug("音声認識結果(whisper) {}".format(result["text"]))
+
+			rec_result_list = list()
+			prev_text = ""
+			check_count = 0
+			rec_is_ok = True
+
+			for segment in result["segments"]:
+				#print("id:{}, seek:{}, start:{}, end:{}, text:{}".format(segment["id"],segment["seek"],segment["start"],segment["end"],segment["text"]))
+				segment_result = dict()
+				segment_result["start_time"] = int(float(segment["start"]) * 1000) + cuttime["start_time"] # 秒単位小数なのでミリ秒に直す + 分割開始時間
+				segment_result["end_time"]   = int(float(segment["end"])   * 1000) + cuttime["start_time"] # 秒単位小数なのでミリ秒に直す + 分割開始時間
+				segment_result["duration"]   = segment_result["end_time"] - segment_result["start_time"]
+				segment_result["text"] = segment["text"]
+				rec_result_list.append(segment_result)
+				logger.debug("segment_result({}-{}:{}){}".format(segment_result["start_time"],segment_result["end_time"],segment_result["duration"],segment_result["text"]))
+				
+				# 同じ認識結果で、認識時間が1000の倍数だったらチェック、連続したらリトライ
+				if rec_is_ok and (segment_result["text"] == prev_text) and (segment_result["duration"] % 1000 == 0 ):
+					check_count += 1
+					logger.debug("　音声認識 同じ結果が繰り返された {} result={}".format(base, segment_result))
+					if check_count > 3: # 閾値は適当
+						rec_is_ok = False
+						logger.info("　※音声認識結果が良くない {} {}/{}(リトライ回数：{}) start_time={}".format(base, cuttime_index + 1 , len(cuttime_list), retry,segment_result["start_time"]))
+						# breakしない。最後までやる（リトライ回数が上限になった場合に結果を残すため）
+				else:
+					check_count = 0
+				
+				prev_text = segment_result["text"]
+			
+			if rec_is_ok:
+				logger.info("　音声認識結果正常 {} {}/{}(リトライ回数：{})".format(base, cuttime_index + 1 , len(cuttime_list),retry))
+				break
+
+		if not rec_is_ok:
+			logger.info("　※音声認識結果が良くないが、リトライ回数が上限に達したため進める {} {}/{}".format(base, cuttime_index + 1 , len(cuttime_list)))
+			
 		os.remove(tmp_audio_file) # 音声ファイルは大きいのでさっさと消してしまう
-
-		logger.debug("音声認識結果(whisper) {}".format(result["text"]))
-
-		rec_result_list = list()
-		for segment in result["segments"]:
-			#print("id:{}, seek:{}, start:{}, end:{}, text:{}".format(segment["id"],segment["seek"],segment["start"],segment["end"],segment["text"]))
-			segment_result = dict()
-			segment_result["start_time"] = int(float(segment["start"]) * 1000) + cuttime["start_time"] # 秒単位 1.0 のようなフォーマットなのでミリ秒に直す
-			segment_result["end_time"]   = int(float(segment["end"])   * 1000) + cuttime["start_time"] # 秒単位 1.0 のようなフォーマットなのでミリ秒に直す
-			segment_result["duration"]   = segment_result["end_time"] - segment_result["start_time"]
-			segment_result["text"] = segment["text"]
-			rec_result_list.append(segment_result)
-			logger.debug("segment_result({}-{}:{}){}".format(segment_result["start_time"],segment_result["end_time"],segment_result["duration"],segment_result["text"]))
 
 		# 認識結果をいったんクリア
 		for split in split_result_list:
@@ -292,8 +325,6 @@ def main(input_file):
 				confidence = 0
 
 				f.write("{},{},{},{},{},{}\n".format(base, audio_file, org_start_time, org_end_time-org_start_time, int(confidence * 100), text)) 
-
-			f.flush()
 
 		# ここまで完了した、と記録
 		common.updateConfig(input_file, {
