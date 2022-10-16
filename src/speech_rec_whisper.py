@@ -90,6 +90,10 @@ def main(input_file):
 	if len(progress) > 0 and (not model_changed):
 		logger.info("認識途中のデータがあったため再開({})".format(progress))
 	else:
+		common.updateConfig(input_file, {
+			CONFIG_WORK_PROGRESS : ""
+		})
+		progress = ""
 		with codecs.open(recognize_result_file , "w", "CP932", 'ignore') as f: # 最初からの場合は、認識結果ファイルを消してしまう(後で読み込むので空のファイルにしておく)
 			pass
 
