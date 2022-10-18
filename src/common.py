@@ -174,17 +174,17 @@ def getWhisperLanguage():
 
 # Whisper解析時に作るテンポラリファイルの音声の長さ（iniファイルでは分単位だが、ミリ秒に変換して返す）
 def getWhisperTmpAudioLength():
-	min = 10 # 10分ごとに分割（デフォルト）
+	min = 5 # 5分ごとに分割（デフォルト）
 
 	try:
 		config = readSysConfig()
 		val = config['DEFAULT'].get(WHISPER_TMP_AUDIO_LENGTH)
 		min = int(val)
-		if min < 5: # 最低でも5分区切り
-			min = 5
+		if min < 1: # 最低でも1分区切り
+			min = 1
 			
 	except: # 設定ファイルが読めなかったり(初回起動時)、値がおかしかったらデフォルトで保存
-		min = 10
+		min = 5
 		config.set('DEFAULT',WHISPER_TMP_AUDIO_LENGTH , str(min))
 		writeSysConfig(config)
 	
