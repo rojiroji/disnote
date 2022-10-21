@@ -34,13 +34,14 @@ def getCuttimeInfoSub(start,end):
 def getCuttimeInfo(cuttime_start, length, split_result_list):
 	cuttime_end   = None
 	cuttime_end_prev = None
-	for split in split_result_list:
 
+	for split in split_result_list:
 		# Whisper認識用に分割する時間の設定
 		cuttime_end   = split["end_time"]
 
 		if cuttime_end - cuttime_start > length: # 規定値より長くなった場合、その1つ前まででカット
 			if cuttime_end_prev is not None:
+				logger.debug("認識用再分割（※通常）")
 				return getCuttimeInfoSub(cuttime_start, cuttime_end_prev)
 			
 			# 1回で規定値より長くなった場合、これで切るしかない
@@ -111,7 +112,7 @@ def main(input_file):
 	progress = config['DEFAULT'].get(CONFIG_WORK_PROGRESS,'')
 
 	# 中断データがあった場合は続きから、そうでない場合は最初から
-	recognize_result_file = common.getRecognizeResultFileWhisper(input_file)
+	segment_file = common.getSegmentFileWhisper(input_file) 
 	if len(progress) > 0 and (not model_changed):
 		logger.info("認識途中のデータがあったため再開({})".format(progress))
 	else:
@@ -119,7 +120,7 @@ def main(input_file):
 			CONFIG_WORK_PROGRESS : ""
 		})
 		progress = ""
-		with codecs.open(recognize_result_file , "w", "CP932", 'ignore') as f: # 最初からの場合は、認識結果ファイルを消してしまう(後で読み込むので空のファイルにしておく)
+		with codecs.open(segment_file , "w", "CP932", 'ignore') as f: # 最初からの場合は、中間ファイルを消してしまう(後で読み込むので空のファイルにしておく)
 			pass
 
 	# (元々の)入力の音声ファイルのパスを指定
@@ -165,6 +166,7 @@ def main(input_file):
 				pass
 							
 			split["index"] = index
+			split["text"] = ""
 
 			logger.debug("split {}({}-{})".format(index,split["start_time"],split["end_time"] ))
 
@@ -172,15 +174,37 @@ def main(input_file):
 			last_endtime = split["end_time"] 
 			index += 1
 
+	# 中断データがあったら、認識結果と処理再開時間を読み込み
+	segment_map = dict() # 認識結果のマップ。認識開始時間（ミリ秒）がキー
 	cuttime_start = None
-	if len(progress) > 0: # 中断データまでスキップ
-		cuttime_start = int(progress)
+	
+	if len(progress) > 0:
+		cuttime_start = int(progress) # 中断データまでスキップ
+
+		# 現時点での認識結果読み込み
+		with codecs.open(segment_file , "r", "CP932", 'ignore') as f:
+			rows = csv.reader(f)
+
+			for row in rows:
+				start_time = int(row[0]) # ミリ秒
+				end_time   = int(row[1])  # ミリ秒
+				text = row[2]
+				
+				# 認識開始時間,認識終了時間,テキスト の順
+				segment_result = dict()
+				segment_result["start_time"] = start_time
+				segment_result["end_time"]   = end_time
+				segment_result["duration"]   = end_time - start_time
+				segment_result["text"] = text
+				logger.debug("　認識結果読み込み：{}-{}:{}".format(segment_result["start_time"] , segment_result["end_time"] , segment_result["text"] ))
+				
+				# 認識開始時間をキーにして登録する
+				segment_map[start_time] = segment_result
+					
 	elif len(split_result_list) > 0: # 最初から
 		cuttime_start = split_result_list[0]["start_time"]
 
 	# 音声認識
-	logger.info("認識結果ファイル(whisper)：{}".format(os.path.basename(recognize_result_file)))
-
 	index = 0
 	while cuttime_start is not None:
 		cuttime = getCuttimeInfo(cuttime_start, cut_len, split_result_list)
@@ -202,10 +226,10 @@ def main(input_file):
 
 		logger.debug("音声認識結果(whisper) {}".format(result["text"]))
 
-		rec_result_list = list()
 		prev_text = ""
 		check_count = 0
-		last_ok_segment = None
+		is_allok = True
+		last_ok = None
 
 		for segment in result["segments"]:
 			#print("id:{}, seek:{}, start:{}, end:{}, text:{}".format(segment["id"],segment["seek"],segment["start"],segment["end"],segment["text"]))
@@ -214,57 +238,40 @@ def main(input_file):
 			segment_result["end_time"]   = int(float(segment["end"])   * 1000)  # 秒単位小数なのでミリ秒に直す
 			segment_result["duration"]   = segment_result["end_time"] - segment_result["start_time"]
 			segment_result["text"] = segment["text"]
-			rec_result_list.append(segment_result)
 			logger.debug("segment_result({}-{}:{}){}".format(segment_result["start_time"],segment_result["end_time"],segment_result["duration"],segment_result["text"]))
 			
 			# 同じ認識結果で、認識時間が1000の倍数だったらチェック、連続したらリトライ
 			if (segment_result["text"] == prev_text) and (segment_result["duration"] % 1000 == 0):
 				check_count += 1
 				logger.debug("　音声認識 同じ結果が繰り返された {} result={}".format(base, segment_result))
-				if check_count > 3: # 閾値は適当
+				if check_count >= 2: # 閾値は適当
 					logger.debug("　※音声認識結果が良くない {} start_time={}".format(base, segment_result["start_time"]))
+					is_allok = False
 					break
 			else:
 				check_count = 0
-				last_ok_segment = segment_result
+				last_ok = segment_result
 			
 			segment_result["start_time"] += cuttime["start_time"] #  + 分割開始時間
 			segment_result["end_time"]   += cuttime["start_time"] #  + 分割開始時間
 			prev_text = segment_result["text"]
-		
+			segment_map[segment_result["start_time"] ] = segment_result # マップに登録（同じ時間の結果は上書きされる）
 
-		# 認識結果をいったんクリア
-		for split in split_result_list:
-			split["text"] = ""
+		# segment_mapを保存 
+		with codecs.open(segment_file , "w", "CP932", 'ignore') as f:
+			for start_time in sorted(segment_map.keys()):
+				segment_result = segment_map[start_time]
 
-		# 現時点での認識結果読み込み
-		with codecs.open(recognize_result_file , "r", "CP932", 'ignore') as f:
-			rows = csv.reader(f)
-			logger.debug("　音声認識結果マージ中 {} ({}%) {}/{}".format(base, int(100 * cuttime_start / last_endtime), cuttime_start, last_endtime))
+				text = "\"" + segment_result["text"] + "\"" # ダブルクォーテーションで囲む
+				f.write("{},{},{}\n".format(segment_result["start_time"] , segment_result["end_time"] , text )) 
 
-			for row in rows:
-				
-				# base, 分割した音声ファイル名(mp3),開始時間(冒頭無音なし),長さ(無音なし),スコア,テキスト の順
-				org_start_time = int(row[2])
-				text = row[5]
-				logger.debug("　認識結果読み込み：{} {}".format(org_start_time,text))
-				
-				exists = False
-				for split in split_result_list:
-					if split["org_start_time"] == org_start_time:
-						split["text"] = text
-						exists = True
-						logger.debug("　　認識結果マージした：{} {}".format(org_start_time,text))
-						break
-					logger.debug("　認識結果ハズレ：{}".format(split["org_start_time"]))
-
-				if exists == False:
-					logger.debug("　　認識結果マージできなかった：{} {}".format(org_start_time,text))
+				if last_ok == segment_result: # おかしな結果は保存しない
+					break
 
 		# 認識結果の時間と分割結果の時間を比べる(WhisperとinaSpeechSegmenterで有声と判定された時間帯が異なるので、inaSpeechSegmenterの方に寄せなければならない)
-		split_index = 0
-		for segment_result in rec_result_list:
-			isOverlap = False
+		for start_time in sorted(segment_map.keys()):
+			segment_result = segment_map[start_time]
+			split_index = 0
 			overlap_duration = None
 			split_overlap = None
 			split = split_result_list[0]
@@ -285,7 +292,7 @@ def main(input_file):
 						break
 					logger.debug("追い抜かれた(index={}):start_time:{} duration:{}<{} text:{}".format(index,segment_result["start_time"] ,overlap_duration, duration,segment_result["text"]))
 				else:
-					if isOverlap: # さっきまで重なっていたのに、また重ならなくなったら終了
+					if split_overlap is not None: # さっきまで重なっていたのに、また重ならなくなったら終了
 						break
 					continue
 
@@ -303,31 +310,23 @@ def main(input_file):
 				split_overlap = split
 				logger.debug("重なりなし:start_time:{} text:{}".format(segment_result["start_time"] ,segment_result["text"]))
 
-			split_overlap["text"] += segment_result["text"] + " "
+			# split_overlap["text"] += segment_result["text"] + " "
+			segment_result["split_index"] = split_index # 認識結果と重なる分割結果のindexを保持
 			logger.debug("checked(index={}):start_time:{} overlap_duration:{} text:{}".format(index,segment_result["start_time"] , overlap_duration,segment_result["text"]))
-
-			if last_ok_segment == segment_result: # 正常な結果の最後だったら、ここで打ち切り
-				logger.debug("　認識打ち切り：split_index={} ".format(split_index))
+			
+			if last_ok == segment_result: # おかしな結果は処理をスキップする
 				break
 
-		# 書き込み
-		audio_file_prefix = common.getSplitAudioFilePrefix(input_file)
-		with codecs.open(recognize_result_file , "w", "CP932", 'ignore') as f:
 
-			for split in split_result_list:
-				confidence = 0
-
-				audio_file = "{}{}.mp3".format(audio_file_prefix , split["id"])
-				org_start_time = split["org_start_time"]
-				org_end_time   = split["org_end_time"]
-				text = "\"" + split["text"] + "\"" # ダブルクォーテーションで囲む
-				confidence = 0
-
-				f.write("{},{},{},{},{},{}\n".format(base, audio_file, org_start_time, org_end_time-org_start_time, int(confidence * 100), text)) 
-
-		# 次の分割開始位置
-		if split_index + 1 < len(split_result_list):
-			cuttime_start = split_result_list[split_index + 1]["start_time"]
+		# 次の分割開始位置（次回は、全部認識成功していたら次の分割区域から、そうでなければ最後に認識した分割区域から、認識する）
+		next_index = split_index
+		if is_allok: 
+			next_index += 1
+		elif split_result_list[next_index]["start_time"] == cuttime_start: # 次回も同じ分割区域にしないようにする（無限ループを防ぐ）
+			next_index += 1
+		
+		if next_index < len(split_result_list):
+			cuttime_start = split_result_list[next_index]["start_time"]
 		else:
 			break # 最後まで行った
 
@@ -336,6 +335,32 @@ def main(input_file):
 			CONFIG_WORK_PROGRESS : str(cuttime_start),
 			CONFIG_WORK_MODEL:modelname # モデルを記録しておく
 		})
+
+
+	# 認識結果のテキストをsplitに反映
+	for start_time in sorted(segment_map.keys()):
+		segment_result = segment_map[start_time]
+		if "split_index" in segment_result:
+			split_index = segment_result["split_index"] # 認識結果と重なる分割結果のindex
+			split_result_list[split_index]["text"] += segment_result["text"] + " "
+
+	# 最終結果書き込み
+	recognize_result_file = common.getRecognizeResultFileWhisper(input_file)
+	logger.info("認識結果ファイル(whisper)：{}".format(os.path.basename(recognize_result_file)))
+	audio_file_prefix = common.getSplitAudioFilePrefix(input_file)
+	with codecs.open(recognize_result_file , "w", "CP932", 'ignore') as f:
+
+		for split in split_result_list:
+			confidence = 0
+
+			audio_file = "{}{}.mp3".format(audio_file_prefix , split["id"])
+			org_start_time = split["org_start_time"]
+			org_end_time   = split["org_end_time"]
+			text = "\"" + split["text"] + "\"" # ダブルクォーテーションで囲む
+			confidence = 0
+
+			f.write("{},{},{},{},{},{}\n".format(base, audio_file, org_start_time, org_end_time-org_start_time, int(confidence * 100), text)) 
+
 
 	# 終了したことをiniファイルに保存
 	common.updateConfig(input_file, {

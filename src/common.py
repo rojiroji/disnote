@@ -320,6 +320,16 @@ def getRecognizeResultFileWhisper(input_file):
 
 	return os.path.join(outputdir, output_file)
 
+# 認識中間ファイル(whisper)
+def getSegmentFileWhisper(input_file):
+	base = getFileNameWithoutExtension(input_file)
+	basedir = os.path.dirname(input_file) # 入力音声ファイルの置いてあるディレクトリ
+	outputdir = os.path.join(basedir, base) # 各種ファイルの出力先ディレクトリ
+
+	output_file = "_{}_whisper_segment.csv".format(base)
+
+	return os.path.join(outputdir, output_file)
+
 # テンポラリファイル
 def getTemporaryFile(input_file,srcfile,extension):
 	base = getFileNameWithoutExtension(input_file)
