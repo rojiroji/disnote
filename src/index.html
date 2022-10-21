@@ -41,8 +41,8 @@
 
 		// òbé“ï\é¶êÿë÷
 		function updateShowNameMode(){
-			$("th.name").css("display", $('#showname').prop('checked') ? "table-cell" : "none");
-			$("td.name").css("display", $('#showname').prop('checked') ? "table-cell" : "none");
+			$("#table th.name").css("display", $('#showname').prop('checked') ? "table-cell" : "none");
+			$("#table td.name").css("display", $('#showname').prop('checked') ? "table-cell" : "none");
 		}
 		$("#showname").change(function(){
 			updateShowNameMode();
