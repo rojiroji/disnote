@@ -138,7 +138,8 @@ def main(input_file):
 	logger.info("分割結果ファイル：{}".format(os.path.basename(split_result_file)))
 
 	split_result_list = list()
-	cut_len = common.getWhisperTmpAudioLength()
+	cut_len_max = common.getWhisperTmpAudioLength()
+	cut_len = cut_len_max
 	last_endtime = 0
 	logger.info("分割単位：{}min".format(int(cut_len/60/1000)))
 
@@ -243,8 +244,8 @@ def main(input_file):
 			# 同じ認識結果で、認識時間が1000の倍数だったらチェック、連続したらリトライ
 			if (segment_result["text"] == prev_text) and (segment_result["duration"] % 1000 == 0):
 				check_count += 1
-				logger.debug("　音声認識 同じ結果が繰り返された {} result={}".format(base, segment_result))
-				if check_count >= 2: # 閾値は適当
+				logger.debug("　音声認識 同じ結果が繰り返された {} check_count={},result={}".format(base, check_count, segment_result))
+				if check_count >= 1: # 閾値を設定する予定だったが、一発でアウトにした
 					logger.debug("　※音声認識結果が良くない {} start_time={}".format(base, segment_result["start_time"]))
 					is_allok = False
 					break
@@ -318,12 +319,17 @@ def main(input_file):
 				break
 
 
-		# 次の分割開始位置（次回は、全部認識成功していたら次の分割区域から、そうでなければ最後に認識した分割区域から、認識する）
+		# 次の分割開始位置（次回は、全部認識成功していたら最後に認識した区分領域の次から、そうでなければ最後に認識した分割区域から、認識する）
 		next_index = split_index
+		cut_len_prev = cut_len
 		if is_allok: 
 			next_index += 1
-		elif split_result_list[next_index]["start_time"] == cuttime_start: # 次回も同じ分割区域にしないようにする（無限ループを防ぐ）
-			next_index += 1
+			cut_len = min(cut_len_prev + 60 * 1000, cut_len_max) # 成功したら認識する音声を長くする（初期値よりは大きくしない）
+		else:
+			if split_result_list[next_index]["start_time"] == cuttime_start: # 無限ループを防ぐため、開始位置だけは必ずずらす
+				next_index += 1
+			cut_len = max(cut_len_prev - 60 * 1000, 60 * 1000) # 失敗したら認識する音声を短くする
+		logger.debug("　次回分割長： {} → {}".format(cut_len_prev, cut_len))
 		
 		if next_index < len(split_result_list):
 			cuttime_start = split_result_list[next_index]["start_time"]
