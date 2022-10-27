@@ -26,156 +26,179 @@ logger.info("----------------------------------------")
 # 認識準備を行うスレッド
 def prepare(input_files):
 	global logger
-	for index, input_file in enumerate(input_files):
-		basename = os.path.basename(input_file)
-		
-		logger.info("認識準備開始：{} ({}/{})".format(basename, index + 1, len(input_files)))
-		
-		# フォーマット確認
-		try:
-			common.getFileFormat(input_file)
-		except Exception as e:
-			logger.error("処理を中断します。")
-			raise
-		
-		# 無音解析
-		try:
-			seg.main(input_file)
-		except Exception as e:
-			tb = sys.exc_info()[2]
-			logger.error(traceback.format_exc())
-			logger.error("{} の無音解析(1)に失敗しました({})。".format(input_file,e.with_traceback(tb)))
-			raise
+	try:
+		for index, input_file in enumerate(input_files):
+			if common.isErrorOccurred(): # 他のスレッドでエラーが起きていたら強制終了する
+				return
+				
+			basename = os.path.basename(input_file)
+			
+			logger.info("認識準備開始：{} ({}/{})".format(basename, index + 1, len(input_files)))
+			
+			# フォーマット確認
+			try:
+				common.getFileFormat(input_file)
+			except Exception as e:
+				logger.error("処理を中断します。")
+				raise
+			
+			# 無音解析
+			try:
+				seg.main(input_file)
+			except Exception as e:
+				tb = sys.exc_info()[2]
+				logger.error(traceback.format_exc())
+				logger.error("{} の無音解析(1)に失敗しました({})。".format(input_file,e.with_traceback(tb)))
+				raise
 
-		# 音声分割設定
-		try:
-			split.main(input_file)
-		except Exception as e:
-			tb = sys.exc_info()[2]
-			logger.error(traceback.format_exc())
-			logger.error("{} の音声分割設定(2-1)に失敗しました({})。".format(input_file,e.with_traceback(tb)))
-			raise
+			# 音声分割設定
+			try:
+				split.main(input_file)
+			except Exception as e:
+				tb = sys.exc_info()[2]
+				logger.error(traceback.format_exc())
+				logger.error("{} の音声分割設定(2-1)に失敗しました({})。".format(input_file,e.with_traceback(tb)))
+				raise
 
-		# 音声分割
-		try:
-			split_audio.main(input_file)
-		except Exception as e:
-			tb = sys.exc_info()[2]
-			logger.error(traceback.format_exc())
-			logger.error("{} の音声分割(2-2)に失敗しました({})。".format(input_file,e.with_traceback(tb)))
-			raise
+			# 音声分割
+			try:
+				split_audio.main(input_file)
+			except Exception as e:
+				tb = sys.exc_info()[2]
+				logger.error(traceback.format_exc())
+				logger.error("{} の音声分割(2-2)に失敗しました({})。".format(input_file,e.with_traceback(tb)))
+				raise
 
-		# 音声認識スレッドに登録
-		thread.pushReadyRecognizeList(input_file)
+			# 音声認識スレッドに登録
+			thread.pushReadyRecognizeList(input_file)
 
-		logger.info("認識準備終了：{} ({}/{})".format(basename, index + 1, len(input_files)))
+			logger.info("認識準備終了：{} ({}/{})".format(basename, index + 1, len(input_files)))
+	except Exception as e:
+		common.errorOccurred()
+		raise
 
 # 音声認識を行うスレッド(Google音声認識)
 def speechRecognizeGoogle(prepareThread):
 	global logger
-	while True:
-		time.sleep(1)
-		logger.debug("スレッド待機中(speechRecognizeGoogle)")
-		
-		input_file = thread.popReadyRecognizeListGoogle()
-		if input_file is None:
-			if prepareThread.done(): # 仕事リストが空＆prepareThreadが終了していたら、もうリストに追加されることはないので終了する
-				logger.info("全ファイル音声認識終了(Google)")
-				return
-			continue
-		
-		# 音声認識
-		try:
-			speech_rec.main(input_file)
-		except Exception as e:
-			tb = sys.exc_info()[2]
-			logger.error(traceback.format_exc())
-			logger.error("{} の音声認識(3)に失敗しました({})。".format(input_file,e.with_traceback(tb)))
-			raise
 
-		thread.pushReadyConvertListGoogle(input_file)
+	try:
+		while True:
+			if common.isErrorOccurred(): # 他のスレッドでエラーが起きていたら強制終了する
+				return
+				
+			time.sleep(1)
+			logger.debug("スレッド待機中(speechRecognizeGoogle)")
+			
+			input_file = thread.popReadyRecognizeListGoogle()
+			if input_file is None:
+				if prepareThread.done(): # 仕事リストが空＆prepareThreadが終了していたら、もうリストに追加されることはないので終了する
+					logger.info("全ファイル音声認識終了(Google)")
+					return
+				continue
+			
+			# 音声認識
+			speech_rec.main(input_file)
+			thread.pushReadyConvertListGoogle(input_file)
+	except Exception as e:
+		common.errorOccurred()
+		tb = sys.exc_info()[2]
+		logger.error(traceback.format_exc())
+		logger.error("{} の音声認識(3)に失敗しました({})。".format(input_file,e.with_traceback(tb)))
+		raise
 
 # 音声認識を行うスレッド(wit.ai音声認識)
 def speechRecognizeWitAI(prepareThread):
 	global logger
-	while True:
-		time.sleep(1)
-		logger.debug("スレッド待機中(speechRecognizeWitAI)")
-		
-		input_file = thread.popReadyRecognizeListWitAI()
-		if input_file is None:
-			if prepareThread.done(): # 仕事リストが空＆prepareThreadが終了していたら、もうリストに追加されることはないので終了する
-				logger.info("全ファイル音声認識終了(wit.ai)")
-				return
-			continue
-		
-		# 音声認識
-		try:
-			speech_rec_wit.main(input_file)
-		except Exception as e:
-			tb = sys.exc_info()[2]
-			logger.error(traceback.format_exc())
-			logger.error("{} の音声認識(3)に失敗しました({})。".format(input_file,e.with_traceback(tb)))
-			raise
 
-		thread.pushReadyConvertListWitAI(input_file)
+	try:
+		while True:
+			if common.isErrorOccurred(): # 他のスレッドでエラーが起きていたら強制終了する
+				return
+				
+			time.sleep(1)
+			logger.debug("スレッド待機中(speechRecognizeWitAI)")
+			
+			input_file = thread.popReadyRecognizeListWitAI()
+			if input_file is None:
+				if prepareThread.done(): # 仕事リストが空＆prepareThreadが終了していたら、もうリストに追加されることはないので終了する
+					logger.info("全ファイル音声認識終了(wit.ai)")
+					return
+				continue
+			
+			# 音声認識
+			speech_rec_wit.main(input_file)
+			thread.pushReadyConvertListWitAI(input_file)
+	except Exception as e:
+		common.errorOccurred()
+		tb = sys.exc_info()[2]
+		logger.error(traceback.format_exc())
+		logger.error("{} の音声認識(3)に失敗しました({})。".format(input_file,e.with_traceback(tb)))
+		raise
+
 
 # 音声認識を行うスレッド(whisper音声認識)
 def speechRecognizeWhisper(prepareThread):
 	global logger
 	
-	while True:
-		time.sleep(1)
-		logger.debug("スレッド待機中(speechRecognizeWhisper)")
-		
-		# TODO:GPUを有効にしていたら、無音検出とWhisperの両方でGPUを使うことになるので、prepareThreadが終了してからWhisperを始めた方が良い
-		
-		input_file = thread.popReadyRecognizeListWhisper() 
-		if input_file is None:
-			if prepareThread.done(): # 仕事リストが空＆prepareThreadが終了していたら、もうリストに追加されることはないので終了する
-				logger.info("全ファイル音声認識終了(Whisper)")
+	try:
+		while True:
+			if common.isErrorOccurred(): # 他のスレッドでエラーが起きていたら強制終了する
 				return
-			continue
-		
-		# 音声認識
-		try:
+				
+			time.sleep(1)
+			logger.debug("スレッド待機中(speechRecognizeWhisper)")
+			
+			# TODO:GPUを有効にしていたら、無音検出とWhisperの両方でGPUを使うことになるので、prepareThreadが終了してからWhisperを始めた方が良い
+			
+			input_file = thread.popReadyRecognizeListWhisper() 
+			if input_file is None:
+				if prepareThread.done(): # 仕事リストが空＆prepareThreadが終了していたら、もうリストに追加されることはないので終了する
+					logger.info("全ファイル音声認識終了(Whisper)")
+					return
+				continue
+			
+			# 音声認識
 			speech_rec_whisper.main(input_file)
-		except Exception as e:
-			tb = sys.exc_info()[2]
-			logger.error(traceback.format_exc())
-			logger.error("{} の音声認識(3)に失敗しました({})。".format(input_file,e.with_traceback(tb)))
-			raise
-
-		thread.pushReadyConvertListWhisper(input_file) 
-
+			thread.pushReadyConvertListWhisper(input_file) 
+	except Exception as e:
+		common.errorOccurred()
+		tb = sys.exc_info()[2]
+		logger.error(traceback.format_exc())
+		logger.error("{} の音声認識(3)に失敗しました({})。".format(input_file,e.with_traceback(tb)))
+		raise
 
 # mp3への変換を行うスレッド
 def convert(recognizeThreads):
 	global logger
-	while True:
-		time.sleep(1)
-		
-		recognize_done = True
-		for t in recognizeThreads:
-			recognize_done &= t.done() # 音声認識スレッドがすべて終了しているかどうか
-
-		logger.debug("スレッド待機中(convert) 音声認識全て終了：{}".format(recognize_done))
-		
-		input_file = thread.popReadyConvertList(pop_and = (not recognize_done)) # 音声認識スレッドが終了していなかったらandを取る。終了していたらorで妥協する（何らかの原因でandが空だった場合に永遠に終了しないため）。
-		if input_file is None:
-			if recognize_done: # 音声認識が終了していたら、もうリストに追加されることはないので終了する
+	try:
+		while True:
+			if common.isErrorOccurred(): # 他のスレッドでエラーが起きていたら強制終了する
 				return
-			continue
-		
-		# 音声変換
-		try:
-			conv_audio.main(input_file)
-		except Exception as e:
-			tb = sys.exc_info()[2]
-			logger.error(traceback.format_exc())
-			logger.error("{} の音声変換(4)に失敗しました({})。".format(input_file,e.with_traceback(tb)))
-			raise
+				
+			time.sleep(1)
+			
+			recognize_done = True
+			for t in recognizeThreads:
+				recognize_done &= t.done() # 音声認識スレッドがすべて終了しているかどうか
 
+			logger.debug("スレッド待機中(convert) 音声認識全て終了：{}".format(recognize_done))
+			
+			input_file = thread.popReadyConvertList(pop_and = (not recognize_done)) # 音声認識スレッドが終了していなかったらandを取る。終了していたらorで妥協する（何らかの原因でandが空だった場合に永遠に終了しないため）。
+			if input_file is None:
+				if recognize_done: # 音声認識が終了していたら、もうリストに追加されることはないので終了する
+					return
+				continue
+			
+			# 音声変換
+			conv_audio.main(input_file)
+
+	except Exception as e:
+		common.errorOccurred()
+		tb = sys.exc_info()[2]
+		logger.error(traceback.format_exc())
+		logger.error("{} の音声変換(4)に失敗しました({})。".format(input_file,e.with_traceback(tb)))
+		raise
+		
 # 新しいバージョンがあったら表示する
 def announceNewVersion():
 	try:
@@ -301,12 +324,17 @@ try:
 
 	# ファイルそれぞれに対して音声認識
 	with ThreadPoolExecutor() as executor:
+		threadList = list()
+	
 		try:
 			prepareThread = executor.submit(prepare, input_files) # 認識準備スレッド
+			threadList.append(prepareThread)
+			
 			recognizeThreads = list()
 			recognizeThreads.append(executor.submit(speechRecognizeGoogle , prepareThread))  # 音声認識スレッド(Google)
 			recognizeThreads.append(executor.submit(speechRecognizeWitAI  , prepareThread))  # 音声認識スレッド(wit.ai)
 			recognizeThreads.append(executor.submit(speechRecognizeWhisper, prepareThread)) # 音声認識スレッド(Whisper)
+			threadList.extend(recognizeThreads)
 
 
 			e = prepareThread.exception() # 認識準備スレッド終了待ち
@@ -315,6 +343,7 @@ try:
 			logger.info("全ファイル認識準備終了")
 
 			convertThread = executor.submit(convert, recognizeThreads) # mp3変換スレッド
+			threadList.append(convertThread)
 			
 			for t in recognizeThreads: # 音声認識スレッド終了待ち
 				e = t.exception()
@@ -325,7 +354,16 @@ try:
 			if e is not None:
 				raise e
 			logger.info("全ファイル音声変換終了")
-		except Exception as e:
+			
+		except Exception as e:# 例外が起きたら、すべてのスレッドの終了を待ってからログを出力して終了する
+			common.errorOccurred()
+			logger.error("スレッド処理中にエラーが発生したため全スレッドを停止")
+			for t in threadList: 
+				try:
+					t.result()
+				except Exception as e:
+					pass
+		
 			tb = sys.exc_info()[2]
 			logger.error(traceback.format_exc())
 			logger.error("スレッド処理中にエラーが発生しました({})。".format(e.with_traceback(tb)))

@@ -8,6 +8,7 @@ import subprocess
 import threading
 
 input_file_config_lock = threading.Lock()
+error_occurred = False
 
 DONE = "done"
 
@@ -391,3 +392,13 @@ def getFileFormat(input_file):
 		logger = getLogger(__file__)
 		logger.error("フォーマット確認失敗。{} は音声ファイルではないようです。".format(input_file))
 		pass
+
+# スレッド処理中に例外が発生したフラグを立てる。このフラグが立っていたら、各スレッドは可及的速やかにスレッドを中断する
+def errorOccurred():
+	global error_occurred
+	error_occurred = True
+
+# スレッド処理中に例外が発生したかどうか
+def isErrorOccurred():
+	global error_occurred
+	return error_occurred
