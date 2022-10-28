@@ -37,7 +37,7 @@ def getCuttimeInfo(cuttime_start, length, split_result_list):
 
 	for split in split_result_list:
 		# Whisper認識用に分割する時間の設定
-		cuttime_end   = split["end_time"]
+		cuttime_end   = split["org_end_time"]
 
 		if cuttime_end - cuttime_start > length: # 規定値より長くなった場合、その1つ前まででカット
 			if cuttime_end_prev is not None:
@@ -169,7 +169,7 @@ def main(input_file):
 			split["index"] = index
 			split["text"] = ""
 
-			logger.debug("split {}({}-{})".format(index,split["start_time"],split["end_time"] ))
+			logger.debug("split {}({}-{})".format(index,split["org_start_time"],split["org_end_time"] ))
 
 			split_result_list.append(split)
 			last_endtime = split["end_time"] 
@@ -203,10 +203,11 @@ def main(input_file):
 				segment_map[start_time] = segment_result
 					
 	elif len(split_result_list) > 0: # 最初から
-		cuttime_start = split_result_list[0]["start_time"]
+		cuttime_start = split_result_list[0]["org_start_time"]
 
 	# 音声認識
 	index = 0
+	prev_index = 0
 	while cuttime_start is not None:
 		cuttime = getCuttimeInfo(cuttime_start, cut_len, split_result_list)
 		if cuttime is None:
@@ -281,14 +282,14 @@ def main(input_file):
 				split = split_result_list[index]
 				
 				# 重なり判定
-				left  = max(segment_result["start_time"] , split["start_time"] )
-				right = min(segment_result["end_time"]   , split["end_time"] )
+				left  = max(segment_result["start_time"] , split["org_start_time"] )
+				right = min(segment_result["end_time"]   , split["org_end_time"] )
 				duration = right - left
 				logger.debug("duration:{}({}-{})".format(duration, right, left))
 				
 				if duration >= 0: # 重なった
 					pass
-				elif  segment_result["end_time"] <  split["start_time"]: # 重ならないまま追い抜かれてしまった
+				elif  segment_result["end_time"] <  split["org_start_time"]: # 重ならないまま追い抜かれてしまった
 					if split_overlap is not None:
 						break
 					logger.debug("追い抜かれた(index={}):start_time:{} duration:{}<{} text:{}".format(index,segment_result["start_time"] ,overlap_duration, duration,segment_result["text"]))
@@ -298,7 +299,6 @@ def main(input_file):
 					continue
 
 				# より深く重なったら、そのsplitが候補
-				isOverlap = True
 				if (overlap_duration is None) or (overlap_duration < duration):
 					if (overlap_duration is not None) and (overlap_duration > 0):
 						logger.debug("候補入れ替え(index={}):start_time:{} duration:{}<{} text:{}".format(index,segment_result["start_time"] ,overlap_duration, duration,segment_result["text"]))
@@ -322,17 +322,23 @@ def main(input_file):
 		# 次の分割開始位置（次回は、全部認識成功していたら最後に認識した区分領域の次から、そうでなければ最後に認識した分割区域から、認識する）
 		next_index = split_index
 		cut_len_prev = cut_len
+
+		logger.debug("index:prev_index:{} split_index:{},is_allok:{}".format(prev_index,split_index,is_allok))
 		if is_allok: 
 			next_index += 1
 			cut_len = min(cut_len_prev + 60 * 1000, cut_len_max) # 成功したら認識する音声を長くする（初期値よりは大きくしない）
 		else:
-			if split_result_list[next_index]["start_time"] == cuttime_start: # 無限ループを防ぐため、開始位置だけは必ずずらす
-				next_index += 1
+			if prev_index >= next_index: # 無限ループを防ぐため、開始位置だけは必ずずらす
+				logger.debug("無限ループ防止:prev_index:{} next_index:{}".format(prev_index,next_index))
+				next_index = prev_index + 1
 			cut_len = max(cut_len_prev - 60 * 1000, 60 * 1000) # 失敗したら認識する音声を短くする
 		logger.debug("　次回分割長： {} → {}".format(cut_len_prev, cut_len))
 		
 		if next_index < len(split_result_list):
-			cuttime_start = split_result_list[next_index]["start_time"]
+			cuttime_start = split_result_list[next_index]["org_start_time"]
+			logger.debug("次回：index:prev_index:{} split_index:{},next_index:{},is_allok:{} cuttime_start:{}".format(prev_index,split_index,next_index,is_allok,cuttime_start))
+			
+			prev_index = next_index
 		else:
 			break # 最後まで行った
 
