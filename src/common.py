@@ -26,7 +26,7 @@ WHISPER_TMP_AUDIO_LENGTH="whisper_tmp_audio_length"
 WHISPER_MODEL_NONE="none"
 
 def getVersion():
-	return "v2.4.0"
+	return "v2.4.1"
 
 # 共通設定iniファイルの設定値を一通り読み込み（設定値がなければ初期値が書き込まれる）
 def writeDefaultSysConfig():
