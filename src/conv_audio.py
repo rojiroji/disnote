@@ -62,7 +62,7 @@ def main(input_file):
 
 	while len(split_result_queue) > 0 and len(recognize_result_list) > 0:
 		# 分割結果ファイルの読み込み
-		split_result = split_result_queue.popleft() # ID,srcファイル名(flac),開始時間(冒頭無音あり),終了時間(末尾無音あり),長さ(無音あり),開始時間(冒頭無音なし),長さ(末尾無音なし)の順 _split.txt
+		split_result = split_result_queue.popleft() # ID,srcファイル名(flac),開始時間(冒頭無音あり),終了時間(末尾無音あり),長さ(無音あり),開始時間(冒頭無音なし),終了時間(末尾無音なし)の順 _split.txt
 		id = int(split_result[0])
 		src_audio_file = split_result[1]
 		start_time = int(float(split_result[2]))
@@ -100,8 +100,13 @@ def main(input_file):
 		
 		# 無音部分を省いてmp3に変換。いったんテンポラリファイルに吐く（ffmpegの処理中にプロセスが落ちると中途半端なファイルが残ってしまうのを防ぐ）
 		tmp_audio_file = common.getTemporaryFile(input_file, __file__, "mp3")
-		common.runSubprocess("ffmpeg -ss {} -t {} -i \"{}\" -vn -y \"{}\"".format((org_start_time - start_time)/1000, (org_end_time-org_start_time)/1000,src_audio_file,tmp_audio_file))
 		logger.debug("ffmpeg -ss {} -t {} -i \"{}\" -vn -y \"{}\"".format((org_start_time - start_time)/1000, (org_end_time-org_start_time)/1000,src_audio_file,tmp_audio_file))
+		try:
+			common.runSubprocess("ffmpeg -ss {} -t {} -i \"{}\" -vn -y \"{}\"".format((org_start_time - start_time)/1000, (org_end_time-org_start_time)/1000,src_audio_file,tmp_audio_file))
+		except Exception as e:
+			logger.info(e)
+			logger.info("mp3変換に失敗したのでスキップ：{}".format(src_audio_file)) # 変換元ファイルの内容と-ss,-tの値によっては、ffmpegが異常終了することがある（Output file is empty）
+			continue
 		logger.debug("mp3_end")
 
 		# 分析した音声にタグをつける
