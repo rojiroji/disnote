@@ -218,8 +218,16 @@ def recognize_wit(target_file, key):
 			request_end = prev_witai_requesttime
 			
 			logger.debug("request {:.3f}".format(request_end - request_start))
+			
 		except HTTPError as e:
-			raise RequestError("recognition request failed: {} / DisNOTE.initのwit_ai_server_access_tokenの値が正しいか確認してください。".format(e.reason))
+			str = "時間を置いて再度実行すると上手くいくかもしれません"
+			if e.code == 408:
+				str = "タイムアウトになりました。時間を置いて再度実行してください"
+			elif e.code == 400:
+				str = "DisNOTE.iniのwit_ai_server_access_tokenの値が正しいか確認してください"
+
+			raise RequestError("recognition request failed:{}({}) / {}。".format(e.code, e.reason, str))
+				
 		except URLError as e:
 			raise RequestError("recognition connection failed: {}".format(e.reason))
 		response_text = response.read().decode("utf-8")
