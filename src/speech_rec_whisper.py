@@ -56,6 +56,22 @@ def getCuttimeInfo(cuttime_start, length, split_result_list):
 	
 	return None
 
+# 音声ファイルの認識を行うかどうか。行わないなら理由（ログに出力する文字列）を返す。行うならNoneを返す。
+def reasonNotToRecognize(input_file):
+	modelname = common.getWhisperModel()
+	config = common.readConfig(input_file)
+
+	# モデルの指定が過去の結果と異なる場合はやり直す。初回もTrueになるはず。
+	model_changed = (config['DEFAULT'].get(CONFIG_WORK_MODEL) != modelname)
+
+	if config['DEFAULT'].get(CONFIG_WORK_KEY) == common.DONE and (not model_changed):
+		return "完了済みのためスキップ(音声認識)"
+
+	if modelname == common.WHISPER_MODEL_NONE:
+		return "whisperを使用しない設定のためスキップ"
+
+	return None
+
 # 音声ファイルをtxtファイルに出力された結果に従って分割
 def main(input_file):
 	global model
@@ -65,6 +81,11 @@ def main(input_file):
 	
 	func_in_time = time.time()
 
+	reason = reasonNotToRecognize(input_file) # 認識せずにスキップするパターン
+	if reason is not None:
+		logger.info(reason)
+		return
+
 	modelname = common.getWhisperModel()
 	language  = common.getWhisperLanguage()
 	logger.info("whisperモデル：{}".format(modelname))
@@ -73,14 +94,6 @@ def main(input_file):
 	
 	# モデルの指定が過去の結果と異なる場合はやり直す。初回もTrueになるはず。
 	model_changed = (config['DEFAULT'].get(CONFIG_WORK_MODEL) != modelname)
-	
-	if config['DEFAULT'].get(CONFIG_WORK_KEY) == common.DONE and (not model_changed):
-		logger.info("完了済みのためスキップ(音声認識)")
-		return
-	
-	if modelname == common.WHISPER_MODEL_NONE:
-		logger.info("whisperを使用しない設定のためスキップ")
-		return
 	
 	if not common.isValidWhisperModel():
 		raise ValueError("whisperのモデル名が不正({})：DisNOTE.iniの{}の設定を確認してください".format(modelname,common.WHISPER_MODEL))

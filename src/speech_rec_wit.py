@@ -17,20 +17,31 @@ CONFIG_WORK_KEY = 'speech_rec_witai'
 CONFIG_WORK_PROGRESS = 'speech_rec_progress_witai'
 CONFIG_WORK_CONV_READY = 'speech_rec_conv_ready_witai'
 
+# 音声ファイルの認識を行うかどうか。行わないなら理由（ログに出力する文字列）を返す。行うならNoneを返す。
+def reasonNotToRecognize(input_file):
+	if len(common.getWitAiServerAccessToken()) == 0:
+		return "wit.aiのトークンが設定されていないためスキップ(音声認識)"
+
+	config = common.readConfig(input_file)
+	if config['DEFAULT'].get(CONFIG_WORK_KEY) == common.DONE:
+		return "完了済みのためスキップ(音声認識)"
+	
+	return None
+
 # 音声ファイルをtxtファイルに出力された結果に従って分割
 def main(input_file):
 
 	logger.info("3. 音声認識開始(wit.ai) - {}".format(os.path.basename(input_file)))
 	func_in_time = time.time()
 
-	if len(common.getWitAiServerAccessToken()) == 0:
-		logger.info("wit.aiのトークンが設定されていないためスキップ(音声認識)")
+	reason = reasonNotToRecognize(input_file) # 認識せずにスキップするパターン
+	if reason is not None:
+		logger.info(reason)
 		return
 
+
 	config = common.readConfig(input_file)
-	if config['DEFAULT'].get(CONFIG_WORK_KEY) == common.DONE:
-		logger.info("完了済みのためスキップ(音声認識)")
-		return
+
 
 	# 中断データ
 	progress = config['DEFAULT'].get(CONFIG_WORK_PROGRESS,'')

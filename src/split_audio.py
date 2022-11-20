@@ -14,20 +14,24 @@ def main(input_file):
 	# 音声ファイルをtxtファイルに出力された結果に従って分割
 	logger.info("2-2. 音声分割開始 - {}".format(os.path.basename(input_file)))
 
-#	音声認識なら音声分割をスキップする方が良いが、判断が難しい＆音声認識済みでアプリを立ち上げ直す状況があまり考えられないのでスキップしない
-#	needSplitFiles = False
-#
-#	config = common.readConfig(input_file)
-#	if config['DEFAULT'].get(speech_rec.CONFIG_WORK_KEY) != common.DONE:  # 音声認識(Google)未完了
-#		needSplitFiles = True
-#	if config['DEFAULT'].get(speech_rec_wit.CONFIG_WORK_KEY) != common.DONE and len(common.getWitAiServerAccessToken()) > 0: # 音声認識(wit.ai)未完了
-#		needSplitFiles = True
-#	if config['DEFAULT'].get(speech_rec_whisper.CONFIG_WORK_KEY) != common.DONE and common.isValidWhisperModel():  # 音声認識(Whisper)未完了
-#		needSplitFiles = True
-#	
-#	if not needSplitFiles:
-#		logger.info("音声認識済みのためスキップ(音声分割)")
-#		return
+	# 音声認識済みなら音声分割をスキップする
+	needSplitFiles = False
+	
+	if speech_rec.reasonNotToRecognize(input_file) is None: # 音声認識(Google) が未完了なら分割する
+		logger.info("　進捗確認：音声認識(Google) 未完了")
+		needSplitFiles = True
+		
+	if speech_rec_wit.reasonNotToRecognize(input_file) is None: # 音声認識(wit.ai) が未完了なら分割する
+		logger.info("　進捗確認：音声認識(wit.ai) 未完了")
+		needSplitFiles = True
+	
+	if speech_rec_whisper.reasonNotToRecognize(input_file) is None: # 音声認識(whisper) が未完了なら分割する
+		logger.info("　進捗確認：音声認識(whisper) 未完了")
+		needSplitFiles = True
+
+	if not needSplitFiles:
+		logger.info("音声認識済みのためスキップ(音声分割)")
+		return
 
 	# 入力の音声ファイルのパスを指定
 	logger.info("音声ファイル：{}".format(os.path.basename(input_file)))
