@@ -10,6 +10,7 @@ import whisper
 import torch
 import shutil
 import csv
+import requests
 
 class RequestError(Exception): pass
 
@@ -27,7 +28,7 @@ def getCuttimeInfoSub(start,end):
 	cuttime["start_time"] = start
 	cuttime["end_time"]   = end
 	cuttime["duration"]   = end - start
-	logger.info("認識用再分割：{}-{}({})".format(cuttime["start_time"] ,cuttime["end_time"], cuttime["duration"] ))
+	logger.debug("認識用再分割：{}-{}({})".format(cuttime["start_time"] ,cuttime["end_time"], cuttime["duration"] ))
 	return cuttime
 
 # 音声分割情報
@@ -103,6 +104,42 @@ def getBinaryWhisperResultToSegments(whisper_result):
 	
 	return segment_list
 
+# Whisper（バイナリ版）の辞書をダウンロードする
+def downloadWhisperGgmlModel(modelname):
+	saveto = os.path.join("whisper", "ggml-{}.bin".format(modelname))
+	
+	if os.path.exists(saveto): # 既に存在すれば何もしない
+		logger.info("Whisper辞書データダウンロード…ダウンロード済みのためスキップ {}".format(saveto))
+		return
+	
+	url = "https://ggml.ggerganov.com/ggml-model-whisper-{}.bin".format(modelname)
+
+	# いったん一時ファイルに吐く
+	tempfile = os.path.join("whisper", "tmp.bin")
+	with open(tempfile, "wb") as f:
+		response = requests.get(url, stream=True)
+		total_length = response.headers.get('content-length')
+
+		if total_length is None: # no content length header
+			f.write(response.content)
+		else:
+			dl = 0
+			total_length = int (int(total_length) / 1024 / 1024)
+			prev_p = -10
+			for data in response.iter_content(chunk_size=4096):
+				f.write(data)
+				dl += len(data)
+
+				dl_m = int (dl / 1024 / 1024)
+				p = int(100 * dl_m / total_length)
+				if p > prev_p + 5:
+					logger.info("Whisper辞書データダウンロード中：{} {}MB / {}MB({}%)".format(modelname, dl_m, total_length, int(p)))
+					prev_p = p
+
+	# 正常に完了したらちゃんとした名前にする
+	os.rename(tempfile, saveto)
+	logger.info("Whisper辞書データダウンロード完了：{}".format(modelname))
+
 # 音声ファイルをtxtファイルに出力された結果に従って分割
 def main(input_file):
 	global model
@@ -131,6 +168,8 @@ def main(input_file):
 	if not common.isValidWhisperModel():
 		raise ValueError("Whisperのモデル名が不正({})：DisNOTE.iniの{}の設定を確認してください".format(modelname,common.WHISPER_MODEL))
 	
+	if is_use_binary:
+		downloadWhisperGgmlModel(modelname) # モデルデータダウンロード（できれば事前に）
 
 	# Whisperモデル読み込み（python版。読み込みを1回にするためにglobalに保持）
 	if (model is None) and (not is_use_binary):
@@ -287,7 +326,7 @@ def main(input_file):
 			logger.debug(process)
 			res = common.runSubprocess(process)
 			
-			logger.info(res.stderr)
+			logger.debug(res.stderr)
 
 			result = dict()
 			result["segments"] = getBinaryWhisperResultToSegments(res.stdout)
@@ -310,7 +349,7 @@ def main(input_file):
 			segment_result["end_time"]   = int(float(segment["end"])   * 1000)  # 秒単位小数なのでミリ秒に直す
 			segment_result["duration"]   = segment_result["end_time"] - segment_result["start_time"]
 			segment_result["text"] = segment["text"]
-			logger.info("segment_result({}-{}:{}){}".format(segment_result["start_time"],segment_result["end_time"],segment_result["duration"],segment_result["text"]))
+			logger.debug("segment_result({}-{}:{}){}".format(segment_result["start_time"],segment_result["end_time"],segment_result["duration"],segment_result["text"]))
 			
 			# 同じ認識結果で、認識時間が1000の倍数だったらチェック、連続したらリトライ
 			if (segment_result["text"] == prev_text) and (segment_result["duration"] % 1000 == 0):
@@ -398,7 +437,7 @@ def main(input_file):
 		next_index = split_index
 		cut_len_prev = cut_len
 
-		logger.info("index:prev_index:{} split_index:{},is_allok:{}".format(prev_index,split_index,is_allok))
+		logger.debug("index:prev_index:{} split_index:{},is_allok:{}".format(prev_index,split_index,is_allok))
 		if is_allok: 
 			next_index += 1
 			cut_len = min(cut_len_prev + 60 * 1000, cut_len_max) # 成功したら認識する音声を長くする（初期値よりは大きくしない）
