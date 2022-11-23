@@ -105,7 +105,14 @@ def getBinaryWhisperResultToSegments(whisper_result):
 	return segment_list
 
 # Whisper（バイナリ版）の辞書をダウンロードする
-def downloadWhisperGgmlModel(modelname):
+def downloadWhisperGgmlModel():
+
+	if not common.isUseBinaryWhisper(): # バイナリ版を使うかどうか
+		return
+	if not common.isValidWhisperModel():
+		return
+
+	modelname = common.getWhisperModel()
 	saveto = os.path.join("whisper", "ggml-{}.bin".format(modelname))
 	
 	if os.path.exists(saveto): # 既に存在すれば何もしない
@@ -168,9 +175,6 @@ def main(input_file):
 	if not common.isValidWhisperModel():
 		raise ValueError("Whisperのモデル名が不正({})：DisNOTE.iniの{}の設定を確認してください".format(modelname,common.WHISPER_MODEL))
 	
-	if is_use_binary:
-		downloadWhisperGgmlModel(modelname) # モデルデータダウンロード（できれば事前に）
-
 	# Whisperモデル読み込み（python版。読み込みを1回にするためにglobalに保持）
 	if (model is None) and (not is_use_binary):
 		logger.info("Cuda.available:{}".format(torch.cuda.is_available()))

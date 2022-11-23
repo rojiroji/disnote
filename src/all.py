@@ -77,6 +77,17 @@ def prepare(input_files):
 		common.errorOccurred()
 		raise
 
+# Whisper（バイナリ版）の辞書をダウンロードするスレッド
+def downloadWhisperGgmlModel():
+	try:
+		speech_rec_whisper.downloadWhisperGgmlModel()
+	except Exception as e:
+		common.errorOccurred()
+		tb = sys.exc_info()[2]
+		logger.error(traceback.format_exc())
+		logger.error("Whisper（バイナリ版）の辞書をダウンロードに失敗しました({})。".format(e.with_traceback(tb)))
+		raise
+
 # 音声認識を行うスレッド(Google音声認識)
 def speechRecognizeGoogle(prepareThread):
 	global logger
@@ -137,7 +148,7 @@ def speechRecognizeWitAI(prepareThread):
 
 
 # 音声認識を行うスレッド(whisper音声認識)
-def speechRecognizeWhisper(prepareThread):
+def speechRecognizeWhisper(prepareThread, downloadWhisperGgmlModelThread):
 	global logger
 	
 	try:
@@ -150,6 +161,11 @@ def speechRecognizeWhisper(prepareThread):
 			
 			# 無音検出とWhisperは両方クライアントのリソースを使うので、並列では行わない
 			if not prepareThread.done():
+				continue
+			
+			# 辞書ダウンロードが終わっていなかったら待つ
+			if not downloadWhisperGgmlModelThread.done():
+				logger.debug("辞書ダウンロード待ち")
 				continue
 			
 			input_file = thread.popReadyRecognizeListWhisper() 
@@ -332,10 +348,13 @@ try:
 			prepareThread = executor.submit(prepare, input_files) # 認識準備スレッド
 			threadList.append(prepareThread)
 			
+			downloadWhisperGgmlModelThread = executor.submit(downloadWhisperGgmlModel) #Whisper（バイナリ版）の辞書をダウンロードするスレッド
+			threadList.append(downloadWhisperGgmlModelThread)
+			
 			recognizeThreads = list()
 			recognizeThreads.append(executor.submit(speechRecognizeGoogle , prepareThread))  # 音声認識スレッド(Google)
 			recognizeThreads.append(executor.submit(speechRecognizeWitAI  , prepareThread))  # 音声認識スレッド(wit.ai)
-			recognizeThreads.append(executor.submit(speechRecognizeWhisper, prepareThread)) # 音声認識スレッド(Whisper)
+			recognizeThreads.append(executor.submit(speechRecognizeWhisper, prepareThread, downloadWhisperGgmlModelThread)) # 音声認識スレッド(Whisper)
 			threadList.extend(recognizeThreads)
 
 
