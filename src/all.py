@@ -88,6 +88,7 @@ def downloadWhisperGgmlModel():
 		logger.error("Whisper（バイナリ版）の辞書をダウンロードに失敗しました({})。".format(e.with_traceback(tb)))
 		raise
 
+
 # 音声認識を行うスレッド(Google音声認識)
 def speechRecognizeGoogle(prepareThread):
 	global logger
@@ -283,6 +284,21 @@ try:
 		logger.error("ffprobeを実行できません。ffprobeがDisNOTEと同じフォルダにあるか確認してください。")
 		sys.exit(1)
 
+	# Whisper(バイナリ版)起動確認
+	if  common.isUseBinaryWhisper() and common.isValidWhisperModel():
+		process = os.path.join("whisper","main.exe")
+		try:
+			logger.info("{} 実行確認".format(process))
+			res = common.runSubprocess("{} -h".format(process))
+			logger.info("{} 実行確認OK".format(process))
+		except FileNotFoundError as e:
+			logger.error(e)
+			logger.error("{}が見つかりません。{}があるか確認してください。".format(process))
+			sys.exit(1)
+		except Exception as e:
+			logger.error(e)
+			logger.error("{}が実行できません。{}の状態を確認してください。".format(process))
+			sys.exit(1)
 
 	# 入力ファイル一覧
 	arg_files = copy.copy(sys.argv)
