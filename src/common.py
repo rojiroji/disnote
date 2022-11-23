@@ -41,6 +41,8 @@ def writeDefaultSysConfig():
 	getWhisperModel()
 	getWhisperLanguage()
 	getWhisperTmpAudioLength()
+	getWhisperBinaryDuration()
+	isUseBinaryWhisper()
 
 # 無音解析時に作るテンポラリファイルの音声の長さ（iniファイルでは分単位だが、ミリ秒に変換して返す）
 def getSegTmpAudioLength():
@@ -194,7 +196,7 @@ def getWhisperTmpAudioLength():
 	return min * 60 * 1000
 
 # Whisper(バイナリ版)解析時に読み込む音声の長さ（iniファイルでは分単位だが、ミリ秒に変換して返す）
-def getWhisperTmpAudioLength():
+def getWhisperBinaryDuration():
 	min = 20 # 20分ごとに出力（デフォルト）
 
 	try:
