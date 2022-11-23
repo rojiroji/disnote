@@ -132,7 +132,6 @@ dmypy.json
 /ffprobe.exe
 /DisNOTE.ini
 /ffmpeg.exe
-*.dll
 /stderr.txt
 /stdout.txt
 /log

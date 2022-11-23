@@ -22,6 +22,8 @@ REMOVE_TEMP_SPLIT_FLAC="remove_temp_split_flac"
 WHISPER_MODEL="whisper_model"
 WHISPER_LANG="recognize_whisper_language"
 WHISPER_TMP_AUDIO_LENGTH="whisper_tmp_audio_length"
+WHISPER_BINARY_DURATION="whisper_binary_duration"
+IS_USE_BINARY_WHISPER="is_use_binary_whisper"
 
 WHISPER_MODEL_NONE="none"
 
@@ -173,7 +175,7 @@ def getWhisperLanguage():
 	
 	return ret
 
-# Whisper解析時に作るテンポラリファイルの音声の長さ（iniファイルでは分単位だが、ミリ秒に変換して返す）
+# Whisper(python版)解析時に作るテンポラリファイルの音声の長さ（iniファイルでは分単位だが、ミリ秒に変換して返す）
 def getWhisperTmpAudioLength():
 	min = 5 # 5分ごとに分割（デフォルト）
 
@@ -190,6 +192,38 @@ def getWhisperTmpAudioLength():
 		writeSysConfig(config)
 	
 	return min * 60 * 1000
+
+# Whisper(バイナリ版)解析時に読み込む音声の長さ（iniファイルでは分単位だが、ミリ秒に変換して返す）
+def getWhisperTmpAudioLength():
+	min = 20 # 20分ごとに出力（デフォルト）
+
+	try:
+		config = readSysConfig()
+		val = config['DEFAULT'].get(WHISPER_BINARY_DURATION)
+		min = int(val)
+		if min < 1: # 最低でも1分区切り
+			min = 1
+			
+	except: # 設定ファイルが読めなかったり(初回起動時)、値がおかしかったらデフォルトで保存
+		min = 20
+		config.set('DEFAULT',WHISPER_BINARY_DURATION , str(min))
+		writeSysConfig(config)
+	
+	return min * 60 * 1000
+
+# バイナリ版Whisperを使うかどうか(デフォルトはTrue)
+def isUseBinaryWhisper():
+	ret = 1;
+	try:
+		config = readSysConfig()
+		val = config['DEFAULT'].get(IS_USE_BINARY_WHISPER)
+		ret = int(val)
+
+	except: # 設定ファイルが読めなかったり(初回起動時)、値がおかしかったらデフォルトで保存
+		config.set('DEFAULT',IS_USE_BINARY_WHISPER , str(ret))
+		writeSysConfig(config)
+	
+	return ret != 0;
 
 
 # システムconfig読み込み
@@ -375,10 +409,16 @@ def getLogger(srcfile):
 
 # サブプロセス実行（returncodeが非0の場合は標準エラー出力をログに吐いて例外を投げる。正常終了時、res.stdoutに標準出力）
 def runSubprocess(args):
-	res = subprocess.run(args, encoding='utf-8', stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+	res = subprocess.run(args, encoding='utf-8', capture_output=True, text=True) #, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 	if res.returncode != 0:
 		logger = getLogger(__file__)
+		logger.error(args)
 		logger.error(res.stderr)
+		
+		if res.stderr is None:
+			logger.error(res.stdout)
+			raise RuntimeError(res.stdout)
+
 		raise RuntimeError(res.stderr)
 
 	return res

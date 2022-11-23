@@ -72,12 +72,42 @@ def reasonNotToRecognize(input_file):
 
 	return None
 
+# Whisper（バイナリ版）の認識結果を返す
+def getBinaryWhisperResultToSegments(whisper_result):
+	
+	lines = whisper_result.split("\n")
+	l = 1 # 最初に空行があるので1行飛ばす
+
+	segment_list = list()
+	while l < len(lines): # 開始時間(秒),終了時間(秒),text,token(text),token(id),区切り行 の順
+		segment = dict()
+
+		line = lines[l].strip()
+		if len(line) <= 0:
+			break
+		segment["start"] = float(line) / 1000
+		l += 1
+		
+		line = lines[l].strip()
+		segment["end"] = float(line) / 1000
+		l += 1
+		
+		line = lines[l].strip()
+		segment["text"] =line
+		l += 1
+		#print(line)
+
+		l += 3 # token(text),token(id),区切り行 を読み飛ばし
+		
+		segment_list.append(segment)
+	
+	return segment_list
+
 # 音声ファイルをtxtファイルに出力された結果に従って分割
 def main(input_file):
 	global model
 	
 	logger.info("3. 音声認識開始(whisper) - {}".format(os.path.basename(input_file)))
-	logger.info("Cuda.available:{}".format(torch.cuda.is_available()))
 	
 	func_in_time = time.time()
 
@@ -88,7 +118,10 @@ def main(input_file):
 
 	modelname = common.getWhisperModel()
 	language  = common.getWhisperLanguage()
-	logger.info("whisperモデル：{}".format(modelname))
+	logger.info("Whisperモデル：{}".format(modelname))
+
+	is_use_binary = common.isUseBinaryWhisper() # バイナリ版を使うかどうか
+	logger.info("使用whisper：{}".format("バイナリ版" if is_use_binary else "Python版"))
 
 	config = common.readConfig(input_file)
 	
@@ -100,7 +133,9 @@ def main(input_file):
 	
 
 	# whisperモデル読み込み（読み込みを1回にするためにglobalに保持）
-	if model is None:
+	if (model is None) and (not is_use_binary):
+		logger.info("Cuda.available:{}".format(torch.cuda.is_available()))
+		
 		# pyinstallerでバイナリを作った場合、lib以下にwhisperのassetsが存在しないため手元からコピーする
 		if os.path.exists("whisper/assets"): # assetsフォルダがある場合
 			assetsdir = os.path.join(os.path.dirname(whisper.__file__), "assets")
@@ -114,13 +149,9 @@ def main(input_file):
 			logger.debug("currentにassetsなし")
 
 		logger.info("whisperモデル読み込み開始：{}".format(modelname))
-		model = whisper.load_model(modelname)
+		model = whisper.load_model(modelname) #, device="cpu"
 		logger.info("whisperモデル読み込み完了：{}".format(modelname))
 
-	if model is None:
-		logger.info("whisperのモデルが指定されていないためスキップ(音声認識)")
-		return
-	
 	# 中断データ
 	progress = config['DEFAULT'].get(CONFIG_WORK_PROGRESS,'')
 
@@ -151,7 +182,7 @@ def main(input_file):
 	logger.info("分割結果ファイル：{}".format(os.path.basename(split_result_file)))
 
 	split_result_list = list()
-	cut_len_max = common.getWhisperTmpAudioLength()
+	cut_len_max = common.getWhisperTmpAudioLength() if is_use_binary else common.getWhisperTmpAudioLength() # バイナリ版かどうかで、作業ごとの音声の長さを決める
 	cut_len = cut_len_max
 	last_endtime = 0
 	logger.info("分割単位：{}min".format(int(cut_len/60/1000)))
@@ -218,6 +249,14 @@ def main(input_file):
 	elif len(split_result_list) > 0: # 最初から
 		cuttime_start = split_result_list[0]["org_start_time"]
 
+	# 作業用音声ファイル
+	if is_use_binary:
+		tmp_audio_file = common.getTemporaryFile(input_file, __file__, "wav") # バイナリ版は16bitのwavしかよめない
+		res = common.runSubprocess("ffmpeg -i \"{}\" -vn  -ar 16000 -ac 1 -c:a pcm_s16le -y \"{}\" "
+			.format(input_file,tmp_audio_file)) # Whisper(バイナリ)の中でseekするので、音声ファイルは先に作っておく
+	else:
+		tmp_audio_file = common.getTemporaryFile(input_file, __file__, "flac")
+	
 	# 音声認識
 	index = 0
 	prev_index = 0
@@ -227,18 +266,34 @@ def main(input_file):
 			break
 
 		# 音声認識用に分割
-		tmp_audio_file = common.getTemporaryFile(input_file, __file__, "flac")
-		res = common.runSubprocess("ffmpeg -ss {} -t {} -i \"{}\" -vn -acodec flac -y \"{}\"".format(cuttime["start_time"]/1000, cuttime["duration"]/1000,input_file,tmp_audio_file))
-		#logger.info("ffmpeg -ss {} -t {} -i \"{}\" -vn -acodec flac -y \"{}\"".format(cuttime["start_time"]/1000, cuttime["duration"]/1000,input_file,tmp_audio_file))
+		if is_use_binary:
+			pass
+		else:
+			process = "ffmpeg -ss {} -t {} -i \"{}\" -vn -acodec flac -y \"{}\"".format(cuttime["start_time"]/1000, cuttime["duration"]/1000,input_file,tmp_audio_file)
+			#logger.info(process)
+			res = common.runSubprocess(process)
 
 		
 		# 音声認識
 		# Whisperは音声認識結果が時々おかしくなる（同じ認識結果で認識時間が1000の倍数、という結果を何度も繰り返す）ので、おかしかったら中断する
 		# Whisperのバージョンが上がれば状況が変わるかもしれない。
-		logger.info("　音声認識中 {} ({}%) {}/{}".format(base, int(100 * cuttime_start / last_endtime), cuttime_start, last_endtime))
-		result = model.transcribe(tmp_audio_file, language=language) # , verbose=True
-		os.remove(tmp_audio_file) # 音声ファイルは大きいのでさっさと消してしまう
+		logger.info("　音声認識中 {} ({}%) {}/{} binary:{}".format(base, int(100 * cuttime_start / last_endtime), cuttime_start, last_endtime, is_use_binary))
+		
+		if is_use_binary: # バイナリ版Whisper実行（wav化した元データを認識）
+			process = "{} -l {} -m whisper/ggml-{}.bin -t 0  -ot {} -d {} -vb \"{}\" \"{}\" ".format(
+				os.path.join("whisper","main.exe"),language, modelname, cuttime["start_time"], cuttime["duration"], split_result_file,tmp_audio_file)
+			logger.debug(process)
+			res = common.runSubprocess(process)
+			
+			logger.debug(res.stderr)
 
+			result = dict()
+			result["segments"] = getBinaryWhisperResultToSegments(res.stdout)
+			result["text"] = ""
+
+		else: # python版Whisper実行（細切れにした音声を認識）
+			result = model.transcribe(tmp_audio_file, language=language) # , verbose=True
+		
 		logger.debug("音声認識結果(whisper) {}".format(result["text"]))
 
 		prev_text = ""
@@ -259,7 +314,7 @@ def main(input_file):
 			if (segment_result["text"] == prev_text) and (segment_result["duration"] % 1000 == 0):
 				check_count += 1
 				logger.debug("　音声認識 同じ結果が繰り返された {} check_count={},result={}".format(base, check_count, segment_result))
-				if check_count >= 1: # 閾値を設定する予定だったが、一発でアウトにした
+				if check_count >= 2: # バイナリ版と条件を揃える
 					logger.debug("　※音声認識結果が良くない {} start_time={}".format(base, segment_result["start_time"]))
 					is_allok = False
 					break
@@ -267,8 +322,12 @@ def main(input_file):
 				check_count = 0
 				last_ok = segment_result
 			
-			segment_result["start_time"] += cuttime["start_time"] #  + 分割開始時間
-			segment_result["end_time"]   += cuttime["start_time"] #  + 分割開始時間
+			if is_use_binary:
+				pass
+			else:
+				segment_result["start_time"] += cuttime["start_time"] # python版Whisperは音声ファイルを分割してから認識しているので、分割開始時間だけずらす
+				segment_result["end_time"]   += cuttime["start_time"] # python版Whisperは音声ファイルを分割してから認識しているので、分割開始時間だけずらす
+				
 			prev_text = segment_result["text"]
 			segment_map[segment_result["start_time"] ] = segment_result # マップに登録（同じ時間の結果は上書きされる）
 
@@ -284,6 +343,7 @@ def main(input_file):
 					break
 
 		# 認識結果の時間と分割結果の時間を比べる(WhisperとinaSpeechSegmenterで有声と判定された時間帯が異なるので、inaSpeechSegmenterの方に寄せなければならない)
+		split_index = 0
 		for start_time in sorted(segment_map.keys()):
 			segment_result = segment_map[start_time]
 			split_index = 0
@@ -361,6 +421,7 @@ def main(input_file):
 			CONFIG_WORK_MODEL:modelname # モデルを記録しておく
 		})
 
+	os.remove(tmp_audio_file) # 作業用の音声ファイルを消す
 
 	# 認識結果のテキストをsplitに反映
 	for start_time in sorted(segment_map.keys()):
