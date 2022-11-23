@@ -148,7 +148,9 @@ def speechRecognizeWhisper(prepareThread):
 			time.sleep(1)
 			logger.debug("スレッド待機中(speechRecognizeWhisper)")
 			
-			# TODO:GPUを有効にしていたら、無音検出とWhisperの両方でGPUを使うことになるので、prepareThreadが終了してからWhisperを始めた方が良い
+			# 無音検出とWhisperは両方クライアントのリソースを使うので、並列では行わない
+			if not prepareThread.done():
+				continue
 			
 			input_file = thread.popReadyRecognizeListWhisper() 
 			if input_file is None:
