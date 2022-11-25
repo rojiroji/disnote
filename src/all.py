@@ -16,6 +16,8 @@ import copy
 import time
 import thread
 from concurrent.futures import (ThreadPoolExecutor, wait)
+from urllib.error import HTTPError
+import socket
 
 logger = common.getLogger(__file__)
 
@@ -85,7 +87,7 @@ def downloadWhisperGgmlModel():
 		common.errorOccurred()
 		tb = sys.exc_info()[2]
 		logger.error(traceback.format_exc())
-		logger.error("Whisper（バイナリ版）の辞書をダウンロードに失敗しました({})。".format(e.with_traceback(tb)))
+		logger.error("Whisper（バイナリ版）辞書のダウンロードに失敗しました({})。".format(e.with_traceback(tb)))
 		raise
 
 
@@ -138,8 +140,35 @@ def speechRecognizeWitAI(prepareThread):
 				continue
 			
 			# 音声認識
-			speech_rec_wit.main(input_file)
-			thread.pushReadyConvertListWitAI(input_file)
+			retry_count = 0
+			while True: # 何度かリトライ
+				retry = False
+				try:
+					speech_rec_wit.main(input_file)
+				except HTTPError as e: # タイムアウトエラーの場合はリトライする
+					if e.code == 408:
+						retry = True
+					else:
+						raise e
+				except socket.timeout:# タイムアウトエラーの場合はリトライする
+					retry = True
+				except Exception as e:
+					raise e
+
+				if retry:
+					retry_count += 1
+					
+					if retry_count <= 3: # 最大3回
+						logger.info("wit.aiの音声認識でタイムアウトが発生したためリトライします({})".format(retry_count))
+						time.sleep(5)
+					else:
+						raise RuntimeError("リトライ回数が上限を超えました({})。".format(retry_count))
+				else:
+					# 完了
+					thread.pushReadyConvertListWitAI(input_file)
+					break
+
+					
 	except Exception as e:
 		common.errorOccurred()
 		tb = sys.exc_info()[2]

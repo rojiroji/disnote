@@ -9,6 +9,7 @@ import time
 from urllib.parse import urlencode
 from urllib.request import Request, urlopen
 from urllib.error import URLError, HTTPError
+import socket
 class RequestError(Exception): pass
 
 logger = common.getLogger(__file__)
@@ -163,7 +164,14 @@ def main(input_file):
 								logger.debug("skipped.")
 							
 						text = text + result_text # 結果を後ろに繋げていく
-
+				except HTTPError as e:
+					if e.code == 408:
+						# タイムアウトエラーの場合はそのまま返す
+						raise
+					logger.error(traceback.format_exc()) # 音声認識失敗。ログを吐いた後にファイル名だけわかるように再度例外を投げる
+					raise RuntimeError("音声認識に失敗したファイル(wit.ai) … {},{}".format(audio_file_prefix, id))
+				except socket.timeout:# タイムアウトエラーの場合はそのまま返す
+					raise
 				except:
 					logger.error(traceback.format_exc()) # 音声認識失敗。ログを吐いた後にファイル名だけわかるように再度例外を投げる
 					raise RuntimeError("音声認識に失敗したファイル(wit.ai) … {},{}".format(audio_file_prefix, id))
@@ -233,12 +241,14 @@ def recognize_wit(target_file, key):
 		except HTTPError as e:
 			str = "時間を置いて再度実行すると上手くいくかもしれません"
 			if e.code == 408:
-				str = "タイムアウトになりました。時間を置いて再度実行してください"
+				# str = "タイムアウトになりました。時間を置いて再度実行してください" # タイムアウトエラーの場合はそのまま返す
+				raise
 			elif e.code == 400:
 				str = "DisNOTE.iniのwit_ai_server_access_tokenの値が正しいか確認してください"
 
 			raise RequestError("recognition request failed:{}({}) / {}。".format(e.code, e.reason, str))
-				
+		except socket.timeout:# タイムアウトエラーの場合はそのまま返す
+			raise
 		except URLError as e:
 			raise RequestError("recognition connection failed: {}".format(e.reason))
 		response_text = response.read().decode("utf-8")
