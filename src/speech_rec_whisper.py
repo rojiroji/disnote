@@ -360,7 +360,7 @@ def main(input_file):
 				check_count += 1
 				logger.debug("　音声認識 同じ結果が繰り返された {} check_count={},result={}".format(base, check_count, segment_result))
 				if check_count >= 2: # バイナリ版と条件を揃える
-					logger.info("　※音声認識結果が良くない {} start_time={}".format(base, segment_result["start_time"]))
+					logger.info("　※音声認識結果が良くないので再認識する {} start_time={}".format(base, segment_result["start_time"]))
 					is_allok = False
 					break
 			else:
