@@ -113,7 +113,7 @@ def downloadWhisperGgmlModel():
 		return
 
 	modelname = common.getWhisperModel()
-	saveto = os.path.join("whisper", "ggml-{}.bin".format(modelname))
+	saveto = os.path.join("whisper", "models", "ggml-{}.bin".format(modelname))
 	
 	if os.path.exists(saveto): # 既に存在すれば何もしない
 		logger.info("Whisper辞書データダウンロード…ダウンロード済みのためスキップ {}".format(saveto))
@@ -324,7 +324,7 @@ def main(input_file):
 		
 		if is_use_binary: # バイナリ版Whisper実行（wav化した元データを認識）
 			process = "{} -l {} -m {} -t 0  -ot {} -d {} -vb \"{}\" \"{}\" ".format(
-				os.path.join("whisper","main.exe"),language, 	os.path.join("whisper", "ggml-{}.bin".format(modelname)),
+				os.path.join("whisper","disnote_whisper.exe"),language, 	os.path.join("whisper", "models", "ggml-{}.bin".format(modelname)),
 				cuttime["start_time"], cuttime["duration"], split_result_file,tmp_audio_file)
 				
 			logger.debug(process)

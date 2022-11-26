@@ -315,7 +315,7 @@ try:
 
 	# Whisper(バイナリ版)起動確認
 	if  common.isUseBinaryWhisper() and common.isValidWhisperModel():
-		process = os.path.join("whisper","main.exe")
+		process = os.path.join("whisper","disnote_whisper.exe")
 		try:
 			logger.info("{} 実行確認".format(process))
 			res = common.runSubprocess("{} -h".format(process))
