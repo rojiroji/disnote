@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
 	<meta charset="Shift-JIS">
-	<title>DisNOTE - マルチトラック動画_トラック1に全部の音_disnote</title>
+	<title>DisNOTE - TITLE</title>
 	<link href="htmlfiles/main.css" rel="stylesheet">
 	<link href="htmlfiles/jquery-ui.css" rel="stylesheet">
 	<script src="htmlfiles/jquery-3.6.0.min.js"></script>
@@ -11,6 +11,8 @@
 
 	<script>
 	$(function() {
+		$edittingtag = null; // 編集中のhtmlタグ
+		var editText = {};
 
 		// 話者
 		var people = {};
@@ -134,7 +136,7 @@
 			saveConfig();
 		});
 		
-		// 行内の表示する候補を変更
+		// 行内の表示する候補を変更($td：対象行、d：候補の変更(+1 or -1))
 		function changeText($td, d){
 			changeCurrentTd($td);
 			$target = $td.parent().data('textTd');
@@ -147,7 +149,7 @@
 			current = (len + current + d) % len;
 
 			$target.data('current', current);
-			$target.text($target.data('text' + current));
+			$target.find('div.text').text($target.data('text' + current));
 			
 			var title = (current + 1) + "/" + len;
 			var textId = $target.attr('id');
@@ -165,6 +167,7 @@
 			selection_engine[number] = engine;
 
 			$target.attr('title',getEnginName(engine));
+			$target.find('span.engine').text(getEnginName(engine))
 			
 			num = 0;
 			for(var i = 0;i < current; i++){
@@ -192,13 +195,26 @@
 		
 		// $tdを選択
 		function changeCurrentTd($td, seekOrgMedia = true){
-			$(".current").removeClass('current');
-			if(!$td){		return;			}
+			var isChange = true;
+			if(!$td){
+				//
+			}else{
+				$td = $td.parent().data('playTd');
+				if(!$currentTd){
+					$currentTd = $td;
+				}else if(!$td || $currentTd == $td){
+					isChange = false;
+				}else{
+					$currentTd = $td;
+				}
+			}
 			
-			$td = $td.parent().data('playTd');
-			if(!$td){		return;			}
-			
-			$currentTd = $td;
+			if(isChange || !$currentTd){ // 違うtdを選んだ場合は、元の選択を外す
+				$(".current").removeClass('current');
+				editTdTextEnd();
+			}else{
+				return;
+			}
 			
 			// 再生中の行に色付け
 			if($currentTd ){
@@ -209,6 +225,7 @@
 					$("#orgmedia")[0].currentTime = $currentTd.parent().data('time');
 					$("#movie")[0].currentTime = $currentTd.parent().data('time');
 				}
+				$("#sound").attr({"src": $currentTd.data('filename') });
 			}
 		}
 		
@@ -494,10 +511,10 @@
 			$("#download").dialog( "close" );
 		});
 		
-		// 選択行を適当に決める
-		function defaultCurrentTd(){
+		// 選択行を適当に取得
+		function getDefaultCurrentTd(){
 			if($currentTd){
-				return;
+				return $currentTd;
 			}
 			$prevtr = undefined;
 			$toptr = undefined;
@@ -510,10 +527,20 @@
 				$prevtr = $(element);
 			});
 			if($toptr){ // 位置調整(進んで戻す)
-				$currentTd = $toptr.data('playTd');
-				scrollToTop($currentTd, false);
-				scrollToBottom($currentTd, false);
+				$td = $toptr.data('playTd');
+				scrollToTop($td, false);
+				scrollToBottom($td, false);
+				return $td;
 			}
+			return undefined;
+		}
+		
+		// 選択行を適当に設定
+		function defaultCurrentTd(){
+			if($currentTd){
+				return ;
+			}
+			$currentTd = getDefaultCurrentTd();
 		}
 		
 
@@ -596,8 +623,7 @@
 			}while($nextPlayTd.parent().hasClass("highlight") == false)
 			
 			// 該当行にフォーカス
-			$currentTd = $nextPlayTd;
-			changeCurrentTd($currentTd);
+			changeCurrentTd($nextPlayTd);
 			scrollToTop($currentTd, false);
 			scrollToBottom($currentTd, false);
 			
@@ -621,6 +647,9 @@
 		// キーボード入力
 		$(document).on("keydown", function(e) {
 			if($("#help").dialog("isOpen") || $("#download").dialog("isOpen")){ // ダイアログ表示中
+				return true;
+			}
+			if($edittingtag){	// 編集中
 				return true;
 			}
 			
@@ -666,8 +695,11 @@
 			}
 			
 			if(e.key == "Enter"){ // Enter
-				defaultCurrentTd();
-				changeCurrentTd($currentTd);
+				if($currentTd){
+					editTdTextStart($currentTd);
+				}else{
+					changeCurrentTd(getDefaultCurrentTd());
+				}
 				return false;
 			}
 
@@ -787,6 +819,84 @@
 			
 		});
 		
+		// 編集開始
+		function editTdTextStart($target){
+			editTdTextEnd();
+			
+			// テキストが表示されているタグが本体
+			$targetTd = $target.parent().data('textTd');
+			
+			// 入力部品
+			$input = $("<input>").attr({"type": "text", "id" : "editting_input"});
+			$input.val($targetTd.find('div.text').text().trim()); // 現在表示されている文字列が初期値
+			
+			// 候補選択
+			$select = $("<select>").attr({"id" : "editting_select"});
+			$select.append($("<option>").attr({"value" : ""}).text(""));
+			$select.append($("<option>").attr({"value" : "候補1"}).text("候補1"));
+			$select.append($("<option>").attr({"value" : "候補2"}).text("候補2"));
+			$select.append($("<option>").attr({"value" : "候補3"}).text("候補3"));
+			
+			// キャンセル時のバックアップ
+			$backup = $("<input>").attr({"type": "hidden", "id" : "editting_backup"}).val($input.val());
+			
+			// 部品表示、元々のテキストを消す
+			$edittingtag = $("<span>").append($input).append($select).append($backup);
+			$targetTd.find('div.text').text("").append($edittingtag);
+			$input.focus();
+			
+			$input.keydown(function(e) { // キー入力
+				if (e.key == "Enter") { // Enter（確定）
+					//console.log($input.val());
+					submitTdText($targetTd, $input.val());
+					
+					return false;
+				}
+				if(e.key == "Escape" ){ // ESC（キャンセル）
+					editTdTextEnd();
+					return false;
+				}
+			});
+			
+			$select.change(function() { // 候補選択
+				var v = $(this).val();
+				if(v){
+					//$("#editting_input").val(v); // 普通に val(v) で設定するとundoが効かない。以下のようにすると効くようになる。
+					$("#editting_input").focus();
+					$("#editting_input").get(0).selectionStart = 0;
+					$("#editting_input").get(0).selectionEnd = $("#editting_input").val().length;
+					document.execCommand('insertText', false, v);
+					
+					$(this).focus();
+				}
+ 			});
+			
+		}
+		
+		// 編集を反映する
+		function submitTdText($targetTd, val){
+			editTdTextEnd();
+			var key = $targetTd.attr("id");
+			
+			if(editText[key]){ // 既存を書き換え
+				console.log("exists.");
+			}else{ // 新規の場合は新しく列を追加
+			}
+			
+			editText[key] = val;
+			console.log(key + ":" + val);
+			$targetTd.find('div.text').text(editText[key]);
+		}
+		
+		// 編集終了（入力タグを消す）入力は反映されない
+		function editTdTextEnd(){
+			if($edittingtag){
+				$edittingtag.parent().text($("#editting_backup").val()); // 戻す
+				$edittingtag.remove();
+			}
+			$edittingtag = null;
+		}
+		
 		
 		// クリップボードにテキストをコピー
 		function copyTdText($target){
@@ -795,7 +905,7 @@
 			$target = $target.parent().data('textTd');
 			
 			var $clipboard = $('<textarea></textarea>');
-			$clipboard.text($target.text());
+			$clipboard.text($target.find('div.text').text());
 			$('body').append($clipboard);
 
 			$clipboard.val($target.text());
@@ -844,9 +954,13 @@
 
 			// 候補
 			var textTdId = "text_" + i;
-			$textTd = $("<td>").attr({"id": textTdId }).addClass("text").on("click", function(){ // クリックでコピー
-				copyTdText($(this));
-			});
+			$textTd = $("<td>").attr({"id": textTdId }).addClass("text")
+			.on("click", function(){ 		changeCurrentTd($(this));	})	// クリックで選択	//	copyTdText($(this));
+			.on("dblclick", function(){ editTdTextStart($(this));	})	// ダブルクリックで編集
+			.append($("<div>").addClass("text")) // テキスト本体
+					.append($("<span>").addClass("engine")) // エンジン名
+			;
+			
 
 			// 左矢印
 			$left = $("<td>").attr({"id": textTdId + "_l"}).addClass("button").data('number', i).addClass("prev").on("click", function(){
@@ -906,11 +1020,12 @@
 			if(!current){ current = 0;} // 何か変な文字が入ってたら0にする
 			if(current >= textlen){current = 0;} // 外にあふれていても0にする
 			
-			$textTd.text(data[i][textBase + current]) // 候補を表示
+			$textTd.find('div.text').text(data[i][textBase + current]) // 候補を表示
 			$textTd.data('textlen', textlen);
 			$textTd.data('current', current);
 			$textTd.data('engines', engines);
 			$textTd.attr('title',getEnginName(engines[current]));
+			$textTd.find('span.engine').text(getEnginName(engines[current]))
 
 			// ボタンに、いまどの候補を表示しているかを出す
 			$left.attr( {"title": (current + 1) + "/" + textlen });
@@ -1148,6 +1263,26 @@
 			$("#peopletable").append($("<tr>").append($checkboxTd).append($filenameTd).append($nameTd));
 		}
 		
+		// ファイルのドラッグ＆ドロップ
+		$(document).on("dragover", function(e){ // TODO：ファイルをドラッグできそうな雰囲気にしたい+できればファイル名から有効無効を見たい
+			e.preventDefault();
+		});
+		$(document).on("dragleave", function(e){ // TODO：dragoverの状態を解除
+			e.preventDefault();
+		});
+		$(document).on("drop", function(e){
+			e.preventDefault();
+
+			var reader = new FileReader();
+
+			reader.onload = function (e) {
+				result = JSON.parse(reader.result);
+				console.log(result); // TODO：画面更新
+			}
+			reader.readAsText(e.originalEvent.dataTransfer.files[0]);
+		});
+		
+		// 初期化処理
 		loadConfig();
 		loadProjectSetting();
 		updateShowNameMode();
