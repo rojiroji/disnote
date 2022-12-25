@@ -139,7 +139,7 @@ def downloadWhisperGgmlModel():
 
 				dl_m = int (dl / 1024 / 1024)
 				p = int(100 * dl_m / total_length)
-				if p > prev_p + 5:
+				if p >= prev_p + 5:
 					logger.info("Whisper辞書データダウンロード中：{} {}MB / {}MB({}%)".format(modelname, dl_m, total_length, int(p)))
 					prev_p = p
 
@@ -437,20 +437,21 @@ def main(input_file):
 				break
 
 
-		# 次の分割開始位置（次回は、全部認識成功していたら最後に認識した区分領域の次から、そうでなければ最後に認識した分割区域から、認識する）
-		next_index = split_index
+		# 次の分割開始位置を決定する
 		cut_len_prev = cut_len
 
 		logger.debug("index:prev_index:{} split_index:{},is_allok:{}".format(prev_index,split_index,is_allok))
-		if is_allok: 
-			next_index += 1
+		if is_allok: # 全部認識成功していたら、最後に認識した区分領域の次から認識する
+			next_index = split_index + 1
 			cut_len = min(cut_len_prev + 60 * 1000, cut_len_max) # 成功したら認識する音声を長くする（初期値よりは大きくしない）
-		else:
-			if prev_index >= next_index: # 無限ループを防ぐため、開始位置だけは必ずずらす
-				logger.debug("無限ループ防止:prev_index:{} next_index:{}".format(prev_index,next_index))
-				next_index = prev_index + 1
+		else: # そうでなければ最後に認識した分割区域から認識する
+			next_index = split_index
 			cut_len = max(cut_len_prev - 60 * 1000, 60 * 1000) # 失敗したら認識する音声を短くする
 		logger.debug("　次回分割長： {} → {}".format(cut_len_prev, cut_len))
+		
+		if prev_index >= next_index: # 無限ループを防ぐため、開始位置が前回と同じだったら次に進める
+			logger.debug("無限ループ防止:prev_index:{} next_index:{}".format(prev_index,next_index))
+			next_index = prev_index + 1
 		
 		if next_index < len(split_result_list):
 			cuttime_start = split_result_list[next_index]["org_start_time"]
