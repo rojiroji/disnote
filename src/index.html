@@ -13,6 +13,8 @@
 	$(function() {
 		$edittingtag = null; // 編集中のhtmlタグ
 		var editText = {};
+		var edited = false;
+		//var editFileName = "";
 
 		// 話者
 		var people = {};
@@ -103,9 +105,9 @@
 			// 再検索
 			search(true);
 
-			if($("#peoplelist").dialog("isOpen")){ // スクロールで話者選択ウィンドウが遠くに行ってしまうことがあるので再表示
-				$("#peoplelist").dialog( "close" );
-				$("#peoplelist").dialog("open");
+			if($("#projectsetting").dialog("isOpen")){ // スクロールで話者選択ウィンドウが遠くに行ってしまうことがあるので再表示
+				$("#projectsetting").dialog( "close" );
+				$("#projectsetting").dialog("open");
 			}
 		
 		}
@@ -136,17 +138,15 @@
 			saveConfig();
 		});
 		
-		// 行内の表示する候補を変更($td：対象行、d：候補の変更(+1 or -1))
-		function changeText($td, d){
+		// 行内の表示する候補を変更($td：対象行、current：候補の番号)
+		function changeTextAbs($td, current){
 			changeCurrentTd($td);
 			$target = $td.parent().data('textTd');
 
-			var current = 0 + $target.data('current');
 			var len = 0 + $target.data('textlen');
 			if(len <= 0){
 				return;
 			}
-			current = (len + current + d) % len;
 
 			$target.data('current', current);
 			$target.find('div.text').text($target.data('text' + current));
@@ -181,6 +181,20 @@
 			//console.log("current=" + selection[number] + ", engine=" + selection_engine[number]  + " engine_num=" + selection_engine_num[number])
 			
 			saveProjectSelection();
+		}
+
+		// 行内の表示する候補を変更($td：対象行、d：候補の変更(+1 or -1))
+		function changeText($td, d){
+			$target = $td.parent().data('textTd');
+
+			var current = 0 + $target.data('current');
+			var len = 0 + $target.data('textlen');
+			if(len <= 0){
+				return;
+			}
+			current = (len + current + d) % len;
+			changeTextAbs($td, current);
+
 		}
 		
 		// ミリ秒から時間表記に変換
@@ -334,7 +348,7 @@
 		
 		// ウィンドウスクロール時、ダイアログの位置を追随させる
 		$(window).on('scroll', function() {
-			[$("#movieDialogue"), $("#help"), $("#peoplelist"), $("#download") ].forEach(function($t){
+			[$("#movieDialogue"), $("#help"), $("#projectsetting"), $("#download") ].forEach(function($t){
 				$p = $t.parent();
 				if($p.css('display') != 'none') {
 					var top = $(window).scrollTop() + $p.data('objectTop');
@@ -469,12 +483,33 @@
 
 			downloadStr(str, isCSV ? 'text/csv' : 'text/plain', filename  + (isCSV ? 'csv' : 'txt'));
 		}); 
+		function saveEdit(){ // 編集データ保存（ダウンロード）
+			var str = JSON.stringify({ projectHash : projectHash , personalData : personalData, editText : editText}, null, 4);
+			var filename = decodeURI($("#projectname").val());
 
+			downloadStr(str, 'json', filename + '_disnote.json');
+			/* // 名前を付けて保存（フォルダが毎回リセットされるので没）
+			const opts = {
+				suggestedName: editFileName,
+				types: [{
+					description: 'DisNote編集ファイル',
+					accept: {'application/json': ['.json']},
+				}]
+			};
+			const handle = await window.showSaveFilePicker(opts);
+			const writable = await handle.createWritable()
+			await writable.write(str)
+			await writable.close()
+			
+			editFileName = handle.name;
+			*/
+			edited = false; // 編集ファイルを保存したのでフラグを降ろす
+		}
 		// 話者表示切替ダイアログ設定
-		$("#peoplelist").dialog({
+		$("#projectsetting").dialog({
 			autoOpen: false,
 			modal: true ,
-			title:"話者設定",
+			title:"プロジェクト設定",
 			closeOnEscape:true,
 			close: function(event, ui){ // ダイアログを閉じるときに表示非表示と話者名を変更
 				for (key in personalData){
@@ -490,24 +525,25 @@
 				}
 
 				updateLineDisplay(); // 表示/非表示切り替え
-				saveProjectSetting(); // 話者設定保存
+				savePersonalSetting(); // 話者設定保存
+				saveProjectSetting(); // プロジェクト設定保存
 			},
 			width:"500",
 			open: function() {					saveDialoguePos($(this));		},
 			resizeStop: function() {		saveDialoguePos($(this));		},
 			dragStop: function() {			saveDialoguePos($(this));		},
 		});
-		$( "#open_peoplelist" ).click(function() {
-			$("#peoplelist").dialog("open");
+		$( "#open_projectsetting" ).click(function() {
+			$("#projectsetting").dialog("open");
 		}); 
 		$("#switch_people").on("click", function(){
-			$("#peoplelist").dialog( "close" );
+			$("#projectsetting").dialog( "close" );
 		});
 		
 		// ダイアログ表示中にダイアログ外を押したら閉じる
 		$( document ).on( "click", ".ui-widget-overlay", function(){
 			$("#help").dialog( "close" );
-			$("#peoplelist").dialog( "close" );
+			$("#projectsetting").dialog( "close" );
 			$("#download").dialog( "close" );
 		});
 		
@@ -653,7 +689,7 @@
 				return true;
 			}
 			
-			if($("#peoplelist").dialog("isOpen")){ // 話者選択ダイアログ表示中
+			if($("#projectsetting").dialog("isOpen")){ // 話者選択ダイアログ表示中
 				if(e.key == "ArrowUp" || e.key == "ArrowDown"){ // スクロール抑制
 					return false;
 				}
@@ -696,9 +732,9 @@
 			
 			if(e.key == "Enter"){ // Enter
 				if($currentTd){
-					editTdTextStart($currentTd);
+					editTdTextStart($currentTd); // 既に行が選択されていたら編集開始
 				}else{
-					changeCurrentTd(getDefaultCurrentTd());
+					changeCurrentTd(getDefaultCurrentTd()); // 適当な行を選択する
 				}
 				return false;
 			}
@@ -773,7 +809,13 @@
 				}
 			}
 
-			
+			if(e.ctrlKey){
+				if(e.code == "KeyS"){ // Ctrl+S,s（保存）
+					saveEdit();
+					return false;
+				}
+			}
+
 			// 以下、通常のショートカットキーと重複しないように処理（Ctrl+Aなど）
 			if(e.ctrlKey){
 				return true;
@@ -804,7 +846,7 @@
 				return false;
 			}
 			if(e.code == "KeyP"){ // P,p（話者設定）
-				$("#peoplelist").dialog("open");
+				$("#projectsetting").dialog("open");
 				return false;
 			}
 			if(e.code == "KeyF"){ // F,f（検索窓にフォーカス）
@@ -820,35 +862,46 @@
 		});
 		
 		// 編集開始
+		var editOptionSelected; // 候補選択のプルダウンが表示されているかどうか
 		function editTdTextStart($target){
 			editTdTextEnd();
+			editOptionSelected = "";
 			
 			// テキストが表示されているタグが本体
-			$targetTd = $target.parent().data('textTd');
+			$target = $target.parent().data('textTd');
 			
 			// 入力部品
 			$input = $("<input>").attr({"type": "text", "id" : "editting_input"});
-			$input.val($targetTd.find('div.text').text().trim()); // 現在表示されている文字列が初期値
+			$input.val($target.find('div.text').text().trim()); // 現在表示されている文字列が初期値
 			
-			// 候補選択
+			// 選択候補
 			$select = $("<select>").attr({"id" : "editting_select"});
 			$select.append($("<option>").attr({"value" : ""}).text(""));
-			$select.append($("<option>").attr({"value" : "候補1"}).text("候補1"));
-			$select.append($("<option>").attr({"value" : "候補2"}).text("候補2"));
-			$select.append($("<option>").attr({"value" : "候補3"}).text("候補3"));
+			
+			var len = 0 + $target.data('textlen');
+			for(var i = 0; i < len; i++){
+				var text = $target.data('text' + i).trim();
+				$option = $("<option>").attr({"value" : text}).text(text);
+				$select.append($option);
+				
+				if(text == $input.val()){
+					$option.attr({"selected" : "selected"});
+					editOptionSelected = text;
+				}
+			}
 			
 			// キャンセル時のバックアップ
 			$backup = $("<input>").attr({"type": "hidden", "id" : "editting_backup"}).val($input.val());
 			
 			// 部品表示、元々のテキストを消す
 			$edittingtag = $("<span>").append($input).append($select).append($backup);
-			$targetTd.find('div.text').text("").append($edittingtag);
+			$target.find('div.text').text("").append($edittingtag);
 			$input.focus();
 			
 			$input.keydown(function(e) { // キー入力
 				if (e.key == "Enter") { // Enter（確定）
 					//console.log($input.val());
-					submitTdText($targetTd, $input.val());
+					submitTdText($target, $input.val());
 					
 					return false;
 				}
@@ -858,34 +911,59 @@
 				}
 			});
 			
-			$select.change(function() { // 候補選択
-				var v = $(this).val();
-				if(v){
+			var selectOnChangeFunction = function(focusToText) { // 選択肢切り替え(on("change")イベントだと、focusの制御が難しかったのでclickとkeyupイベントで発生させる)
+				var v = $("#editting_select").val();
+				if(v && editOptionSelected != v){
+					
 					//$("#editting_input").val(v); // 普通に val(v) で設定するとundoが効かない。以下のようにすると効くようになる。
-					$("#editting_input").focus();
+					$("#editting_input").focus(); 
 					$("#editting_input").get(0).selectionStart = 0;
 					$("#editting_input").get(0).selectionEnd = $("#editting_input").val().length;
 					document.execCommand('insertText', false, v);
 					
-					$(this).focus();
+					// この時点で$("#editting_input") にフォーカスが移っているので、selectに戻す
+					if(!focusToText){
+						$("#editting_select").focus(); 
+					}
+					console.log(focusToText);
+					
+					editOptionSelected = v;
 				}
- 			});
+			};
+			
+			$select.on("click", function(){ // クリックで選択肢を変更した場合、textにフォーカスを移す（選択肢表示中にEnterを押した場合もclickイベントが発生する）
+				selectOnChangeFunction(true);
+			});
+			$select.keyup(  function(e){ // 矢印キーで選択肢を変更した場合、selectにフォーカスを残す
+				selectOnChangeFunction(false);
+			});
 			
 		}
 		
 		// 編集を反映する
-		function submitTdText($targetTd, val){
+		function submitTdText($target, val){
 			editTdTextEnd();
-			var key = $targetTd.attr("id");
+			var key = $target.attr("id");
 			
-			if(editText[key]){ // 既存を書き換え
+			var len = 0 + $target.data('textlen');
+
+			if(key in editText){ // 既存を書き換え
 				console.log("exists.");
 			}else{ // 新規の場合は新しく列を追加
+				len++;
+				$target.data('textlen', len);
+				
+				var engines = $target.data('engines');
+				$target.data('engines', engines + "E");
 			}
+			$target.data('text' + (len - 1), val); // 最後のデータに設定
 			
 			editText[key] = val;
 			console.log(key + ":" + val);
-			$targetTd.find('div.text').text(editText[key]);
+			//$target.find('div.text').text(editText[key]);
+			changeTextAbs($target, len - 1);
+			
+			edited = true;
 		}
 		
 		// 編集終了（入力タグを消す）入力は反映されない
@@ -1000,7 +1078,7 @@
 			}
 			var textlen = k - textBase;
 			var current = parseInt(selection[i]); // どの候補を表示するかを設定から読み込む
-			var engines = data[i][textBase - 1];
+			var engines = data[i][textBase - 1].slice(0,textlen); // エンジンのIDの文字列（候補ごと）
 			//console.log("current=" + current + ", engine=" + selection_engine[i]  + " engine_num=" + selection_engine_num[i])
 
 			if(selection_engine[i] && selection_engine[i] != " "){ // このエンジンの何番目、という情報があったらそちらを優先
@@ -1061,6 +1139,11 @@
 					$("#download").dialog("open");
 				}); 
 				$( "#open_download" ).css("opacity","1").css("cursor","pointer").attr("title","ダウンロード(D)");
+
+				$( "#save" ).click(function() { // ロードが完了したので、保存ボタンが使えるようにする
+					saveEdit();
+				}); 
+				$( "#save" ).css("opacity","1").css("cursor","pointer").attr("title","書き起こしデータ保存(Ctrl+S)");
 			}
 			//$("#table").floatThead({ // ヘッダ固定を試したけどしなくてもいいかな
 			//	position: 'absolute'
@@ -1078,6 +1161,7 @@
 				case "s": return "Whisper(small)";
 				case "m": return "Whisper(medium)";
 				case "l": return "Whisper(large)";
+				case "E": return "[Edit]";
 			}
 			return "";
 		}
@@ -1147,9 +1231,21 @@
 			}
 		}
 		
-		// 話者設定保存（プロジェクト単位の設定）
-		var PROJECT_SETTING_KEY = projectHash + "_SETTING";
+		// プロジェクト設定保存
+		var PROJECT_SETTING_KEY = projectHash + "_PROJECT_SETTING";
 		function saveProjectSetting(){
+			var setting = {};
+			setting["projectname"] = $("#projectname").val(); // プロジェクト名
+			saveToLocalStorage(PROJECT_SETTING_KEY,setting);
+		}
+		// プロジェクト設定読み込み
+		function loadProjectSetting(){
+			var setting = loadFromLocalStorage(PROJECT_SETTING_KEY);
+			$("#projectname").val((setting && "projectname" in setting) ? setting["projectname"] : projectHash);
+		}
+		// 話者設定保存（プロジェクト単位の設定）
+		var PERSONAL_SETTING_KEY = projectHash + "_SETTING";
+		function savePersonalSetting(){
 			for (key in personalData){
 				var pv = personalData[key];
 				
@@ -1159,11 +1255,11 @@
 				var nameSettingId = "person_namesetting_" + pv["hash"]; // 表示名
 				pv["displayname"] = $("#" + nameSettingId).val();
 			}
-			saveToLocalStorage(PROJECT_SETTING_KEY,personalData);
+			saveToLocalStorage(PERSONAL_SETTING_KEY,personalData);
 		}
 		// 話者設定読み込み（プロジェクト単位の設定）
-		function loadProjectSetting(){
-			var setting = loadFromLocalStorage(PROJECT_SETTING_KEY);
+		function loadPersonalSetting(){
+			var setting = loadFromLocalStorage(PERSONAL_SETTING_KEY);
 			for (key in setting){
 				var pv = setting[key];
 				
@@ -1264,26 +1360,85 @@
 		}
 		
 		// ファイルのドラッグ＆ドロップ
-		$(document).on("dragover", function(e){ // TODO：ファイルをドラッグできそうな雰囲気にしたい+できればファイル名から有効無効を見たい
+		$(document).on("dragover", function(e){ // ファイルをドラッグしたときに、通常の動き（ファイルを別タブで開く）をしないようにする
 			e.preventDefault();
 		});
-		$(document).on("dragleave", function(e){ // TODO：dragoverの状態を解除
+		
+		$(document).on("dragenter", function(e){ // ファイルをドラッグできそうな雰囲気にする
+			e.preventDefault();
+			$("#draggable").css("display","block");
+			//console.log(e.originalEvent.dataTransfer.items[0].type);
+		});
+		$("#draggable").on("dragleave", function(e){ // dragenterの状態を解除
+			$("#draggable").css("display","none");
 			e.preventDefault();
 		});
-		$(document).on("drop", function(e){
+		$("#draggable_close").on("click", function(e){ // クローズ（何かの原因でドラッグの画面が消え無くなった場合に使う）
+			$("#draggable").css("display","none");
+		});
+		
+		// 編集データ読み込み(key=tdのid,value=編集テキスト の辞書データ)
+		function loadEditData(editText){
+			$("#draggable").css("cursor","wait");
+			var keys = Object.keys(editText);
+			keys.sort();
+			
+			for (key of keys){
+				$target = $("#" + key);
+				if($target[0]){ // 既にテキスト業が存在する場合
+					submitTdText($target, editText[key]); // 設定
+					delete editText[key]; // 読み込むデータから除外
+					console.log(key);
+				} else {
+					break;
+				}
+			}
+
+			if(Object.keys(editText).length > 0){
+				setTimeout(loadEditData, 100, editText); // まだ読み込みが終わっていないので、非同期で少し待って再読み込み
+			}else{
+				$("#draggable").css("display","none");
+				$("#draggable").css("cursor","auto");
+				alert("編集データを読み込みました");
+				edited = false; // 画面反映中に edited がtrueになるので、ここでフラグを降ろす
+			}
+		}
+		
+		$(document).on("drop", function(e){ // 実際に読み込む
 			e.preventDefault();
 
 			var reader = new FileReader();
 
 			reader.onload = function (e) {
-				result = JSON.parse(reader.result);
-				console.log(result); // TODO：画面更新
+				try{
+					file = JSON.parse(reader.result);
+					
+					if( file.projectHash == projectHash){
+						editTextTmp = file.editText;
+						loadEditData(file.editText);
+						return; // 正常に読み込み開始
+					}else{
+						result = "編集ファイルの読み込みに失敗しました。違う音声ファイルの編集ファイルです。";
+					}
+					
+				} catch (error){
+					result = "編集ファイルの読み込みに失敗しました。jsonファイルではありません。";
+				}
+				$("#draggable").css("display","none");
+				alert(result);
 			}
 			reader.readAsText(e.originalEvent.dataTransfer.files[0]);
 		});
 		
+		$(window).on("beforeunload", function() { // 未保存でページを抜けようとしたら確認
+			if(edited){
+				return "確認";
+			}
+		});
+		
 		// 初期化処理
 		loadConfig();
+		loadPersonalSetting();
 		loadProjectSetting();
 		updateShowNameMode();
 		updateSearchResult();
