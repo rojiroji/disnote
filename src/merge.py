@@ -32,7 +32,7 @@ def main(input_files, arg_files):
 		join_hash += hash + "_"
 		
 		key = common.getFileNameWithoutExtension(input_file)
-		personalData[key] = {"orgfile":os.path.basename(input_file), "hash": hash, "name": key}
+		personalData[key] = {"orgfile":os.path.basename(input_file), "hash": hash, "name": key , "displayname" : key, "show" : "true"}
 
 	project_hash = hashlib.md5(join_hash.encode()).hexdigest() # 出力ファイル用のハッシュ値
 
@@ -148,7 +148,7 @@ def main(input_files, arg_files):
 		merged_js += "baseDate=new Date({},{},{},{},{},{});\n".format(baseDate.year, baseDate.month, baseDate.day, baseDate.hour, baseDate.minute, baseDate.second)
 
 	# index.html の値の部分を置換
-	index_data = index_data.replace('TITLE', basefilename).replace('RESULTS', merged_js)
+	index_data = index_data.replace('TITLE', basefilename.replace("_disnote","")).replace('RESULTS', merged_js)
 	
 	# index.html書き込み
 	with open(os.path.join(basedir, basefilename + ".html") , "w", newline='' ) as f: # 変な改行が入るのを防ぐため newline='' 
