@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
 	<meta charset="Shift-JIS">
-	<title>DisNOTE - TITLE</title>
+	<title>DisNOTE</title>
 	<link href="htmlfiles/main.css" rel="stylesheet">
 	<link href="htmlfiles/jquery-ui.css" rel="stylesheet">
 	<script src="htmlfiles/jquery-3.6.0.min.js"></script>
@@ -504,6 +504,7 @@
 			editFileName = handle.name;
 			*/
 			edited = false; // 編集ファイルを保存したのでフラグを降ろす
+			updateTitle();
 		}
 		// 話者表示切替ダイアログ設定
 		$("#projectsetting").dialog({
@@ -527,6 +528,7 @@
 				updateLineDisplay(); // 表示/非表示切り替え
 				savePersonalSetting(); // 話者設定保存
 				saveProjectSetting(); // プロジェクト設定保存
+				updateTitle();
 			},
 			width:"500",
 			open: function() {					saveDialoguePos($(this));		},
@@ -964,6 +966,7 @@
 			changeTextAbs($target, len - 1);
 			
 			edited = true;
+			updateTitle();
 		}
 		
 		// 編集終了（入力タグを消す）入力は反映されない
@@ -1241,7 +1244,7 @@
 		// プロジェクト設定読み込み
 		function loadProjectSetting(){
 			var setting = loadFromLocalStorage(PROJECT_SETTING_KEY);
-			$("#projectname").val((setting && "projectname" in setting) ? setting["projectname"] : projectHash);
+			$("#projectname").val((setting && "projectname" in setting) ? setting["projectname"] : defaultTitle);
 		}
 		// 話者設定保存（プロジェクト単位の設定）
 		var PERSONAL_SETTING_KEY = projectHash + "_SETTING";
@@ -1330,33 +1333,9 @@
 			}
 			return s2;
 		}
-		// --- ここからページ読み込み終了時の処理 ---
-		var data = results;
-		$tableObj = $("#tbody");
-		var selection = loadProjectSelection();
-		var selection_engine = loadProjectSelectionEngine();
-		var selection_engine_num = loadProjectSelectionEngineNum();
-
-		if(typeof baseDate === "undefined"){ // craigの開始時間情報がない場合、時刻表示のcheckbox表示しない
-			$("#abstime").prop("disabled", true);
-			$("#timelabel").css("display", "none")
-		}
-
-		// 話者設定画面の表を作成
-		for (key in personalData){
-			var pv = personalData[key];
-			
-			var personalId = "person_" + pv["hash"];
-			$input  = $("<input>").prop("type","checkbox").prop("id",personalId + "_temp").prop("checked", true); // checkboxで表示非表示を切り替えるが、画面を閉じるまで反映しない
-			$hidden = $("<input>").prop("type","hidden").prop("id",personalId).addClass("person_input").val($input.prop("checked")); // こちらが設定値の本体
-			$checkboxTd = $("<td>").append($("<label>").append($input).append($hidden));
-			
-			$filenameTd = $("<td>").append($("<p>").text(pv["orgfile"]).attr({"title": pv["orgfile"] }).addClass("orgfile"));
-			
-			var nameSettingId = "person_namesetting_" + pv["hash"];
-			$nameTd = $("<td>").append($("<input>").attr("id",nameSettingId).prop("type","input").val(pv["name"])).addClass("name");
-			
-			$("#peopletable").append($("<tr>").append($checkboxTd).append($filenameTd).append($nameTd));
+		
+		function updateTitle(){
+			document.title = (edited ? "(*)" : "") + $("#projectname").val() + " DisNOTE";
 		}
 		
 		// ファイルのドラッグ＆ドロップ
@@ -1401,6 +1380,7 @@
 				$("#draggable").css("cursor","auto");
 				alert("編集データを読み込みました");
 				edited = false; // 画面反映中に edited がtrueになるので、ここでフラグを降ろす
+				updateTitle();
 			}
 		}
 		
@@ -1436,6 +1416,35 @@
 			}
 		});
 		
+		// --- ここからページ読み込み終了時の処理 ---
+		var data = results;
+		$tableObj = $("#tbody");
+		var selection = loadProjectSelection();
+		var selection_engine = loadProjectSelectionEngine();
+		var selection_engine_num = loadProjectSelectionEngineNum();
+
+		if(typeof baseDate === "undefined"){ // craigの開始時間情報がない場合、時刻表示のcheckbox表示しない
+			$("#abstime").prop("disabled", true);
+			$("#timelabel").css("display", "none")
+		}
+
+		// 話者設定画面の表を作成
+		for (key in personalData){
+			var pv = personalData[key];
+			
+			var personalId = "person_" + pv["hash"];
+			$input  = $("<input>").prop("type","checkbox").prop("id",personalId + "_temp").prop("checked", true); // checkboxで表示非表示を切り替えるが、画面を閉じるまで反映しない
+			$hidden = $("<input>").prop("type","hidden").prop("id",personalId).addClass("person_input").val($input.prop("checked")); // こちらが設定値の本体
+			$checkboxTd = $("<td>").append($("<label>").append($input).append($hidden));
+			
+			$filenameTd = $("<td>").append($("<p>").text(pv["orgfile"]).attr({"title": pv["orgfile"] }).addClass("orgfile"));
+			
+			var nameSettingId = "person_namesetting_" + pv["hash"];
+			$nameTd = $("<td>").append($("<input>").attr("id",nameSettingId).prop("type","input").val(pv["name"])).addClass("name");
+			
+			$("#peopletable").append($("<tr>").append($checkboxTd).append($filenameTd).append($nameTd));
+		}
+		
 		// 初期化処理
 		loadConfig();
 		loadPersonalSetting();
@@ -1444,6 +1453,7 @@
 		updateSearchResult();
 		updateTimeMode();
 		updateLineDisplay();
+		updateTitle();
 		$("#version").text(version);
 		
 		$("#orgmedia").attr({"src": mixedMediafile });
@@ -1460,6 +1470,7 @@
 	});
 
 RESULTS
+defaultTitle = "TITLE";
 
 	</script>
 
@@ -1469,14 +1480,27 @@ RESULTS
 	<div class="main">
 		<div id="loading" class="loading"></div>
 		
-		<div id="peoplelist" style="display:none">
-			<table id="peopletable">
-				<tr>
-					<th>表示</th><th>音声ファイル名</th><th>名前</th>
-				</tr>
+		<div id="projectsetting" style="display:none">
+			<div class="group">
+				<div>
+					<span class="caption">プロジェクト名</span>
+				</div>
+				<div style="text-align: right;margin-bottom:3px;width:100%;">
+					<input type="text" id="projectname" style="width:300px"/>
+				</div>
+			</div>
+			<div class="group">
+				<div>
+					<span class="caption">話者設定</span>
+				</div>
+				<table id="peopletable">
+					<tr>
+						<th>表示</th><th>音声ファイル名</th><th>名前</th>
+					</tr>
 
-			</table>
-			<!-- <input type="button" id="switch_people" value="閉じる"> -->
+				</table>
+			</div>
+					<!-- <input type="button" id="switch_people" value="閉じる"> -->
 		</div>
 		
 		<div id="help" style="display:none">
@@ -1514,7 +1538,7 @@ RESULTS
 		</div>
 
 		<div id="download" style="display:none">
-			<div class="dlgroup">
+			<div class="group">
 				<div>
 					<span class="caption">ゆっくりMovieMaker4台本形式 ダウンロード</span>
 				</div>
@@ -1524,7 +1548,7 @@ RESULTS
 					</span>
 				</div>
 			</div>
-			<div class="dlgroup">
+			<div class="group">
 				<div>
 					<span class="caption">カスタムダウンロード</span>
 				
@@ -1578,10 +1602,14 @@ RESULTS
 			<a id="download_dummy" style="display:none" >dummy</a>
 		</div>
 
+		<div id="draggable" style="display:none">
+			<span id="draggable_close">×</span>
+		</div>
 		
 		<div class="header">
+			<div id="save" class="push icon save" title="書き起こしデータ保存(Ctrl+S) (※ロードが完了するまでお待ちください)" style="opacity:0.5;cursor: auto;"></div>
 			<div id="open_download" class="push icon download" title="ダウンロード(D) (※ロードが完了するまでお待ちください)" style="opacity:0.5;cursor: auto;"></div>
-			<div id="open_peoplelist" class="push icon people" title="話者設定(P)" ></div><div id="peoplecount"></div>
+			<div id="open_projectsetting" class="push icon people" title="話者設定(P)" ></div><div id="peoplecount"></div>
 			<div id="search_icon" class="icon search"  ></div>
 			<div><input type="text" id="search"></div>
 			<div id="search_prev" class="push icon searchbutton"></div>
