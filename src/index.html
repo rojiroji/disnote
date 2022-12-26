@@ -215,10 +215,14 @@
 			}else{
 				$td = $td.parent().data('playTd');
 				if(!$currentTd){
-					$currentTd = $td;
+					$currentTd = $td; // 未選択だった場合
 				}else if(!$td || $currentTd == $td){
-					isChange = false;
+					isChange = false; // 変更なしの場合
 				}else{
+					// 選択済みで変更した場合
+					if($edittingtag){
+						submitTdText($currentTd, $("#editting_input").val()); // 編集中だったら反映させる
+					}
 					$currentTd = $td;
 				}
 			}
@@ -684,18 +688,16 @@
 		
 		// キーボード入力
 		$(document).on("keydown", function(e) {
-			if($("#help").dialog("isOpen") || $("#download").dialog("isOpen")){ // ダイアログ表示中
-				return true;
-			}
-			if($edittingtag){	// 編集中
-				return true;
-			}
-			
 			if($("#projectsetting").dialog("isOpen")){ // 話者選択ダイアログ表示中
 				if(e.key == "ArrowUp" || e.key == "ArrowDown"){ // スクロール抑制
 					return false;
 				}
-
+				return true;
+			}
+			if($("#help").dialog("isOpen") || $("#download").dialog("isOpen")){ // その他のダイアログ表示中
+				return true;
+			}
+			if($edittingtag){	// 編集中
 				return true;
 			}
 			
@@ -864,7 +866,7 @@
 		});
 		
 		// 編集開始
-		var editOptionSelected; // 候補選択のプルダウンが表示されているかどうか
+		var editOptionSelected; // 候補選択のプルダウンが何を選択しているか
 		function editTdTextStart($target){
 			editTdTextEnd();
 			editOptionSelected = "";
@@ -904,7 +906,10 @@
 				if (e.key == "Enter") { // Enter（確定）
 					//console.log($input.val());
 					submitTdText($target, $input.val());
-					
+					$td = nextTd($currentTd, +1); // 次の行へ
+					if($td){
+						changeCurrentTd($td);
+					}
 					return false;
 				}
 				if(e.key == "Escape" ){ // ESC（キャンセル）
@@ -945,6 +950,8 @@
 		// 編集を反映する
 		function submitTdText($target, val){
 			editTdTextEnd();
+
+			$target = $target.parent().data('textTd');
 			var key = $target.attr("id");
 			
 			var len = 0 + $target.data('textlen');
@@ -1364,7 +1371,7 @@
 			
 			for (key of keys){
 				$target = $("#" + key);
-				if($target[0]){ // 既にテキスト業が存在する場合
+				if($target[0]){ // 既にテキスト行が存在する場合
 					submitTdText($target, editText[key]); // 設定
 					delete editText[key]; // 読み込むデータから除外
 					console.log(key);
