@@ -399,7 +399,7 @@
 			autoOpen: false,
 			modal: true ,
 			title:"ショートカットキー", closeOnEscape:true,
-			width:"630",
+			width:"830",
 			open: function() {					saveDialoguePos($(this));	$("#aboutlink").blur();	},
 			resizeStop: function() {		saveDialoguePos($(this));		},
 			dragStop: function() {			saveDialoguePos($(this));		},
@@ -849,7 +849,7 @@
 				$("#download").dialog("open");
 				return false;
 			}
-			if(e.code == "KeyP"){ // P,p（話者設定）
+			if(e.code == "KeyP"){ // P,p（プロジェクト設定）
 				$("#projectsetting").dialog("open");
 				return false;
 			}
@@ -1517,7 +1517,7 @@ defaultTitle = "TITLE";
 					<tr><th>Key</th><th>説明</th></tr>
 					<tr><td>Enter</td><td>選択モードON</td></tr>
 					<tr><td>D</td>    <td><div class="icon download"></div>ダウンロード</td></tr>
-					<tr><td>P</td>    <td><div class="icon people"></div>話者設定</td></tr>
+					<tr><td>P</td>    <td><div class="icon people"></div>プロジェクト設定</td></tr>
 					<tr><td>F,F3</td> <td><div class="icon search"></div>検索</td></tr>
 					<tr><td>H</td>    <td><div class="icon help"></div>この画面を表示</td></tr>
 					<tr><td>Q</td>    <td><input type="checkbox" disabled checked>話者表示</td></tr>
@@ -1526,16 +1526,24 @@ defaultTitle = "TITLE";
 					<tr><td>A</td>    <td><input type="checkbox" disabled checked>連続再生</td></tr>
 				</table>
 			</div>
-
 			<div>
 				<span class="caption">選択モードON状態のみ</span>
 				<table class="helptable">
 					<tr><th>Key</th><th>説明</th></tr>
+					<tr><td>Enter,F2</td><td>編集モード開始</td></tr>
 					<tr><td>ESC</td> <td>選択モードOFF</td></tr>
 					<tr><td>↑↓</td><td>行選択</td></tr>
 					<tr><td>←→</td><td>候補選択</td></tr>
 					<tr><td>Space</td><td>再生/停止</td></tr>
 					<tr><td>C</td><td>コピー</td></tr>
+				</table>
+			</div>
+			<div>
+				<span class="caption">編集モード時</span>
+				<table class="helptable">
+					<tr><th>Key</th><th>説明</th></tr>
+					<tr><td>Enter</td><td>確定</td></tr>
+					<tr><td>ESC</td> <td>編集破棄</td></tr>
 				</table>
 				
 			</div>
@@ -1616,7 +1624,7 @@ defaultTitle = "TITLE";
 		<div class="header">
 			<div id="save" class="push icon save" title="書き起こしデータ保存(Ctrl+S) (※ロードが完了するまでお待ちください)" style="opacity:0.5;cursor: auto;"></div>
 			<div id="open_download" class="push icon download" title="ダウンロード(D) (※ロードが完了するまでお待ちください)" style="opacity:0.5;cursor: auto;"></div>
-			<div id="open_projectsetting" class="push icon people" title="話者設定(P)" ></div><div id="peoplecount"></div>
+			<div id="open_projectsetting" class="push icon people" title="プロジェクト設定(P)" ></div><div id="peoplecount"></div>
 			<div id="search_icon" class="icon search"  ></div>
 			<div><input type="text" id="search"></div>
 			<div id="search_prev" class="push icon searchbutton"></div>
