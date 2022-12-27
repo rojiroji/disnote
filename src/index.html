@@ -1153,7 +1153,7 @@
 				$( "#save" ).click(function() { // ロードが完了したので、保存ボタンが使えるようにする
 					saveEdit();
 				}); 
-				$( "#save" ).css("opacity","1").css("cursor","pointer").attr("title","書き起こしデータ保存(Ctrl+S)");
+				$( "#save" ).css("opacity","1").css("cursor","pointer").attr("title","編集データ保存(Ctrl+S)");
 			}
 			//$("#table").floatThead({ // ヘッダ固定を試したけどしなくてもいいかな
 			//	position: 'absolute'
@@ -1512,10 +1512,11 @@ defaultTitle = "TITLE";
 		
 		<div id="help" style="display:none">
 			<div>
-				<span class="caption">通常ショートカット</span>
+				<span class="caption">通常</span>
 				<table class="helptable">
 					<tr><th>Key</th><th>説明</th></tr>
 					<tr><td>Enter</td><td>選択モードON</td></tr>
+					<tr><td>Ctrl+S</td><td><div class="icon save"></div>編集データ保存</td></tr>
 					<tr><td>D</td>    <td><div class="icon download"></div>ダウンロード</td></tr>
 					<tr><td>P</td>    <td><div class="icon people"></div>プロジェクト設定</td></tr>
 					<tr><td>F,F3</td> <td><div class="icon search"></div>検索</td></tr>
@@ -1527,7 +1528,7 @@ defaultTitle = "TITLE";
 				</table>
 			</div>
 			<div>
-				<span class="caption">選択モードON状態のみ</span>
+				<span class="caption">選択モード</span>
 				<table class="helptable">
 					<tr><th>Key</th><th>説明</th></tr>
 					<tr><td>Enter,F2</td><td>編集モード開始</td></tr>
@@ -1622,7 +1623,7 @@ defaultTitle = "TITLE";
 		</div>
 		
 		<div class="header">
-			<div id="save" class="push icon save" title="書き起こしデータ保存(Ctrl+S) (※ロードが完了するまでお待ちください)" style="opacity:0.5;cursor: auto;"></div>
+			<div id="save" class="push icon save" title="編集データ保存(Ctrl+S) (※ロードが完了するまでお待ちください)" style="opacity:0.5;cursor: auto;"></div>
 			<div id="open_download" class="push icon download" title="ダウンロード(D) (※ロードが完了するまでお待ちください)" style="opacity:0.5;cursor: auto;"></div>
 			<div id="open_projectsetting" class="push icon people" title="プロジェクト設定(P)" ></div><div id="peoplecount"></div>
 			<div id="search_icon" class="icon search"  ></div>
