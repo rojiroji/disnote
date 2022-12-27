@@ -28,7 +28,7 @@ IS_USE_BINARY_WHISPER="is_use_binary_whisper"
 WHISPER_MODEL_NONE="none"
 
 def getVersion():
-	return "v2.5.0"
+	return "v2.6.0"
 
 # 共通設定iniファイルの設定値を一通り読み込み（設定値がなければ初期値が書き込まれる）
 def writeDefaultSysConfig():
