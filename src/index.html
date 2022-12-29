@@ -444,7 +444,7 @@
 				return line.filter(function (cell, index){
 					return filter[index < filter.length ? index : filter.length - 1]; // 設定に沿って出力列を決定(候補3以降は、候補2と同じ設定)
 				}).map(function (cell){
-					return isCSV ? "\"" + cell + "\"" : cell; // CSV形式の場合は " で囲む
+					return isCSV ? `"${cell.replace(/\"/g, '\"\"')}"` : cell; // CSV形式の場合は "をエスケープして " で囲む
 				}).join(isCSV ? ',' : "\t");
 			}).filter(function (line, index) {
 				return $("#tr_" + index).css("display") != "none"; // 表示している行だけ出力する(先にfilterするとindexがずれるので最後にfilterする)

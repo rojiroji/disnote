@@ -80,7 +80,7 @@ def getBinaryWhisperResultToSegments(whisper_result):
 	l = 1 # 最初に空行があるので1行飛ばす
 
 	segment_list = list()
-	while l < len(lines): # 開始時間(秒),終了時間(秒),text,token(text),token(id),区切り行 の順
+	while l < len(lines): # 開始時間(秒),終了時間(秒),text,token(text),token(id),区切り行 の順 TODO:catchしたら読み捨てて抜ける（出力されたところまでは正常な値だと信じる）
 		segment = dict()
 
 		line = lines[l].strip()
