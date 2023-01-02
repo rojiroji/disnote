@@ -135,3 +135,7 @@ dmypy.json
 /stderr.txt
 /stdout.txt
 /log
+
+# electron
+node_modules
+DisNOTE-win32-x64

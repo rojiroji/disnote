@@ -1,0 +1,18 @@
+{
+  "name": "disnote_gui",
+  "productName": "DisNOTE",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "start": "set ELECTRON_DEBUG=true&electron .",
+    "release_start": "electron .",
+    "build_win": "electron-packager ./ DisNOTE --overwrite --platform=win32 arch=x64 --ignore=\"node_modules\""
+  },
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "electron": "^22.0.0",
+    "electron-packager": "^17.1.1"
+  }
+}
