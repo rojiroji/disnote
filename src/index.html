@@ -1391,7 +1391,7 @@
 			}else{
 				$("#draggable").css("display","none");
 				$("#draggable").css("cursor","auto");
-				alert("編集データを読み込みました");
+				//alert("編集データを読み込みました");
 				edited = false; // 画面反映中に edited がtrueになるので、ここでフラグを降ろす
 				updateTitle();
 			}
@@ -1442,11 +1442,11 @@
 			reader.readAsText(e.originalEvent.dataTransfer.files[0]);
 		});
 		
-		$(window).on("beforeunload", function() { // 未保存でページを抜けようとしたら確認
-			if(edited){
-				return "確認";
-			}
-		});
+		//$(window).on("beforeunload", function() { // 未保存でページを抜けようとしたら確認
+		//	if(edited){
+		//		return "確認";
+		//	}
+		//});
 		
 		// --- ここからページ読み込み終了時の処理 ---
 		var data = results;
