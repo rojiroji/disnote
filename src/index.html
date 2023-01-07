@@ -11,6 +11,12 @@
 
 	<script>
 	$(function() {
+		/* callback登録 */
+		window.api.on("apiSaveEditNotify",saveEdit)
+		window.api.on("apiLoadEditData", (arg)=>{
+			loadEditDataWrap(arg)
+		})
+
 		$edittingtag = null; // 編集中のhtmlタグ
 		var editText = {};
 		var edited = false;
@@ -490,8 +496,8 @@
 		function saveEdit(){ // 編集データ保存（ダウンロード）
 			var str = JSON.stringify({ projectHash : projectHash , personalData : personalData, editText : editText}, null, 4);
 			var filename = decodeURI($("#projectname").val());
-
-			downloadStr(str, 'json', filename + '_disnote.json');
+			window.api.apiSaveEditFile(str)
+			//downloadStr(str, 'json', filename + '_disnote.json');
 			/* // 名前を付けて保存（フォルダが毎回リセットされるので没）
 			const opts = {
 				suggestedName: editFileName,
@@ -1385,12 +1391,31 @@
 			}else{
 				$("#draggable").css("display","none");
 				$("#draggable").css("cursor","auto");
-				alert("編集データを読み込みました");
+				//alert("編集データを読み込みました");
 				edited = false; // 画面反映中に edited がtrueになるので、ここでフラグを降ろす
 				updateTitle();
 			}
 		}
 		
+		function loadEditDataWrap(file){
+			try{
+				file = JSON.parse(file);
+				
+				if( file.projectHash == projectHash){
+					editTextTmp = file.editText;
+					loadEditData(file.editText);
+					return; // 正常に読み込み開始
+				}else{
+					result = "編集ファイルの読み込みに失敗しました。違う音声ファイルの編集ファイルです。";
+				}
+				
+			} catch (error){
+				result = "編集ファイルの読み込みに失敗しました。jsonファイルではありません。";
+			}
+			$("#draggable").css("display","none");
+			alert(result);
+			reader.readAsText(e.originalEvent.dataTransfer.files[0]);
+		}
 		$(document).on("drop", function(e){ // 実際に読み込む
 			e.preventDefault();
 
@@ -1417,11 +1442,11 @@
 			reader.readAsText(e.originalEvent.dataTransfer.files[0]);
 		});
 		
-		$(window).on("beforeunload", function() { // 未保存でページを抜けようとしたら確認
-			if(edited){
-				return "確認";
-			}
-		});
+		//$(window).on("beforeunload", function() { // 未保存でページを抜けようとしたら確認
+		//	if(edited){
+		//		return "確認";
+		//	}
+		//});
 		
 		// --- ここからページ読み込み終了時の処理 ---
 		var data = results;
