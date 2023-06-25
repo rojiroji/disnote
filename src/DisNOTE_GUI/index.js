@@ -1,5 +1,7 @@
 // アプリケーション作成用のモジュールを読み込み
-const { ipcMain, app, BrowserWindow, globalShortcut } = require("electron");
+const { ipcMain, app, BrowserWindow } = require("electron");
+const localShortcut = require("electron-localshortcut");
+
 const path = require("path");
 const fs = require('fs');
 
@@ -50,8 +52,6 @@ app.whenReady().then(() => {
 
 // 全てのウィンドウが閉じたときの処理
 app.on("window-all-closed", () => {
-  // ショートカットの登録解除
-  globalShortcut.unregister("Ctrl+S")
 
   // macOSのとき以外はアプリケーションを終了させます
   if (process.platform !== "darwin") {
@@ -128,7 +128,7 @@ function saveFile(path, data){
  * ショートカットキーを登録する
  */
 function registShortcut(){
-  globalShortcut.register("Ctrl+S", () => {
+  localShortcut.register("Ctrl+S", () => {
     mainWindow.webContents.send('apiSaveEditNotify'); 
   })
 }
