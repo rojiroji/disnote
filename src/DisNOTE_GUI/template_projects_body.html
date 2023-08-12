@@ -1,0 +1,47 @@
+<tr class="title">
+    <td colspan="4" class="title left">
+        ${item.title}
+    </td>
+    <td class="buttons big-icon" rowspan="2" >
+        <div class="big-icon" title="編集画面を開きます">
+            <button class="edit" projectid="${item.id}">
+                <img src="img/edit.png">
+            </button>
+        </div>
+    </td>
+    <td class="buttons small-icon" rowspan="2">
+        <!--<div>
+            <button>
+                <img src="img/recognize.png">
+            </button>
+        </div>-->
+        <div title="音声ファイルのあるフォルダを開きます">
+            <button>
+                <img src="img/folder.png">
+            </button>
+        </div>
+        <div title="プロジェクトの設定を行います">
+            <button>
+                <img src="img/config.png">
+            </button>
+        </div>
+    </td>
+        
+    </td>
+</tr>
+<tr>
+    <td class="icon right" style="width:80px;">
+        <img src="img/people.png">
+    </td>
+    <td class="left">
+        ${name_e}
+    </td>
+    <td class="left">
+        ${name_o}
+    </td>
+    <td class="times">
+        <div class="icon time item" title="認識日時"><img src="img/recognize.png"><span>${item.recognized_time}</span></div>
+        <div class="icon time item" title="編集日時"><img src="img/edit.png"><span>${item.modified_time}</span></div>
+        <div class="icon time item" title="最終閲覧日時"><img src="img/show.png"><span>${item.access_time}</span></div>
+    </td>
+</tr>

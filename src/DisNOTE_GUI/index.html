@@ -1,14 +1,180 @@
-<!DOCTYPE html>
+<!DOCTYPE HTML PUBLIC “-//W3C//DTD HTML 4.01 Frameset//EN” “http://www.w3.org/TR/html4/frameset.dtd”>
 <html>
-    <head>
-        <meta charset="UTF-8">
-        <!-- https://developer.mozilla.org/en-US/docs/Web/HTTP/CSP -->
-        <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'">
-        <script src="js/main.js"></script>
-    </head>
-    <body>
-        <div id="holder">
-            xxx_disnote.htmlファイルをここにドラッグ&ドロップ
-        </div>  
-    </body>
+
+<head>
+    <meta charset="UTF-8">
+    <!-- https://developer.mozilla.org/en-US/docs/Web/HTTP/CSP -->
+    <script src="js/main.js"></script>
+    <style>
+        div#projects {
+            width: 100%;
+            text-align: center;
+        }
+
+        div#projects table {
+            border-collapse: collapse;
+            margin: 0 auto;
+        }
+
+
+        div#projects table tr.title {
+            border-top: 1px solid #dedede;
+        }
+
+        div#projects table {
+            border-bottom: 1px solid #dedede;
+        }
+
+        div#projects table td {
+            vertical-align: top;
+        }
+
+        div#projects table td.buttons {
+            vertical-align: middle;
+        }
+
+        div#projects table td.title {
+            font-size: 24px;
+            text-align: left;
+            height: 39px;
+        }
+
+        div#projects table .name,
+        div#projects table .time {
+            margin-left: 8px;
+            margin-right: 8px;
+            white-space: nowrap;
+        }
+
+        div#projects table tr.header .time {
+            width: 60px;
+        }
+
+
+        div#projects table .name {
+            /* 最大横幅を指定 */
+            max-width: 200px;
+
+            /* 制約された幅からはみ出る部分を隠す */
+            overflow: hidden;
+            /* 隠された部分を省略記号 (...) で表示 */
+            text-overflow: ellipsis;
+            /* テキストを折り返さないようにする */
+            white-space: nowrap;
+            padding-right: 10px;
+        }
+
+        div#projects table .time img {
+            vertical-align: middle;
+        }
+
+        div#projects table .time span {
+            margin-left: 4px;
+        }
+
+        div#projects table .left {
+            text-align: left;
+        }
+
+        div#projects table .right {
+            text-align: right;
+        }
+
+        div#projects table .icon img,
+        div#projects table .image img {
+            width: 32px;
+        }
+
+        div#projects table .row {
+            display: flex;
+            align-items: center;
+        }
+
+        div#projects table .item {
+            float: left;
+            vertical-align: middle;
+            height: 32px;
+        }
+
+        div#projects table .buttons {
+            text-align: center;
+        }
+
+        div#projects table .buttons div {
+            white-space: nowrap;
+            margin-top: 3px;
+            margin-bottom: 3px;
+        }
+
+        /* ボタンのスタイル */
+        div#projects table .buttons div button {
+            display: inline-block;
+            background-color: white;
+            color: white;
+            text-align: center;
+            text-decoration: none;
+            cursor: pointer;
+            border: gray;
+            border-style: solid;
+            border-width: thin;
+            border-radius: 5px;
+            /*transition: background-color 0.3s, transform 0.3s, box-shadow 0.3s;*/
+        }
+
+        div#projects table .buttons div button img {
+            vertical-align: middle;
+            /*    margin-right: 10px; */
+        }
+
+        div#projects table .small-icon div button {
+            padding: 5px 10px;
+        }
+
+        div#projects table .small-icon div button img {
+            width: 24px;
+            height: 24px;
+        }
+
+        div#projects table .big-icon div button {
+            padding: 10px 20px;
+        }
+
+        div#projects table .big-icon img {
+            width: 48px;
+            height: 48px;
+        }
+
+        /* 影のスタイル */
+        div#projects table .buttons div button:hover {
+            background-color: #e0e0e0;
+            /*    transform: translateY(-2px);*/
+            box-shadow: 0px 1px 2px;
+        }
+
+        div#projects table tr.header td div {
+            margin-left: 8px;
+            margin-bottom: 4px;
+        }
+
+        div#projects table tr.header td div#order {
+            width: 24px;
+            height: 24px;
+            font-size: 16px;
+            vertical-align: middle;
+            text-align: center;
+            border-style: solid;
+            border-width: thin;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="header" style="text-align:center;">
+        <img src="img/logo.png" style="width:50%;">
+    </div>
+    <div id="projects">
+
+    </div>
+</body>
+
 </html>
