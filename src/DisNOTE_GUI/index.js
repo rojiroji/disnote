@@ -4,7 +4,7 @@ const localShortcut = require("electron-localshortcut");
 
 const path = require("path");
 const fs = require('fs');
-const {spawn} = require('child_process');
+const { spawn } = require('child_process');
 
 
 // プロジェクトリスト読み込み
@@ -137,14 +137,14 @@ function writeProjects() {
  */
 ipcMain.handle('getProjectsTable', (event) => {
   let tableHtml = '<table class="projects">';
-  tableHtml += template_projects_header.replaceAll("${order}","↓");
+  tableHtml += template_projects_header.replaceAll("${order}", "↓");
 
   // テーブルボディを作成
   for (const item of projects) {
     let name_e = "";//偶数番号の名前
     let name_o = "";//奇数番号の名前
     for (const [index, file] of item.files.entries()) {
-      const temp = template_projects_name.replaceAll("${file.name}",file.name);
+      const temp = template_projects_name.replaceAll("${file.name}", file.name);
       if (index % 2 == 0) {
         name_e += temp;
       } else {
@@ -255,7 +255,7 @@ function getProject(filePaths) {
  * -> index.js       editProject
 * @returns 
  */
-    
+
 ipcMain.handle('editProject', (event, projectId) => {
   console.log("editProject:" + projectId);
 
@@ -271,6 +271,9 @@ ipcMain.handle('editProject', (event, projectId) => {
   childProcess.stdout.on('data', (data) => {
     const outputLine = sjisDecoder.decode(data).trim(); // 標準出力を文字列に変換
     console.log(outputLine);
+
+    // TODO 色々処理
+
     mainWindow.webContents.send('engineStdout', outputLine); // engineStdout(main.js)に渡す
   });
 
@@ -281,7 +284,17 @@ ipcMain.handle('editProject', (event, projectId) => {
   });
 
   childProcess.on('close', (code) => {
-    console.log(`Child process exited with code ${code}`);
+    console.log(`Child process exited with code ${code} / projectId = ${projectId}`);
+
+    if (code == 0) { // 成功時
+      project.recognized_time = timeToLocalString(new Date());
+
+      // 更新したのでプロジェクトリスト出力
+      writeProjects();
+
+      // TODO 再描画
+    }
+
     mainWindow.webContents.send('engineClose', code); // engineClose(main.js)に渡す
   });
 });
