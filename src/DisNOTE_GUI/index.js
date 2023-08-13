@@ -4,7 +4,8 @@ const localShortcut = require("electron-localshortcut");
 
 const path = require("path");
 const fs = require('fs');
-const { table } = require("console");
+const {spawn} = require('child_process');
+
 
 // プロジェクトリスト読み込み
 const projectsFilePath = path.join(__dirname, 'projects.json');
@@ -20,6 +21,12 @@ const template_projects_header = fs.readFileSync(path.join(__dirname, 'template_
 const template_projects_body = fs.readFileSync(path.join(__dirname, 'template_projects_body.html'), 'utf8');
 const template_projects_name = fs.readFileSync(path.join(__dirname, 'template_projects_name.html'), 'utf8');
 
+// リリース版or開発環境で異なる設定を読み込み
+const env = JSON.parse(fs.readFileSync("env.json", 'utf8'));
+console.log("env. " + JSON.stringify(env));
+
+// エンジンから返ってくる文字列がsjisなのでデコードする
+const sjisDecoder = new TextDecoder(env.decoder);
 
 // メインウィンドウ
 var mainWindow;
@@ -248,8 +255,35 @@ function getProject(filePaths) {
  * -> index.js       editProject
 * @returns 
  */
+    
 ipcMain.handle('editProject', (event, projectId) => {
-  console.log("editProject:" + projectId)
+  console.log("editProject:" + projectId);
+
+  // projectIdでproject取得
+  const project = projects.find((project) => project.id == projectId);
+
+  // projectに登録されたfullpathを取得
+  let args = project.files.map(file => {
+    return file.fullpath;
+  })
+  const childProcess = spawn(env.engine, args); // ここにコマンドと引数を指定
+
+  childProcess.stdout.on('data', (data) => {
+    const outputLine = sjisDecoder.decode(data).trim(); // 標準出力を文字列に変換
+    console.log(outputLine);
+    mainWindow.webContents.send('engineStdout', outputLine); // engineStdout(main.js)に渡す
+  });
+
+  childProcess.stderr.on('data', (data) => {
+    const outputLine = sjisDecoder.decode(data).trim(); // エラー出力を文字列に変換
+    console.log(outputLine);
+    mainWindow.webContents.send('engineStderr', outputLine); // engineStderr(main.js)に渡す
+  });
+
+  childProcess.on('close', (code) => {
+    console.log(`Child process exited with code ${code}`);
+    mainWindow.webContents.send('engineClose', code); // engineClose(main.js)に渡す
+  });
 });
 
 /**

@@ -16,6 +16,12 @@ document.addEventListener('drop', (e) => {
  */
 window.addEventListener('load', async (event) => {
   reloadProjects(); // プロジェクト一覧描画
+
+  /* callback登録 */
+  window.api.on("engineStdout",engineStdout); // DisNOTEエンジンの標準出力を受け取る
+  window.api.on("engineStderr",engineStderr); // DisNOTEエンジンのエラー出力を受け取る
+  window.api.on("engineClose",engineClose); // DisNOTEエンジンの終了コードを受け取る
+
 });
 
 /**
@@ -59,3 +65,18 @@ document.addEventListener('dragover', (e) => {
   e.preventDefault();
   e.stopPropagation();
 });
+
+// DisNOTEエンジンの標準出力を受け取る
+function engineStdout(outputLine){
+  document.querySelector('#enginestdout').innerText = outputLine; // TODO
+}
+
+// DisNOTEエンジンのエラー出力を受け取る
+function engineStderr(outputLine){
+  document.querySelector('#engineStderr').innerText = outputLine; // TODO
+}
+
+// DisNOTEエンジンの終了コードを受け取る
+function engineClose(code){
+  alert("engine exit code=" + code);
+}

@@ -139,3 +139,4 @@ dmypy.json
 # electron
 node_modules
 DisNOTE-win32-x64
+src/DisNOTE_GUI/projects.json
