@@ -1,5 +1,5 @@
 // アプリケーション作成用のモジュールを読み込み
-const { ipcMain, app, BrowserWindow , shell } = require("electron");
+const { ipcMain, app, BrowserWindow, shell } = require("electron");
 const localShortcut = require("electron-localshortcut");
 
 const path = require("path");
@@ -22,10 +22,24 @@ const template_projects_body = fs.readFileSync(path.join(__dirname, 'template_pr
 const template_projects_name = fs.readFileSync(path.join(__dirname, 'template_projects_name.html'), 'utf8');
 
 // リリース版or開発環境で異なる設定を読み込み
-const env = JSON.parse(fs.readFileSync("env.json", 'utf8'));
+const env = JSON.parse(fs.readFileSync(path.join(__dirname, 'env.json'), 'utf8'));
 console.log("env. " + JSON.stringify(env));
 
-// エンジンから返ってくる文字列がsjisなのでデコードする
+// ユーザーごとの設定を読み込み
+const configFilePath = path.join(__dirname, 'config.json');
+let config = {};
+try {
+  config = JSON.parse(fs.readFileSync(configFilePath, 'utf8'));
+} catch (err) {
+  console.log(err); // ファイルがない場合は何もしない
+  config.width = 1200;
+  config.height = 800;
+  config.maximize = false;
+  config.x = undefined;
+  config.y = undefined;
+}
+
+// エンジンから返ってくる文字列のデコーダ（WindowsだとShift-JISなのでデコードが必要）
 const sjisDecoder = new TextDecoder(env.decoder);
 
 // メインウィンドウ
@@ -34,8 +48,10 @@ var mainWindow;
 const createWindow = () => {
   // メインウィンドウを作成します
   mainWindow = new BrowserWindow({
-    width: 1280,
-    height: 800,
+    width: config.width,
+    height: config.height,
+    x: config.x,
+    y: config.y,
     webPreferences: {
       // プリロードスクリプトは、レンダラープロセスが読み込まれる前に実行され、
       // レンダラーのグローバル（window や document など）と Node.js 環境の両方にアクセスできます。
@@ -43,6 +59,9 @@ const createWindow = () => {
     },
   });
   mainWindow.setMenuBarVisibility(false); // メニューバー非表示
+  if(config.maximize){
+    mainWindow.maximize(); // 最大化
+  }
 
   registShortcut()
 
@@ -54,6 +73,22 @@ const createWindow = () => {
     // デベロッパーツールの起動
     mainWindow.webContents.openDevTools();
   }
+  // メインウィンドウが閉じるときの処理
+  mainWindow.on("close", () => {
+    // コンフィグ保存
+    config.width = mainWindow.getBounds().width;
+    config.height = mainWindow.getBounds().height;
+    config.y = mainWindow.getBounds().y;
+    config.x = mainWindow.getBounds().x;
+    config.maximize = mainWindow.isMaximized();
+
+    fs.writeFile(configFilePath, JSON.stringify(config, null, 4), (err) => {
+      if (err) {
+        console.error(err);
+        return;
+      }
+    });
+  });
 
   // メインウィンドウが閉じられたときの処理
   mainWindow.on("closed", () => {
@@ -310,7 +345,7 @@ ipcMain.handle('editProject', (event, projectId) => {
 
 ipcMain.handle('openProjectFolder', (event, projectId) => {
   console.log("openProjectFolder:" + projectId);
-  
+
   // projectIdでproject取得
   const project = projects.find((project) => project.id == projectId);
 
