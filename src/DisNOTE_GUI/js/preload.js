@@ -11,7 +11,10 @@ contextBridge.exposeInMainWorld(
   getProjectsTable: () => ipcRenderer.invoke("getProjectsTable") // プロジェクトリストのtableを取得
     .then(result => result)
     .catch(err => console.log(err)),
-  editProject: (projectId) => ipcRenderer.invoke("editProject",projectId) // プロジェクト編集
+  editProject: (projectId) => ipcRenderer.invoke("editProject", projectId) // プロジェクト編集
+    .then(result => result)
+    .catch(err => console.log(err)),
+  openProjectFolder: (projectId) => ipcRenderer.invoke("openProjectFolder", projectId) // プロジェクトのファイルが置いてあるフォルダを開く
     .then(result => result)
     .catch(err => console.log(err)),
   apiSaveEditFile: (path) => ipcRenderer.invoke("apiSaveEditFile", path) // 保存

@@ -1,5 +1,5 @@
 // アプリケーション作成用のモジュールを読み込み
-const { ipcMain, app, BrowserWindow } = require("electron");
+const { ipcMain, app, BrowserWindow , shell } = require("electron");
 const localShortcut = require("electron-localshortcut");
 
 const path = require("path");
@@ -297,6 +297,25 @@ ipcMain.handle('editProject', (event, projectId) => {
 
     mainWindow.webContents.send('engineClose', code); // engineClose(main.js)に渡す
   });
+});
+
+
+/**
+ * プロジェクトのfolderボタンを押下 → フォルダを開く。
+ * js/main.js        reloadProjects -> folderbutton.addEventListener('click',' ...
+ * -> js/preload.js  openProjectFolder
+ * -> index.js       openProjectFolder
+* @returns 
+ */
+
+ipcMain.handle('openProjectFolder', (event, projectId) => {
+  console.log("openProjectFolder:" + projectId);
+  
+  // projectIdでproject取得
+  const project = projects.find((project) => project.id == projectId);
+
+  // フォルダを開く
+  shell.openPath(project.dir);
 });
 
 /**

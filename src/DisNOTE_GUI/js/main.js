@@ -18,9 +18,9 @@ window.addEventListener('load', async (event) => {
   reloadProjects(); // プロジェクト一覧描画
 
   /* callback登録 */
-  window.api.on("engineStdout",engineStdout); // DisNOTEエンジンの標準出力を受け取る
-  window.api.on("engineStderr",engineStderr); // DisNOTEエンジンのエラー出力を受け取る
-  window.api.on("engineClose",engineClose); // DisNOTEエンジンの終了コードを受け取る
+  window.api.on("engineStdout", engineStdout); // DisNOTEエンジンの標準出力を受け取る
+  window.api.on("engineStderr", engineStderr); // DisNOTEエンジンのエラー出力を受け取る
+  window.api.on("engineClose", engineClose); // DisNOTEエンジンの終了コードを受け取る
 
 });
 
@@ -59,6 +59,16 @@ async function reloadProjects() {
       await window.api.editProject(projectid);
     });
   }
+
+  // プロジェクトごとのfolderボタンにイベントを追加
+  const folderbuttons = document.querySelectorAll("button.folder");
+  for (const folderbutton of folderbuttons) {
+    folderbutton.addEventListener('click', async (e) => {
+      let projectid = e.currentTarget.getAttribute("projectid"); // ボタンにはprojetid属性がついている
+      console.log("folderbutton click:" + projectid);
+      await window.api.openProjectFolder(projectid);
+    });
+  }
 }
 
 document.addEventListener('dragover', (e) => {
@@ -67,16 +77,16 @@ document.addEventListener('dragover', (e) => {
 });
 
 // DisNOTEエンジンの標準出力を受け取る
-function engineStdout(outputLine){
+function engineStdout(outputLine) {
   document.querySelector('#enginestdout').innerText = outputLine; // TODO
 }
 
 // DisNOTEエンジンのエラー出力を受け取る
-function engineStderr(outputLine){
+function engineStderr(outputLine) {
   document.querySelector('#engineStderr').innerText = outputLine; // TODO
 }
 
 // DisNOTEエンジンの終了コードを受け取る
-function engineClose(code){
+function engineClose(code) {
   alert("engine exit code=" + code);
 }
