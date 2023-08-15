@@ -280,8 +280,9 @@ def announceNewVersion():
 try:
 	announceNewVersion()
 	common.writeDefaultSysConfig() # とりあえず設定ファイルを読んで未設定の値を書き込こむ
+	args = common.getSysArgs() # 引数取得
 	
-	if len(sys.argv) < 2:
+	if len(args.files) < 1:
 		logger.error("ファイルが指定されていません。")
 		sys.exit(1)
 	
@@ -330,8 +331,7 @@ try:
 			sys.exit(1)
 
 	# 入力ファイル一覧
-	arg_files = copy.copy(sys.argv)
-	arg_files.pop(0) # ドラッグしたファイルは第2引数以降なので1つ除く
+	arg_files = copy.copy(args.files)
 	arg_files.sort() # ファイル名をソート（引数の順番だけ違う場合にファイル名を揃えるため）
 
 	# すべてのトラックを認識するため、最初のトラックは元のファイルを、それ以降のトラックはffmpegで抜き出して認識対象に追加する

@@ -6,6 +6,7 @@ import configparser
 import hashlib
 import subprocess
 import threading
+import argparse
 
 input_file_config_lock = threading.Lock()
 error_occurred = False
@@ -27,6 +28,17 @@ IS_USE_BINARY_WHISPER="is_use_binary_whisper"
 
 WHISPER_MODEL_NONE="none"
 
+# 引数設定
+parser = argparse.ArgumentParser() 
+parser.add_argument('--witaitoken') # wit.aiのServer Access Token（未指定の場合(None)はiniファイルの設定を使う。"none" を指定したらwit.aiを使わない）
+parser.add_argument('--files', nargs='*', required=True) # ファイル
+args = parser.parse_args()
+
+# 実行引数を返す
+def getSysArgs():
+	return args
+
+# DisNOTEのバージョン
 def getVersion():
 	return "v2.6.0"
 
@@ -93,19 +105,24 @@ def isRecognizeNoize():
 
 # wit.aiのServer Access Token(未設定時(空文字列)はwit.aiでの認識をスキップする)
 def getWitAiServerAccessToken():
-	try:
-		config = readSysConfig()
-		val = config['DEFAULT'].get(WIT_AI_SERVER_ACCESS_TOKEN)
-		if val is not None:
-			return val.strip()
+	if args.witaitoken is None: # 引数で未指定の場合はiniファイルの設定を使う
+		try:
+			config = readSysConfig()
+			val = config['DEFAULT'].get(WIT_AI_SERVER_ACCESS_TOKEN)
+			if val is not None:
+				return val.strip()
+				
+		except: # 設定ファイルが読めなかったり(初回起動時)、値がおかしかったらデフォルトで保存
+			pass
 			
-	except: # 設定ファイルが読めなかったり(初回起動時)、値がおかしかったらデフォルトで保存
-		pass
-		
-	config.set('DEFAULT',WIT_AI_SERVER_ACCESS_TOKEN , "")
-	writeSysConfig(config)
+		config.set('DEFAULT',WIT_AI_SERVER_ACCESS_TOKEN , "")
+		writeSysConfig(config)
+		return ""
 	
-	return ""
+	if args.witaitoken == "none": # 引数で"none"を指定したら使わない
+		return ""
+	
+	return args.witaitoken
 
 # GoogleAPIで認識する際の言語（デフォルトは日本語(ja-JP)）
 def getRecognizeGoogleLanguage():
