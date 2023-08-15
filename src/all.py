@@ -359,6 +359,7 @@ try:
 			if first_audio: # 最初のトラックは抜き出さずに、元のファイルをinput_filesに入れる
 				first_audio = False
 				input_files.append(arg_file)
+				common.addAudioFile(arg_file,arg_file,stream["index"])
 				continue
 
 			# トラックごとに音声を分解する
@@ -378,6 +379,7 @@ try:
 				logger.info("トラック出力：{}".format(os.path.basename(track_filename)))
 
 			input_files.append(track_filename)
+			common.addAudioFile(arg_file,track_filename,stream["index"])
 
 		if first_audio: # 音声トラックがないファイルだった
 			logger.error("{}は音声ファイルではないようです。処理を中断します。".format(arg_file))

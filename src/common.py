@@ -7,6 +7,8 @@ import hashlib
 import subprocess
 import threading
 import argparse
+import copy
+import json
 
 input_file_config_lock = threading.Lock()
 error_occurred = False
@@ -27,6 +29,24 @@ WHISPER_BINARY_DURATION="whisper_binary_duration"
 IS_USE_BINARY_WHISPER="is_use_binary_whisper"
 
 WHISPER_MODEL_NONE="none"
+WIT_AI_SERVER_ACCESS_TOKEN_NONE="none"
+
+track_infos = {} # 認識対象の音声ファイル情報のmap（key=ファイル名 valueはaddTrackの中身を参照）
+
+# GUI用にログを出力する
+def logForGui(logger,stage,value={},progress=0,max=None):
+	outvalue = copy.copy(value)
+	outvalue["stage"] = stage
+	outvalue["progress"] = progress
+	outvalue["max"] = max
+	logger.info("[PROGRESS]" + json.dumps(outvalue))
+
+# 音声認識対象ファイル情報登録（引数：ユーザーが渡したファイル、トラックごとに分解したファイル、トラック番号）
+def addAudioFile(orgfile,filename,trackindex):
+	track_info = {"orgfile" : orgfile,"filename" : filename,"trackindex":trackindex,"index":len(track_infos)}
+	track_infos[filename] = track_info
+	logger = getLogger(__file__)
+	logForGui(logger,"addAudioFile", track_info)
 
 # 引数設定
 parser = argparse.ArgumentParser() 
@@ -119,7 +139,7 @@ def getWitAiServerAccessToken():
 		writeSysConfig(config)
 		return ""
 	
-	if args.witaitoken == "none": # 引数で"none"を指定したら使わない
+	if args.witaitoken == WIT_AI_SERVER_ACCESS_TOKEN_NONE: # 引数で"none"を指定したら使わない
 		return ""
 	
 	return args.witaitoken
