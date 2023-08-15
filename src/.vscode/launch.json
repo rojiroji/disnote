@@ -1,0 +1,33 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "DisNOTE_Engine",
+      "type": "python",
+      "request": "launch",
+      "program": "${workspaceFolder}/all.py",
+      "cwd": "${workspaceFolder}/../",
+      "args": [
+        "--files",
+        "test/test.mp3"
+      ],
+    },
+    {
+      "name": "DisNOTE_GUI",
+      "type": "node",
+      "request": "launch",
+      "cwd": "${workspaceFolder}/DisNOTE_GUI/",
+      "runtimeExecutable": "${workspaceFolder}/DisNOTE_GUI/node_modules/.bin/electron",
+      "windows": {
+        "runtimeExecutable": "${workspaceFolder}/DisNOTE_GUI/node_modules/.bin/electron.cmd"
+      },
+      "env": {
+        "ELECTRON_DEBUG": "true"
+      },
+      "args": [
+        "."
+      ],
+      "outputCapture": "std"
+    }
+  ]
+}
