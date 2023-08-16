@@ -220,6 +220,7 @@ def main(input_file):
             )
             if (id % 5) == 0 or (len(split_result_queue) == 0):  # 5行ごとか、最後の1行に進捗を出す
                 logger.info("　音声認識中(wit.ai)… {} {}/{}".format(base, id, queuesize))
+                common.logForGui(logger, "rec", input_file, progress=id, max=queuesize,info={"engine":"witai"})
 
             f.write(
                 "{},{},{},{},{},{}\n".format(
@@ -256,7 +257,7 @@ def main(input_file):
             os.path.basename(input_file), (func_out_time - func_in_time) / 60
         )
     )
-
+    common.logForGui(logger, "rec", input_file, progress=1, max=1,info={"engine":"witai"})
 
 # wit.aiで音声認識
 prev_witai_requesttime = 0

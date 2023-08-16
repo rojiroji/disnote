@@ -74,6 +74,13 @@ def main(input_file):
         logger.info(
             "　無音解析処理中… {} {}/{}".format(base, index + 1, int(duration / split_len) + 1)
         )
+        common.logForGui(
+            logger,
+            "seg",
+            input_file,
+            progress=index + 1,
+            max=int(duration / split_len) + 1,
+        )
 
         end_time = min(start_time + split_len, duration)
 
@@ -135,6 +142,7 @@ def main(input_file):
             os.path.basename(input_file), (func_out_time - func_in_time) / 60
         )
     )
+    common.logForGui(logger, "seg", input_file, progress=1, max=1)
 
 
 # 直接起動した場合

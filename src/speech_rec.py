@@ -155,6 +155,7 @@ def main(input_file):
             )
             if (id % 10) == 0 or (len(split_result_queue) == 0):  # 10行ごとか、最後の1行に進捗を出す
                 logger.info("　音声認識中… {} {}/{}".format(base, id, queuesize))
+                common.logForGui(logger, "rec", input_file, progress=id, max=queuesize,info={"engine":"google"})
 
             f.write(
                 "{},{},{},{},{},{}\n".format(
@@ -192,6 +193,7 @@ def main(input_file):
             os.path.basename(input_file), (func_out_time - func_in_time) / 60
         )
     )
+    common.logForGui(logger, "rec", input_file, progress=1, max=1,info={"engine":"google"})
 
 
 # 直接起動した場合

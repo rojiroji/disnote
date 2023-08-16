@@ -67,6 +67,7 @@ def main(input_file):
 
             if (index % 100) == 0 or (len(file_data) == index):  # 100行ごとか、最後の1行で進捗を出す
                 logger.info("　音声分割中… {} {}/{}".format(base, index, len(file_data)))
+                common.logForGui(logger, "split_audio", input_file, progress=index, max=len(file_data))
 
             if os.path.exists(filename):  # 分割した音声ファイル(flac)が存在する場合
                 split_audio_file_mttime = os.stat(filename).st_mtime
@@ -93,6 +94,7 @@ def main(input_file):
             shutil.move(tmp_audio_file, filename)
 
     logger.info("音声分割終了！ {}".format(os.path.basename(input_file)))
+    common.logForGui(logger, "split_audio", input_file, progress=1, max=1)
 
 
 # 直接起動した場合

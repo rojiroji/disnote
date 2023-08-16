@@ -31,29 +31,47 @@ IS_USE_BINARY_WHISPER = "is_use_binary_whisper"
 WHISPER_MODEL_NONE = "none"
 WIT_AI_SERVER_ACCESS_TOKEN_NONE = "none"
 
-track_infos = {}  # 認識対象の音声ファイル情報のmap（key=ファイル名 valueはaddTrackの中身を参照）
+LOG_FOR_GUI = "[PROGRESS]"  # GUI用にログを出力するときに出す文字列
 
 
 # GUI用にログを出力する
-def logForGui(logger, stage, value={}, progress=0, max=None):
-    outvalue = copy.copy(value)
-    outvalue["stage"] = stage
-    outvalue["progress"] = progress
-    outvalue["max"] = max
-    logger.info("[PROGRESS]" + json.dumps(outvalue))
+def logForGui(logger, stage, input_file=None, info=None, progress=0, max=None):
+    outinfo = {}
+
+    # 何かしら特別な情報があれば追加
+    if info is not None:
+        outinfo.update(info)
+
+    # 音声ファイルに対するログであればその音声ファイルの情報を追加
+    if input_file is not None:
+        audiofile_info = getAudioFileInfo(input_file)
+        outinfo.update(audiofile_info)
+
+    outinfo["stage"] = stage
+    outinfo["progress"] = progress
+    outinfo["max"] = max
+    logger.info(LOG_FOR_GUI + json.dumps(outinfo))
 
 
-# 音声認識対象ファイル情報登録（引数：ユーザーが渡したファイル、トラックごとに分解したファイル、トラック番号）
-def addAudioFile(orgfile, filename, trackindex):
+# 認識対象の音声ファイル情報のmap（key=ファイル名 setAudioFileInfo
+audiofile_infos = {}
+
+
+# 音声認識対象ファイル情報登録（引数：ユーザーが渡したファイル、トラックごとに分解したファイル(=実際に音声認識するファイル)、トラック番号）
+def setAudioFileInfo(orgfile, input_file, trackindex):
     track_info = {
-        "orgfile": orgfile,
-        "filename": filename,
+        "orgfile": os.path.basename(orgfile),
+        "input_file": os.path.basename(input_file),
         "trackindex": trackindex,
-        "index": len(track_infos),
+        "index": len(audiofile_infos),
     }
-    track_infos[filename] = track_info
-    logger = getLogger(__file__)
-    logForGui(logger, "addAudioFile", track_info)
+    audiofile_infos[input_file] = track_info
+    logForGui(logger, "setAudioFileInfo", input_file)
+
+
+# 音声認識対象ファイル情報取得（引数：トラックごとに分解したファイル）
+def getAudioFileInfo(input_file):
+    return audiofile_infos[input_file]
 
 
 # 引数設定
@@ -501,13 +519,16 @@ def getLogger(srcfile):
     return logger
 
 
+# common.pyのlogger
+logger = getLogger(__file__)
+
+
 # サブプロセス実行（returncodeが非0の場合は標準エラー出力をログに吐いて例外を投げる。正常終了時、res.stdoutに標準出力）
 def runSubprocess(args):
     res = subprocess.run(
         args, encoding="utf-8", capture_output=True, text=True
     )  # , stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     if res.returncode != 0:
-        logger = getLogger(__file__)
         logger.error(args)
         logger.error(res.stderr)
 

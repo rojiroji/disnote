@@ -78,6 +78,7 @@ def main(input_files, arg_files):
             logger.info("最終結果ファイル(mp3)出力（既に存在するためスキップ）")
         else:
             logger.info("最終結果ファイル(mp3)出力開始")
+            common.logForGui(logger, "merge_mp3")
             common.runSubprocess(
                 'ffmpeg {}  -y -filter_complex "amix=inputs={}:duration=longest:dropout_transition=0:normalize=0" "{}" '.format(
                     option_input, len(input_files), mixed_mediafile
@@ -189,14 +190,14 @@ def main(input_files, arg_files):
         )
 
     # index.html の値の部分を置換
-    index_data = index_data.replace(
-        "TITLE", basefilename.replace("_disnote", "")
-    ).replace("RESULTS", merged_js)
+    default_title = basefilename.replace("_disnote", "")
+    index_data = index_data.replace("TITLE", default_title).replace(
+        "RESULTS", merged_js
+    )
 
     # index.html書き込み
-    with open(
-        os.path.join(basedir, basefilename + ".html"), "w", newline=""
-    ) as f:  # 変な改行が入るのを防ぐため newline=''
+    htmlfile = os.path.join(basedir, basefilename + ".html")
+    with open(htmlfile, "w", newline="") as f:  # 変な改行が入るのを防ぐため newline=''
         f.write(index_data)
 
     # htmlファイルなどをコピー
@@ -213,6 +214,9 @@ def main(input_files, arg_files):
         for line in l:
             f.write(line[1])
             f.write("\n")
+
+    # 終了ログ
+    common.logForGui(logger, "merge_end", info={"result": os.path.abspath(htmlfile)})
 
     logger.info("すべての処理が完了しました！")
     logger.info("【出力ファイル】")
