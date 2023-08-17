@@ -9,7 +9,9 @@
       "cwd": "${workspaceFolder}/../",
       "args": [
         "--files",
-        "test/test.mp3"
+        "test/test1.mp3",
+        "test/test2.mp3",
+        "test/test3.mp3"
       ],
     },
     {
@@ -20,9 +22,6 @@
       "runtimeExecutable": "${workspaceFolder}/DisNOTE_GUI/node_modules/.bin/electron",
       "windows": {
         "runtimeExecutable": "${workspaceFolder}/DisNOTE_GUI/node_modules/.bin/electron.cmd"
-      },
-      "env": {
-        "ELECTRON_DEBUG": "true"
       },
       "args": [
         "."

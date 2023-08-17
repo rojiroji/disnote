@@ -16,6 +16,7 @@
     "electron-packager": "^17.1.1"
   },
   "dependencies": {
-    "electron-localshortcut": "^3.2.1"
+    "electron-localshortcut": "^3.2.1",
+    "encoding-japanese": "^2.0.0"
   }
 }

@@ -5,6 +5,7 @@ const localShortcut = require("electron-localshortcut");
 const path = require("path");
 const fs = require('fs');
 const { spawn } = require('child_process');
+const encoding = require('encoding-japanese');
 
 
 // プロジェクトリスト読み込み
@@ -39,9 +40,6 @@ try {
   config.y = undefined;
 }
 
-// エンジンから返ってくる文字列のデコーダ（WindowsだとShift-JISなのでデコードが必要）
-const sjisDecoder = new TextDecoder(env.decoder);
-
 // メインウィンドウ
 var mainWindow;
 
@@ -59,7 +57,7 @@ const createWindow = () => {
     },
   });
   mainWindow.setMenuBarVisibility(false); // メニューバー非表示
-  if(config.maximize){
+  if (config.maximize) {
     mainWindow.maximize(); // 最大化
   }
 
@@ -69,7 +67,7 @@ const createWindow = () => {
   // （今回はmain.jsと同じディレクトリのindex.html）
   mainWindow.loadFile("index.html");
 
-  if (process.env.ELECTRON_DEBUG == "true") {
+  if (env.opendevtools == "true") {
     // デベロッパーツールの起動
     mainWindow.webContents.openDevTools();
   }
@@ -298,25 +296,46 @@ ipcMain.handle('editProject', (event, projectId) => {
   const project = projects.find((project) => project.id == projectId);
 
   // projectに登録されたfullpathを取得
-  let args = project.files.map(file => {
+  let args = ["--files"].concat(project.files.map(file => {
     return file.fullpath;
-  })
-  const childProcess = spawn(env.engine, args); // ここにコマンドと引数を指定
+  }));
+  const childProcess = spawn(env.engine, args, { encoding: env.encoding }); // エンジンのサブプロセスを起動
 
-  childProcess.stdout.on('data', (data) => {
-    const outputLine = sjisDecoder.decode(data).trim(); // 標準出力を文字列に変換
-    console.log(outputLine);
+  // サブプロセスの標準出力読み込み
+  let stdoutBuffer = '';
+  childProcess.stdout.on('data', function (data) {
+    data = encoding.convert(data, { // Windowsの場合、標準出力がSjift-JISなのでエンコード
+      from: env.encoding,
+      to: 'UNICODE',
+      type: 'string',
+    });
+    var lines = (stdoutBuffer + data).replaceAll("\r\n","\n").split("\n");
+    if (data[data.length - 1] != '\n') {
+      stdoutBuffer = lines.pop(); // TODO：エンジン側で、ログを出すときに必ずflushするようにすると、ここに入ることがなくなるはず
+    } else {
+      stdoutBuffer = '';
+    }
+    for (var i = 0; i < lines.length - 1; i++) {
+      var line = lines[i];
+      const outputLine = line.trim(); // 標準出力を文字列に変換
+      console.log(outputLine);
 
-    // TODO 色々処理
-
-    mainWindow.webContents.send('engineStdout', outputLine); // engineStdout(main.js)に渡す
+      const GUIMARK = "[PROGRESS]"; // GUI向けに出力されたログ
+      const guilogpos = outputLine.indexOf(GUIMARK);
+      if (guilogpos > -1) {
+        let logbody = outputLine.slice(guilogpos + GUIMARK.length)// ログ本体を抽出
+        mainWindow.webContents.send('engineStdout', logbody); // engineStdout(main.js)に渡す
+      }
+    }
   });
 
-  childProcess.stderr.on('data', (data) => {
-    const outputLine = sjisDecoder.decode(data).trim(); // エラー出力を文字列に変換
+  /*
+  childProcess.stderr.on('data', (data) => { // TODO：標準出力と同じようにする
+    const outputLine = decoder.decode(data).trim(); // エラー出力を文字列に変換
     console.log(outputLine);
     mainWindow.webContents.send('engineStderr', outputLine); // engineStderr(main.js)に渡す
   });
+  */
 
   childProcess.on('close', (code) => {
     console.log(`Child process exited with code ${code} / projectId = ${projectId}`);

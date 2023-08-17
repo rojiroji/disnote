@@ -77,8 +77,8 @@ document.addEventListener('dragover', (e) => {
 });
 
 // DisNOTEエンジンの標準出力を受け取る
-function engineStdout(outputLine) {
-  document.querySelector('#enginestdout').innerText = outputLine; // TODO
+function engineStdout(logbody) {
+  document.querySelector('#enginestdout').innerText = logbody; // TODO
 }
 
 // DisNOTEエンジンのエラー出力を受け取る
