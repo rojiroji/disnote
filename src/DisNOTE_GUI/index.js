@@ -150,15 +150,17 @@ ipcMain.handle('dropMediaFiles', (event, filePaths) => {
  * プロジェクトリスト出力
  */
 function writeProjects() {
-  fs.writeFile(projectsFilePath, JSON.stringify(projects, null, 4), (err) => {
-    if (err) {
-      console.error(err);
-      mainWindow.webContents.send('output-error', err.message);
-      return;
-    }
+  if (projects.length > 0) {
+    fs.writeFile(projectsFilePath, JSON.stringify(projects, null, 4), (err) => {
+      if (err) {
+        console.error(err);
+        mainWindow.webContents.send('output-error', err.message);
+        return;
+      }
 
-    mainWindow.webContents.send('output-success', projectsFilePath);
-  });
+      mainWindow.webContents.send('output-success', projectsFilePath);
+    });
+  }
 }
 
 /**
