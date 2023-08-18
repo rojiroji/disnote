@@ -5,4 +5,4 @@ py -m pip install inaSpeechSegmenter ffmpeg-python SpeechRecognition mutagen req
 rem py -m pip install git+https://github.com/openai/whisper.git > stdout.txt
 py -m pip freeze > freeze_develop.txt
 
-py src/all.py %* 2> stderr.txt
+py src/all.py %* 

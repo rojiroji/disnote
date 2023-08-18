@@ -304,20 +304,11 @@ ipcMain.handle('editProject', (event, projectId) => {
   // サブプロセスの標準出力読み込み
   let stdoutBuffer = '';
   childProcess.stdout.on('data', function (data) {
-    data = encoding.convert(data, { // Windowsの場合、標準出力がSjift-JISなのでエンコード
-      from: env.encoding,
-      to: 'UNICODE',
-      type: 'string',
-    });
-    var lines = (stdoutBuffer + data).replaceAll("\r\n","\n").split("\n");
-    if (data[data.length - 1] != '\n') {
-      stdoutBuffer = lines.pop(); // TODO：エンジン側で、ログを出すときに必ずflushするようにすると、ここに入ることがなくなるはず
-    } else {
-      stdoutBuffer = '';
-    }
+    var lines;
+    ({ lines, stdoutBuffer } = convertOutToLines(data, stdoutBuffer));
     for (var i = 0; i < lines.length - 1; i++) {
       var line = lines[i];
-      const outputLine = line.trim(); // 標準出力を文字列に変換
+      const outputLine = line.trim();
       console.log(outputLine);
 
       const GUIMARK = "[PROGRESS]"; // GUI向けに出力されたログ
@@ -329,13 +320,18 @@ ipcMain.handle('editProject', (event, projectId) => {
     }
   });
 
-  /*
-  childProcess.stderr.on('data', (data) => { // TODO：標準出力と同じようにする
-    const outputLine = decoder.decode(data).trim(); // エラー出力を文字列に変換
-    console.log(outputLine);
-    mainWindow.webContents.send('engineStderr', outputLine); // engineStderr(main.js)に渡す
+  // サブプロセスの標準エラー出力読み込み
+  let stderrBuffer = '';
+  childProcess.stderr.on('data', function (data) {
+    var lines;
+    ({ lines, stdErrBuffer: stderrBuffer } = convertOutToLines(data, stderrBuffer));
+    for (var i = 0; i < lines.length - 1; i++) {
+      var line = lines[i];
+      const outputLine = line.trim();
+      console.log(outputLine);
+      mainWindow.webContents.send('engineStderr', outputLine); // engineStderr(main.js)に渡す
+    }
   });
-  */
 
   childProcess.on('close', (code) => {
     console.log(`Child process exited with code ${code} / projectId = ${projectId}`);
@@ -352,6 +348,27 @@ ipcMain.handle('editProject', (event, projectId) => {
     mainWindow.webContents.send('engineClose', code); // engineClose(main.js)に渡す
   });
 });
+
+/**
+ * 標準出力、標準エラー出力を1行ごとの配列にして返す（改行前の文字列は保持して次回読み込み時に連結する）
+ * @param {*} data 標準出力あるいは標準エラー出力
+ * @param {*} buffer 前回の出力の最後の部分
+ * @returns 1行ごとの配列、今回の出力の最後の行（改行で終わっていた場合は空文字列）
+ */
+function convertOutToLines(data, buffer) {
+  data = encoding.convert(data, {
+    from: env.encoding,
+    to: 'UNICODE',
+    type: 'string',
+  });
+  var lines = (buffer + data).replaceAll("\r\n", "\n").split("\n");
+  if (data[data.length - 1] != '\n') {
+    buffer = lines.pop();
+  } else {
+    buffer = '';
+  }
+  return { lines, buffer };
+}
 
 
 /**
