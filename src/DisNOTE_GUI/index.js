@@ -304,6 +304,7 @@ ipcMain.handle('editProject', (event, projectId) => {
   }));
   const childProcess = spawn(env.engine, args, { encoding: env.encoding }); // エンジンのサブプロセスを起動
   let recfiles = [];
+  let multitracks = false;
 
   // サブプロセスの標準出力読み込み
   let stdoutBuffer = '';
@@ -319,7 +320,7 @@ ipcMain.handle('editProject', (event, projectId) => {
       const guilogpos = outputLine.indexOf(GUIMARK);
       if (guilogpos > -1) {
         let logbody = outputLine.slice(guilogpos + GUIMARK.length)// ログ本体を抽出
-        updateProgress(logbody, recfiles);
+        updateProgress(logbody, recfiles,multitracks);
         //mainWindow.webContents.send('engineStdout', logbody); // engineStdout(main.js)に渡す
       }
     }
@@ -385,13 +386,16 @@ ipcMain.handle('editProject', (event, projectId) => {
     switch (info.stage) {
       case "setAudioFileInfo": // 音声ファイル登録
         recfiles.push(info);
+        if(info.trackindex > 0){
+          multitracks = true;
+        }
         break;
       case "checkedAudioFiles": // 音声ファイル登録完了 → 画面にtableを出す
-        let tableHtml = '<table class="progress"><tr><th colspan="2">File</th><th>Progress</th></tr>';
+        let tableHtml = '<table class="progress"><tr><th colspan="2">ファイル</th><th colspan="2">進捗</th></tr>';
         for (const recfile of recfiles) {
           tableHtml += template_file_progress
             .replaceAll("${orgfile}", recfile.orgfile)
-            .replaceAll("${trackindex}", recfile.trackindex + 1)
+            .replaceAll("${track}", multitracks ? "track" + (recfile.trackindex + 1) : "")
             .replaceAll("${index}", recfile.index);
         }
 
@@ -401,7 +405,7 @@ ipcMain.handle('editProject', (event, projectId) => {
       default: // その他の進捗
         if (typeof info.index !== 'undefined') { // 特定の音声ファイルの進捗
           const index = parseInt(info.index);
-          recfiles[index] = info;
+          recfiles[index] = info; // TODO mainとgoogleとwitaiの進捗が混ざっている + 非同期処理のため進捗の数字が巻き戻ることがある
           mainWindow.webContents.send('updateAudioFileProgress', info);
         }
 

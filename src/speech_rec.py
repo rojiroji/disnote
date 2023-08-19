@@ -73,6 +73,7 @@ def main(input_file):
         logger.info("認識言語：{}".format(language))
 
         queuesize = len(split_result_queue)
+        common.logForGui(logger, "rec", input_file, progress=0, max=queuesize,info={"engine":"google"})
 
         # 分割して出力する音声ファイルのフォルダとプレフィックスまで指定
         audio_file_prefix = common.getSplitAudioFilePrefix(input_file)

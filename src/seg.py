@@ -78,8 +78,8 @@ def main(input_file):
             logger,
             "seg",
             input_file,
-            progress=index + 1,
-            max=int(duration / split_len) + 1,
+            progress=index,
+            max=int(duration / split_len),
         )
 
         end_time = min(start_time + split_len, duration)

@@ -4,6 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <!-- https://developer.mozilla.org/en-US/docs/Web/HTTP/CSP -->
+    <script src="js/jquery-3.6.0.min.js"></script>
     <script src="js/main.js"></script>
     <style>
         div#projects {
@@ -174,11 +175,13 @@
         div#progress table tr.main {
             border-top: 1px solid #dedede;
         }
+
         div#progress table {
             border-bottom: 1px solid #dedede;
         }
 
-        div#progress table td.orgfile {
+        div#progress table td.orgfile,
+        div#progress table td.track {
             /* 最大横幅を指定 */
             max-width: 200px;
 
@@ -191,20 +194,40 @@
             padding-right: 10px;
         }
 
-        div#progress table td.progress {
-            width: 300px;
+
+        div#progress table td.stage {
+            width: 180px;
+            white-space: nowrap;
         }
 
-        div#progress table td.progress div.stage,
-        div#progress table td.progress div.enginename {
-            float: left;
-        }
-        div#progress table td.progress div.enginename {
-            margin-left: 20px;
+        .progress-container {
+            position: relative;
+            width: 200px;
+            height: 30px;
         }
 
-        div#progress table td.progress div.engineprogress {
-            float: right;
+        .custom-text {
+            position: absolute;
+            top: 0;
+            right: 0;
+            font-size: 16px;
+            color: black;
+            padding-right: 10px;
+            /* テキストと <progress> の右端の間隔を設定 */
+        }
+
+        progress {
+            -webkit-appearance: none;
+            width: 200px;
+            height: 25px;
+        }
+
+        ::-webkit-progress-bar {
+            background-color: rgb(206, 206, 206);
+        }
+
+        ::-webkit-progress-value {
+            background-color: #00CCC2;
         }
     </style>
 </head>

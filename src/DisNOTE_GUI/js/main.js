@@ -89,24 +89,40 @@ function checkedAudioFiles(tableHtml) {
 // 音声ファイルの進捗テーブルの更新
 function updateAudioFileProgress(info) {
   const index = info.index;
-  document.querySelector(`#stage_${index}`).innerHTML = info.stage;
+  document.querySelector(`#stage_${index}`).innerHTML = {
+    "setAudioFileInfo": "他音声準備待ち(1/7)", "seg": "無音解析中(2/7)", "split": "音声分割設定中(3/7)",
+    "split_audio": "音声分割中(4/7)", "prepare": "音声認識開始待ち(5/7)", "rec": "音声認識中(6/7)",
+    "conv_audio": "音声変換処理(7/7)"
+  }[info.stage];
 
   let progress = 0;
-  if(info.max){
+  if (info.max) {
     progress = 100 * info.progress / info.max;
   }
-  if(info.engine){
+
+  let progress_tag = null;
+  let percent_tag = null;
+  if (info.engine) {
+    let progressTarget;
     switch (info.engine) {
       case "google":
-        document.querySelector(`#progress_google_${index}`).innerHTML = progress;
+        progress_tag = document.querySelector(`#progress_google_${index}`);
+        percent_tag = document.querySelector(`#percent_google_${index}`);
         break;
       case "witai":
-        document.querySelector(`#progress_witai_${index}`).innerHTML = progress;
+        progress_tag = document.querySelector(`#progress_witai_${index}`);
+        percent_tag = document.querySelector(`#percent_witai_${index}`);
         break;
     }
-  }else{
-    document.querySelector(`#progress_main_${index}`).innerHTML = progress;
-
+  } else {
+    progress_tag = document.querySelector(`#progress_main_${index}`);
+    percent_tag = document.querySelector(`#percent_main_${index}`);
+  }
+  if (progress_tag) {
+    progress_tag.value = progress;
+  }
+  if (percent_tag) {
+    percent_tag.innerText = progress.toFixed(1) + "%";
   }
 
 
@@ -119,7 +135,7 @@ function engineStdout(logbody) {
 
 // DisNOTEエンジンのエラー出力を受け取る
 function engineStderr(outputLine) {
-  document.querySelector('#engineStderr').innerText = outputLine; // TODO
+  //document.querySelector('#engineStderr').innerText = outputLine; // TODO
 }
 
 // DisNOTEエンジンの終了コードを受け取る

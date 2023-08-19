@@ -80,6 +80,7 @@ def main(input_file):
     with codecs.open(recognize_result_file, mode, "CP932", "ignore") as f:
         logger.info("音声認識中(wit.ai)… {}".format(base))
         queuesize = len(split_result_queue)
+        common.logForGui(logger, "rec", input_file, progress=0, max=queuesize,info={"engine":"witai"})
 
         # 分割して出力する音声ファイルのフォルダとプレフィックスまで指定
         audio_file_prefix = common.getSplitAudioFilePrefix(input_file)
