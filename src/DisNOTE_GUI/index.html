@@ -165,6 +165,47 @@
             border-style: solid;
             border-width: thin;
         }
+
+        div#progress table {
+            border-collapse: collapse;
+            margin: 20px auto;
+        }
+
+        div#progress table tr.main {
+            border-top: 1px solid #dedede;
+        }
+        div#progress table {
+            border-bottom: 1px solid #dedede;
+        }
+
+        div#progress table td.orgfile {
+            /* 最大横幅を指定 */
+            max-width: 200px;
+
+            /* 制約された幅からはみ出る部分を隠す */
+            overflow: hidden;
+            /* 隠された部分を省略記号 (...) で表示 */
+            text-overflow: ellipsis;
+            /* テキストを折り返さないようにする */
+            white-space: nowrap;
+            padding-right: 10px;
+        }
+
+        div#progress table td.progress {
+            width: 300px;
+        }
+
+        div#progress table td.progress div.stage,
+        div#progress table td.progress div.enginename {
+            float: left;
+        }
+        div#progress table td.progress div.enginename {
+            margin-left: 20px;
+        }
+
+        div#progress table td.progress div.engineprogress {
+            float: right;
+        }
     </style>
 </head>
 
@@ -176,10 +217,12 @@
 
     </div>
     <div id="enginestdout">
-        
+
     </div>
     <div id="enginestderr">
-        
+
+    </div>
+    <div id="progress">
     </div>
 </body>
 

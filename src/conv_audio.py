@@ -83,9 +83,8 @@ def main(input_file):
             pass
 
         # 認識結果ファイルの読み込み
-        recognize_result = recognize_result_list.pop(
-            0
-        )  # 話者,dstファイル名(mp3),開始時間(冒頭無音なし),長さ(末尾無音なし), スコア, 認識結果 の順
+        recognize_result = recognize_result_list.pop(0)
+        # 話者,dstファイル名(mp3),開始時間(冒頭無音なし),長さ(末尾無音なし), スコア, 認識結果 の順
         audio_file = recognize_result[1]
         text = recognize_result[5]
 
@@ -162,7 +161,13 @@ def main(input_file):
         # 100行ごとか、最後の1行に進捗を出す
         if (id % 100) == 0 or (len(split_result_queue) == 0):
             logger.info("　音声変換中… {} {}/{}".format(base, id, queuesize))
-
+            common.logForGui(
+                logger,
+                "conv_audio",
+                input_file,
+                progress=id + 1,
+                max=queuesize,
+            )
     # 終了したことをiniファイルに保存
     common.updateConfig(input_file, {CONFIG_WORK_KEY: common.DONE})
 

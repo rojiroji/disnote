@@ -22,6 +22,10 @@ window.addEventListener('load', async (event) => {
   window.api.on("engineStderr", engineStderr); // DisNOTEエンジンのエラー出力を受け取る
   window.api.on("engineClose", engineClose); // DisNOTEエンジンの終了コードを受け取る
 
+  window.api.on("checkedAudioFiles", checkedAudioFiles); // 音声ファイルの進捗テーブルの作成
+  window.api.on("updateAudioFileProgress", updateAudioFileProgress); // 音声ファイルの進捗テーブルの更新
+
+
 });
 
 /**
@@ -55,7 +59,7 @@ async function reloadProjects() {
     // console.log("projectid=" + editbutton.getAttribute("projectid"));
     editbutton.addEventListener('click', async (e) => {
       let projectid = e.currentTarget.getAttribute("projectid"); // ボタンにはprojetid属性がついている
-      console.log("editbutton click:" + projectid);
+      //console.log("editbutton click:" + projectid);
       await window.api.editProject(projectid);
     });
   }
@@ -76,9 +80,41 @@ document.addEventListener('dragover', (e) => {
   e.stopPropagation();
 });
 
+// 音声ファイルの進捗テーブルの作成
+function checkedAudioFiles(tableHtml) {
+  document.querySelector('#progress').innerHTML = tableHtml;
+
+}
+
+// 音声ファイルの進捗テーブルの更新
+function updateAudioFileProgress(info) {
+  const index = info.index;
+  document.querySelector(`#stage_${index}`).innerHTML = info.stage;
+
+  let progress = 0;
+  if(info.max){
+    progress = 100 * info.progress / info.max;
+  }
+  if(info.engine){
+    switch (info.engine) {
+      case "google":
+        document.querySelector(`#progress_google_${index}`).innerHTML = progress;
+        break;
+      case "witai":
+        document.querySelector(`#progress_witai_${index}`).innerHTML = progress;
+        break;
+    }
+  }else{
+    document.querySelector(`#progress_main_${index}`).innerHTML = progress;
+
+  }
+
+
+}
 // DisNOTEエンジンの標準出力を受け取る
 function engineStdout(logbody) {
   document.querySelector('#enginestdout').innerText = logbody; // TODO
+  console.log(logbody);
 }
 
 // DisNOTEエンジンのエラー出力を受け取る
@@ -88,5 +124,5 @@ function engineStderr(outputLine) {
 
 // DisNOTEエンジンの終了コードを受け取る
 function engineClose(code) {
-  alert("engine exit code=" + code);
+  //alert("engine exit code=" + code);
 }

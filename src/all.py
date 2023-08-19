@@ -50,6 +50,7 @@ def prepare(input_files):
             # 無音解析
             try:
                 seg.main(input_file)
+                common.logForGui(logger, "seg", input_file, progress=1, max=1)
             except Exception as e:
                 tb = sys.exc_info()[2]
                 logger.error(traceback.format_exc())
@@ -61,6 +62,7 @@ def prepare(input_files):
             # 音声分割設定
             try:
                 split.main(input_file)
+                common.logForGui(logger, "split", input_file, progress=1, max=1)
             except Exception as e:
                 tb = sys.exc_info()[2]
                 logger.error(traceback.format_exc())
@@ -74,6 +76,7 @@ def prepare(input_files):
             # 音声分割
             try:
                 split_audio.main(input_file)
+                common.logForGui(logger, "split_audio", input_file, progress=1, max=1)
             except Exception as e:
                 tb = sys.exc_info()[2]
                 logger.error(traceback.format_exc())
@@ -130,6 +133,7 @@ def speechRecognizeGoogle(prepareThread):
             # 音声認識
             speech_rec.main(input_file)
             thread.pushReadyConvertListGoogle(input_file)
+            common.logForGui(logger, "rec", input_file, progress=1, max=1,info={"engine":"google"})
     except Exception as e:
         common.errorOccurred()
         tb = sys.exc_info()[2]
@@ -188,6 +192,8 @@ def speechRecognizeWitAI(prepareThread):
                 else:
                     # 完了
                     thread.pushReadyConvertListWitAI(input_file)
+                    common.logForGui(logger, "rec", input_file, progress=1, max=1,info={"engine":"witai"})
+
                     break
 
     except Exception as e:
@@ -231,6 +237,7 @@ def speechRecognizeWhisper(prepareThread, downloadWhisperGgmlModelThread):
             # 音声認識
             speech_rec_whisper.main(input_file)
             thread.pushReadyConvertListWhisper(input_file)
+            common.logForGui(logger, "rec", input_file, progress=1, max=1,info={"engine":"whisper"})
     except Exception as e:
         common.errorOccurred()
         tb = sys.exc_info()[2]
@@ -265,6 +272,7 @@ def convert(recognizeThreads):
 
             # 音声変換
             conv_audio.main(input_file)
+            common.logForGui(logger, "conv_audio", input_file, progress=1, max=1)
 
     except Exception as e:
         common.errorOccurred()
@@ -433,6 +441,8 @@ try:
                 os.path.basename(arg_file), arg_index + 1, len(arg_files)
             )
         )
+
+    common.logForGui(logger, "checkedAudioFiles")
 
     # ファイルそれぞれに対して音声認識
     with ThreadPoolExecutor() as executor:

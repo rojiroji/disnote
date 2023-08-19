@@ -94,7 +94,6 @@ def main(input_file):
             shutil.move(tmp_audio_file, filename)
 
     logger.info("音声分割終了！ {}".format(os.path.basename(input_file)))
-    common.logForGui(logger, "split_audio", input_file, progress=1, max=1)
 
 
 # 直接起動した場合

@@ -257,8 +257,7 @@ def main(input_file):
             os.path.basename(input_file), (func_out_time - func_in_time) / 60
         )
     )
-    common.logForGui(logger, "rec", input_file, progress=1, max=1,info={"engine":"witai"})
-
+    
 # wit.aiで音声認識
 prev_witai_requesttime = 0
 

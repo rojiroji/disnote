@@ -21,6 +21,7 @@ try {
 const template_projects_header = fs.readFileSync(path.join(__dirname, 'template_projects_header.html'), 'utf8');
 const template_projects_body = fs.readFileSync(path.join(__dirname, 'template_projects_body.html'), 'utf8');
 const template_projects_name = fs.readFileSync(path.join(__dirname, 'template_projects_name.html'), 'utf8');
+const template_file_progress = fs.readFileSync(path.join(__dirname, 'template_file_progress.html'), 'utf8');
 
 // リリース版or開発環境で異なる設定を読み込み
 const env = JSON.parse(fs.readFileSync(path.join(__dirname, 'env.json'), 'utf8'));
@@ -302,6 +303,7 @@ ipcMain.handle('editProject', (event, projectId) => {
     return file.fullpath;
   }));
   const childProcess = spawn(env.engine, args, { encoding: env.encoding }); // エンジンのサブプロセスを起動
+  let recfiles = [];
 
   // サブプロセスの標準出力読み込み
   let stdoutBuffer = '';
@@ -311,13 +313,14 @@ ipcMain.handle('editProject', (event, projectId) => {
     for (var i = 0; i < lines.length - 1; i++) {
       var line = lines[i];
       const outputLine = line.trim();
-      console.log(outputLine);
+      //console.log(outputLine);
 
       const GUIMARK = "[PROGRESS]"; // GUI向けに出力されたログ
       const guilogpos = outputLine.indexOf(GUIMARK);
       if (guilogpos > -1) {
         let logbody = outputLine.slice(guilogpos + GUIMARK.length)// ログ本体を抽出
-        mainWindow.webContents.send('engineStdout', logbody); // engineStdout(main.js)に渡す
+        updateProgress(logbody, recfiles);
+        //mainWindow.webContents.send('engineStdout', logbody); // engineStdout(main.js)に渡す
       }
     }
   });
@@ -330,7 +333,7 @@ ipcMain.handle('editProject', (event, projectId) => {
     for (var i = 0; i < lines.length - 1; i++) {
       var line = lines[i];
       const outputLine = line.trim();
-      console.log(outputLine);
+      //console.log(outputLine);
       mainWindow.webContents.send('engineStderr', outputLine); // engineStderr(main.js)に渡す
     }
   });
@@ -349,28 +352,63 @@ ipcMain.handle('editProject', (event, projectId) => {
 
     mainWindow.webContents.send('engineClose', code); // engineClose(main.js)に渡す
   });
-});
 
-/**
- * 標準出力、標準エラー出力を1行ごとの配列にして返す（改行前の文字列は保持して次回読み込み時に連結する）
- * @param {*} data 標準出力あるいは標準エラー出力
- * @param {*} buffer 前回の出力の最後の部分
- * @returns 1行ごとの配列、今回の出力の最後の行（改行で終わっていた場合は空文字列）
- */
-function convertOutToLines(data, buffer) {
-  data = encoding.convert(data, {
-    from: env.encoding,
-    to: 'UNICODE',
-    type: 'string',
-  });
-  var lines = (buffer + data).replaceAll("\r\n", "\n").split("\n");
-  if (data[data.length - 1] != '\n') {
-    buffer = lines.pop();
-  } else {
-    buffer = '';
+  /**
+   * 標準出力、標準エラー出力を1行ごとの配列にして返す（改行前の文字列は保持して次回読み込み時に連結する）
+   * @param {*} data 標準出力あるいは標準エラー出力
+   * @param {*} buffer 前回の出力の最後の部分
+   * @returns 1行ごとの配列、今回の出力の最後の行（改行で終わっていた場合は空文字列）
+   */
+  function convertOutToLines(data, buffer) {
+    data = encoding.convert(data, {
+      from: env.encoding,
+      to: 'UNICODE',
+      type: 'string',
+    });
+    var lines = (buffer + data).replaceAll("\r\n", "\n").split("\n");
+    if (data[data.length - 1] != '\n') {
+      buffer = lines.pop();
+    } else {
+      buffer = '';
+    }
+    return { lines, buffer };
   }
-  return { lines, buffer };
-}
+
+  /**
+   * エンジンから受け取ったログを解析し、画面に音声ファイルごとの進捗として表示する
+   * @param {*} logbody ログ(json形式であること)
+   * @param {*} recfiles  音声ファイルの情報の一覧
+   */
+  function updateProgress(logbody, recfiles) {
+    console.log("updateProgress:" + logbody);
+    const info = JSON.parse(logbody); // TODO parseできなかった場合
+    switch (info.stage) {
+      case "setAudioFileInfo": // 音声ファイル登録
+        recfiles.push(info);
+        break;
+      case "checkedAudioFiles": // 音声ファイル登録完了 → 画面にtableを出す
+        let tableHtml = '<table class="progress"><tr><th colspan="2">File</th><th>Progress</th></tr>';
+        for (const recfile of recfiles) {
+          tableHtml += template_file_progress
+            .replaceAll("${orgfile}", recfile.orgfile)
+            .replaceAll("${trackindex}", recfile.trackindex + 1)
+            .replaceAll("${index}", recfile.index);
+        }
+
+        tableHtml += '</table>';
+        mainWindow.webContents.send('checkedAudioFiles', tableHtml);
+        break;
+      default: // その他の進捗
+        if (typeof info.index !== 'undefined') { // 特定の音声ファイルの進捗
+          const index = parseInt(info.index);
+          recfiles[index] = info;
+          mainWindow.webContents.send('updateAudioFileProgress', info);
+        }
+
+        return;
+    }
+  }
+});
 
 
 /**
