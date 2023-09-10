@@ -320,7 +320,7 @@ ipcMain.handle('editProject', (event, projectId) => {
       const guilogpos = outputLine.indexOf(GUIMARK);
       if (guilogpos > -1) {
         let logbody = outputLine.slice(guilogpos + GUIMARK.length)// ログ本体を抽出
-        updateProgress(logbody, recfiles,multitracks);
+        updateProgress(logbody, recfiles, multitracks);
         //mainWindow.webContents.send('engineStdout', logbody); // engineStdout(main.js)に渡す
       }
     }
@@ -380,13 +380,13 @@ ipcMain.handle('editProject', (event, projectId) => {
    * @param {*} logbody ログ(json形式であること)
    * @param {*} recfiles  音声ファイルの情報の一覧
    */
-  function updateProgress(logbody, recfiles) {
+  function updateProgress(logbody, recfiles, multitracks) {
     console.log("updateProgress:" + logbody);
     const info = JSON.parse(logbody); // TODO parseできなかった場合
     switch (info.stage) {
       case "setAudioFileInfo": // 音声ファイル登録
         recfiles.push(info);
-        if(info.trackindex > 0){
+        if (info.trackindex > 0) {
           multitracks = true;
         }
         break;
@@ -401,11 +401,17 @@ ipcMain.handle('editProject', (event, projectId) => {
 
         tableHtml += '</table>';
         mainWindow.webContents.send('checkedAudioFiles', tableHtml);
+        mainWindow.webContents.send('updateCuiProgress', "音声認識処理中");
+        break;
+      case "merge_mp3": // 音声マージ
+        mainWindow.webContents.send('updateCuiProgress', "音声ファイルマージ中");
+        break;
+      case "merge_end": // 処理終了
+        mainWindow.webContents.send('updateCuiProgress', "音声認識完了");
         break;
       default: // その他の進捗
         if (typeof info.index !== 'undefined') { // 特定の音声ファイルの進捗
           const index = parseInt(info.index);
-          recfiles[index] = info; // TODO mainとgoogleとwitaiの進捗が混ざっている + 非同期処理のため進捗の数字が巻き戻ることがある
           mainWindow.webContents.send('updateAudioFileProgress', info);
         }
 
