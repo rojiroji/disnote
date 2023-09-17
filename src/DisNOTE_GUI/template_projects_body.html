@@ -2,7 +2,7 @@
     <td colspan="4" class="title left">
         ${item.title}
     </td>
-    <td class="buttons big-icon" rowspan="2" >
+    <td class="buttons big-icon" rowspan="2">
         <div class="big-icon" title="編集画面を開きます">
             <button class="edit" projectid="${item.id}">
                 <img src="img/edit.png">
@@ -26,7 +26,7 @@
             </button>
         </div>
     </td>
-        
+
     </td>
 </tr>
 <tr>
@@ -40,8 +40,14 @@
         ${name_o}
     </td>
     <td class="times">
-        <div class="icon time item" title="認識日時"><img src="img/recognize.png"><span>${item.recognized_time}</span></div>
-        <div class="icon time item" title="編集日時"><img src="img/edit.png"><span>${item.modified_time}</span></div>
-        <div class="icon time item" title="最終閲覧日時"><img src="img/show.png"><span>${item.access_time}</span></div>
+        <div class="icon time item" title="認識日時：${item.recognized_time}">
+            <img src="img/recognize.png"><span>${item.recognized_date}</span>
+        </div>
+        <div class="icon time item" title="編集日時：${item.modified_time}">
+            <img src="img/edit.png"><span>${item.modified_date}</span>
+        </div>
+        <div class="icon time item" title="最終閲覧日時：${item.access_time}">
+            <img src="img/show.png"><span>${item.access_date}</span>
+        </div>
     </td>
 </tr>

@@ -195,6 +195,9 @@ ipcMain.handle('getProjectsTable', (event) => {
       .replaceAll("${item.recognized_time}", item.recognized_time)
       .replaceAll("${item.modified_time}", item.modified_time)
       .replaceAll("${item.access_time}", item.access_time)
+      .replaceAll("${item.recognized_date}", item.recognized_time.substring(0, 10))
+      .replaceAll("${item.modified_date}", item.modified_time.substring(0, 10))
+      .replaceAll("${item.access_date}", item.access_time.substring(0, 10))
       .replaceAll("${item.id}", item.id)
       .replaceAll("${name_e}", name_e)
       .replaceAll("${name_o}", name_o);
@@ -438,7 +441,7 @@ ipcMain.handle('cancelRecognize', (event) => {
 /**
  * 子プロセスを落とす
  */
-function killChildProcess(){
+function killChildProcess() {
   if (childProcess != null) { // 既に落ちたプロセスに再度killしても副作用はないようなので状態は見ない
     childProcess.kill('SIGTERM');  // TODO:SIGTERMで終了して、上手く落ちなかったらSIGKILLで落とす
   }
