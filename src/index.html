@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="ja">
+
 <head>
 	<meta charset="Shift-JIS">
 	<title>DisNOTE</title>
@@ -10,1702 +11,1785 @@
 	<script src="htmlfiles/jquery-ui.min.js"></script>
 
 	<script>
-	$(function() {
-		/* callback登録 */
-		window.api.on("apiSaveEditNotify",saveEdit)
-		window.api.on("apiLoadEditData", (arg)=>{
-			loadEditDataWrap(arg)
-		})
+		$(function () {
+			/* callback登録 */
+			window.api.on("apiSaveEditNotify", saveEdit)
+			window.api.on("apiLoadEditData", (arg) => {
+				loadEditDataWrap(arg)
+			})
 
-		$edittingtag = null; // 編集中のhtmlタグ
-		var editText = {};
-		var edited = false;
-		//var editFileName = "";
+			$edittingtag = null; // 編集中のhtmlタグ
+			var editText = {};
+			var edited = false;
+			//var editFileName = "";
 
-		// 話者
-		var people = {};
-		
-		var textBase = 5; // resultの配列の中で本文がある場所
-		
-		$toptr = $($('#table').find('tr')[0]);
-		var toptr_top = $toptr.offset().top; // 先頭tr（thead）の表示位置
-		
-		// 指定した<tr>が上の端に来るようにスクロール
-		function scrollToTop($target, force){
-			if(!$target){
-				return;
-			}
-			var y = $target.offset().top - toptr_top;
-			if(force || y < $(window).scrollTop()){
-				$(window).scrollTop(y);
-			}
-		}
+			// 話者
+			var people = {};
 
-		// 指定した<tr>が下の端に表示されるようにスクロール
-		function scrollToBottom($target, force){
-			var y = $target.offset().top + $target.height() + $("#foottable").height() + 35;
-			if(force || ($(window).scrollTop() +  $(window).height() < y)){
-				$(window).scrollTop(y - $(window).height());
-			}
-		}
+			var textBase = 5; // resultの配列の中で本文がある場所
 
-		// 話者表示切替
-		function updateShowNameMode(){
-			$("#table th.name").css("display", $('#showname').prop('checked') ? "table-cell" : "none");
-			$("#table td.name").css("display", $('#showname').prop('checked') ? "table-cell" : "none");
-		}
-		$("#showname").change(function(){
-			updateShowNameMode();
-			saveConfig();
-		});
+			$toptr = $($('#table').find('tr')[0]);
+			var toptr_top = $toptr.offset().top; // 先頭tr（thead）の表示位置
 
-		// 行の表示/非表示切り替え(特定話者)
-		function updatePersonLineDisplay($person){
-			var id = $person.attr("id");
-			
-			if($person.val() != "false"){ // 話者チェック
-				if($('#notext').prop('checked')){ // 「認識できなかった行を表示」チェック
-					$(".textexists."+id).css("display", "table-row");
-					$(".notext."+id).css("display", "table-row");
-				}else{ //「認識できなかった行を表示」チェックされてない ⇒ 特定の話者 and notextでない行だけ表示
-					$(".textexists."+id).css("display", "table-row");
-					$(".notext."+id).css("display", "none");
+			// 指定した<tr>が上の端に来るようにスクロール
+			function scrollToTop($target, force) {
+				if (!$target) {
+					return;
 				}
-			}else{ // 話者非表示
-				$(".textexists."+id).css("display", "none");
-				$(".notext."+id).css("display", "none");
+				var y = $target.offset().top - toptr_top;
+				if (force || y < $(window).scrollTop()) {
+					$(window).scrollTop(y);
+				}
 			}
-		}
-		
-		// 行の表示/非表示切り替え
-		function updateLineDisplay(){
-			$prevtr = undefined;
-			$toptr = undefined;
-			
-			// いま画面の一番上に表示されているtrを探す（このtrが画面の一番上に表示されるようにスクロール位置を調整する）
-			$('#table').find('tr').each( function( index, element ){
-				if(!($(element).css('display') == "none")){ // $(element).hasClass("notext")
-					var t = $(element).offset().top -  $(window).scrollTop();
-					if(t > toptr_top){
-						$toptr = $prevtr;
+
+			// 指定した<tr>が下の端に表示されるようにスクロール
+			function scrollToBottom($target, force) {
+				var y = $target.offset().top + $target.height() + $("#foottable").height() + 35;
+				if (force || ($(window).scrollTop() + $(window).height() < y)) {
+					$(window).scrollTop(y - $(window).height());
+				}
+			}
+
+			// 話者表示切替
+			function updateShowNameMode() {
+				$("#table th.name").css("display", $('#showname').prop('checked') ? "table-cell" : "none");
+				$("#table td.name").css("display", $('#showname').prop('checked') ? "table-cell" : "none");
+			}
+			$("#showname").change(function () {
+				updateShowNameMode();
+				saveConfig();
+			});
+
+			// 行の表示/非表示切り替え(特定話者)
+			function updatePersonLineDisplay($person) {
+				var id = $person.attr("id");
+
+				if ($person.val() != "false") { // 話者チェック
+					if ($('#notext').prop('checked')) { // 「認識できなかった行を表示」チェック
+						$(".textexists." + id).css("display", "table-row");
+						$(".notext." + id).css("display", "table-row");
+					} else { //「認識できなかった行を表示」チェックされてない ⇒ 特定の話者 and notextでない行だけ表示
+						$(".textexists." + id).css("display", "table-row");
+						$(".notext." + id).css("display", "none");
+					}
+				} else { // 話者非表示
+					$(".textexists." + id).css("display", "none");
+					$(".notext." + id).css("display", "none");
+				}
+			}
+
+			// 行の表示/非表示切り替え
+			function updateLineDisplay() {
+				$prevtr = undefined;
+				$toptr = undefined;
+
+				// いま画面の一番上に表示されているtrを探す（このtrが画面の一番上に表示されるようにスクロール位置を調整する）
+				$('#table').find('tr').each(function (index, element) {
+					if (!($(element).css('display') == "none")) { // $(element).hasClass("notext")
+						var t = $(element).offset().top - $(window).scrollTop();
+						if (t > toptr_top) {
+							$toptr = $prevtr;
+							return false;
+						}
+						$prevtr = $(element);
+					}
+				});
+
+				var show = 0;
+				var total = 0;
+				// 話者ごとの表示/非表示設定
+				$(".person_input").each(function (index, element) {
+					updatePersonLineDisplay($(element));
+					total++;
+					if ($(element).val() != "false") { show++; }
+				});
+				$("#peoplecount").text("(" + show + "/" + total + ")");
+
+
+				// 元のtrを先頭に表示するようにスクロール位置を調整
+				scrollToTop($toptr, true);
+
+				// 再検索
+				search(true);
+
+				if ($("#projectsetting").dialog("isOpen")) { // スクロールで話者選択ウィンドウが遠くに行ってしまうことがあるので再表示
+					$("#projectsetting").dialog("close");
+					$("#projectsetting").dialog("open");
+				}
+
+			}
+
+			// 認識できなかった行を表示
+			$("#notext").change(function () {
+				updateLineDisplay();
+				saveConfig();
+			});
+
+			// 時刻切り替え
+			function updateTimeMode() {
+				if ($('#abstime').prop('checked')) {
+					$(".abstime").css("display", "inline");
+					$(".reltime").css("display", "none");
+				} else {
+					$(".reltime").css("display", "inline");
+					$(".abstime").css("display", "none");
+				}
+			}
+			$("#abstime").change(function () {
+				updateTimeMode();
+				saveConfig();
+			});
+
+			// 自動再生切り替え（設定保存のみ）
+			$("#autoplay").change(function () {
+				saveConfig();
+			});
+
+			// 行内の表示する候補を変更($td：対象行、current：候補の番号)
+			function changeTextAbs($td, current) {
+				changeCurrentTd($td);
+				$target = $td.parent().data('textTd');
+
+				var len = 0 + $target.data('textlen');
+				if (len <= 0) {
+					return;
+				}
+
+				$target.data('current', current);
+				$target.find('div.text').text($target.data('text' + current));
+
+				var title = (current + 1) + "/" + len;
+				var textId = $target.attr('id');
+				$("#" + textId + "_l").attr({ "title": title });
+				$("#" + textId + "_r").attr({ "title": title });
+
+				var number = $td.data('number');
+				current = Number.isInteger(current) ? current : 0
+				selection[number] = String(current);
+
+				var engines = $target.data('engines');
+				//console.log("engines=" + engines )
+
+				var engine = engines[current];
+				selection_engine[number] = engine;
+
+				$target.attr('title', getEnginName(engine));
+				$target.find('span.engine').text(getEnginName(engine))
+
+				num = 0;
+				for (var i = 0; i < current; i++) {
+					if (engines[i] == engine) {
+						num++;
+					}
+				}
+				selection_engine_num[number] = String(num);
+
+				//console.log("current=" + current + ", engine=" + engine + " engine_num=" + num)
+				//console.log("current=" + selection[number] + ", engine=" + selection_engine[number]  + " engine_num=" + selection_engine_num[number])
+
+				saveProjectSelection();
+			}
+
+			// 行内の表示する候補を変更($td：対象行、d：候補の変更(+1 or -1))
+			function changeText($td, d) {
+				$target = $td.parent().data('textTd');
+
+				var current = 0 + $target.data('current');
+				var len = 0 + $target.data('textlen');
+				if (len <= 0) {
+					return;
+				}
+				current = (len + current + d) % len;
+				changeTextAbs($td, current);
+
+			}
+
+			// ミリ秒から時間表記に変換
+			function getTimeStr(base, t) {
+				date = new Date(base.getTime() + t);
+				d = ('0' + date.getHours()).slice(-2) + ":" + ('0' + date.getMinutes()).slice(-2) + ":" + ('0' + date.getSeconds()).slice(-2);
+				return d;
+			}
+
+			// 現在選択されている行
+			$currentTd = undefined;
+
+			// $tdを選択
+			function changeCurrentTd($td, seekOrgMedia = true) {
+				var isChange = true;
+				if (!$td) {
+					//
+				} else {
+					$td = $td.parent().data('playTd');
+					if (!$currentTd) {
+						$currentTd = $td; // 未選択だった場合
+					} else if (!$td || $currentTd == $td) {
+						isChange = false; // 変更なしの場合
+					} else {
+						// 選択済みで変更した場合
+						if ($edittingtag) {
+							submitTdText($currentTd, $("#editting_input").val()); // 編集中だったら反映させる
+						}
+						$currentTd = $td;
+					}
+				}
+
+				if (isChange || !$currentTd) { // 違うtdを選んだ場合は、元の選択を外す
+					$(".current").removeClass('current');
+					editTdTextEnd();
+				} else {
+					return;
+				}
+
+				// 再生中の行に色付け
+				if ($currentTd) {
+					$currentTd.parent().addClass('current');
+					//console.log(0 + $currentTd.parent().data('time'));
+
+					if (seekOrgMedia) {
+						$("#orgmedia")[0].currentTime = $currentTd.parent().data('time');
+						$("#movie")[0].currentTime = $currentTd.parent().data('time');
+					}
+					$("#sound").attr({ "src": $currentTd.data('filename') });
+				}
+			}
+
+			// 次の行へ(d=1),前の行へ(d=-1)
+			function nextTd($td, d) {
+				if (!$td) { return; }
+				var next_id = $td.data('number');
+				$nextPlayTd = null;
+
+				do { // 次の行を探す（非表示の場合はスキップ）
+					next_id += d;
+					$nextPlayTd = $("#play_" + next_id);
+
+					if ($nextPlayTd.length <= 0) { return null; } // 最後まで進んだ
+
+				} while ($nextPlayTd.parent().css('display') == "none")
+
+				return $nextPlayTd;
+
+			}
+
+			// 音声再生
+			function play($td) {
+				changeCurrentTd($td);
+
+				// ファイル名設定
+				$("#sound").attr({ "src": $td.data('filename') });
+				// 再生
+				$("#sound")[0].play();
+			}
+
+			// 再生終了
+			$("#sound").on("ended", function () {
+				if ($('#autoplay').prop('checked')) { // 連続再生
+					$currentTd = nextTd($currentTd, +1); // 次の行へ
+
+					// 次の行を再生
+					if ($currentTd) {
+						play($currentTd);
+
+						// 画面外に出ていた場合はスクロール
+						scrollToBottom($nextPlayTd, false);
+					}
+				}
+			});
+
+			// 2つの音声を同時に再生できないようにする
+			$("#orgmedia").on("play", function () {
+				$("#sound")[0].pause();
+				$("#movie")[0].pause();
+			});
+			$("#sound").on("play", function () {
+				$("#orgmedia")[0].pause();
+				$("#movie")[0].pause();
+			});
+			$("#movie").on("play", function () {
+				$("#orgmedia")[0].pause();
+				$("#sound")[0].pause();
+			});
+
+			// オリジナル音源の時間が動いたときに、currentTdを移動する
+			function changeCurrentTdByMedia($m) {
+				var t = $m[0].currentTime.toFixed(2); // 桁数の違いにより数値の比較がおかしくなることがあるので桁数を揃える
+				if (mixedMediaIsMovie) {
+					$("#movieThumbnail")[0].currentTime = t; // 動画のサムネイルを追いつかせる
+				}
+
+				defaultCurrentTd();
+				var currentT = $currentTd.parent().data('time').toFixed(2); // 桁数の違いにより数値の比較がおかしくなることがあるので桁数を揃える
+
+				$targettd = undefined;
+				if (currentT < t) { // オリジナル音源にcurrentTdを追いつかせる
+					$targettd = $currentTd;
+					do {
+						$tmptd = nextTd($targettd, 1);
+						if (!$tmptd) {
+							break;
+						}
+						if ($tmptd.parent().data('time') > t) { // 追い抜く直前まで進める
+							break;
+						}
+						$targettd = $tmptd;
+					} while ($targettd);
+				} else { // オリジナル音源までcurrentTdを戻す
+					$targettd = $currentTd;
+					while ($targettd) {
+						if ($targettd.parent().data('time') <= t) { // オリジナル音源の前まで戻る
+							break;
+						}
+						$targettd = nextTd($targettd, -1);
+					}
+				}
+
+				if ($targettd && $targettd != $currentTd) { // currentTd移動（0の移動をさせるとそこからまたイベントが走るのでそれを防ぐ）
+					changeCurrentTd($targettd, false); // シークしない
+					scrollToTop($currentTd, false);
+					scrollToBottom($currentTd, false);
+				}
+			}
+			$("#orgmedia").on("timeupdate ", function () {
+				changeCurrentTdByMedia($("#orgmedia"))
+			});
+			$("#movie").on("timeupdate ", function () {
+				changeCurrentTdByMedia($("#movie"))
+			});
+
+			// ウィンドウスクロール時、ダイアログの位置を追随させる
+			$(window).on('scroll', function () {
+				[$("#movieDialogue"), $("#help"), $("#projectsetting"), $("#download")].forEach(function ($t) {
+					$p = $t.parent();
+					if ($p.css('display') != 'none') {
+						var top = $(window).scrollTop() + $p.data('objectTop');
+						$p.offset({ top: top });
+					}
+				});
+			}).trigger('scroll');
+
+			// ダイアログの位置を覚える（ウィンドウがスクロールしたときに追随するため）
+			function saveDialoguePos($t) {
+				$p = $t.parent();
+				var top = $p.offset().top - $(window).scrollTop();
+				$p.data('objectTop', top);
+			}
+
+			// 動画サムネイルクリックで動画ダイアログを開く
+			$("#movieThumbnail").on("click", function () {
+				$("#movieDialogue").dialog("open");
+				$("#orgmedia")[0].pause();
+				$("#orgmedia").css("display", "none"); // audioとサムネは隠す
+				$("#movieThumbnail").css("display", "none");
+			});
+			$("#movieDialogue").dialog({ // 動画ダイアログ
+				autoOpen: false, width: "400",
+				closeOnEscape: true,
+				position: { my: "right", at: "right" },
+				collision: "flipfit",
+				resize: function () {
+					$(this).css("overflow", "hidden"); // リサイズ時のスクロールバー消し
+				},
+				open: function () { saveDialoguePos($(this)); },
+				resizeStop: function () { saveDialoguePos($(this)); },
+				dragStop: function () { saveDialoguePos($(this)); },
+			});
+
+			$("#movieDialogue").on("dialogclose", function () {
+				$("#orgmedia").css("display", "inline");
+				$("#movieThumbnail").css("display", "inline");
+				$("#movie")[0].pause();
+			});
+
+			// ヘルプダイアログ設定
+			$("#help").dialog({
+				autoOpen: false,
+				modal: true,
+				title: "ショートカットキー", closeOnEscape: true,
+				width: "830",
+				open: function () { saveDialoguePos($(this)); $("#aboutlink").blur(); },
+				resizeStop: function () { saveDialoguePos($(this)); },
+				dragStop: function () { saveDialoguePos($(this)); },
+			});
+			$("#open_help").click(function () {
+				$("#help").dialog("open");
+			});
+			$("#close_help").on("click", function () {
+				$("#help").dialog("close");
+			});
+
+			// ダウンロードダイアログ設定(ロードが完了するまでopenできない)
+			$("#download").dialog({
+				autoOpen: false,
+				modal: true,
+				title: "ダウンロード",
+				closeOnEscape: true,
+				width: "500",
+				open: function () { saveDialoguePos($(this)); },
+				resizeStop: function () { saveDialoguePos($(this)); },
+				dragStop: function () { saveDialoguePos($(this)); },
+				close: function () { saveConfig(); },
+			});
+
+			function getDownloadStr(filter, isCSV, isHeader) { // ダウンロードするファイルの内容を文字列で返す
+				var str = data.map(function (orgLine, index) {
+					var line = orgLine.slice(); // 以下の処理で配列を破壊するので、ここで配列を値コピー
+					var name = line[0];
+					$tr = $("#tr_" + index);
+					line[0] = $("#person_namesetting_" + personalData[name]["hash"]).val(); // 名前を表示名に変更
+					line[2] = $tr.find("td.time").find($('#abstime').prop('checked') ? "span.abstime" : "span.reltime").text(); // 相対時間か時刻か
+
+					// 候補（現在選択中のものを先頭にもってくる）
+					$target = $tr.data('textTd');
+					var current = 0 + $target.data('current');
+					var len = $target.data('textlen');
+					for (var i = 0; i < len; i++) {
+						line[5 + i] = $target.data('text' + (current + i) % len);
+					}
+
+
+					return line.filter(function (cell, index) {
+						return filter[index < filter.length ? index : filter.length - 1]; // 設定に沿って出力列を決定(候補3以降は、候補2と同じ設定)
+					}).map(function (cell) {
+						return isCSV ? `"${cell.replace(/\"/g, '\"\"')}"` : cell; // CSV形式の場合は "をエスケープして " で囲む
+					}).join(isCSV ? ',' : "\t");
+				}).filter(function (line, index) {
+					return $("#tr_" + index).css("display") != "none"; // 表示している行だけ出力する(先にfilterするとindexがずれるので最後にfilterする)
+				}).join('\r\n');
+
+				if (isHeader) { // ヘッダ
+					var header = ["話者", "ファイル名", "時間", "長さ", "スコア", "候補"];
+					var headerStr = header.filter(function (cell, index) {
+						return filter[index < filter.length ? index : filter.length - 1]; // 設定に沿って出力列を決定(候補3以降は、候補2と同じ設定)
+					}).join(isCSV ? ',' : "\t");
+					str = headerStr + '\r\n' + str;
+				}
+				return str;
+			}
+			function downloadStr(str, type, filename) { // 文字列のファイルをダウンロードする
+				var bom = new Uint8Array([0xEF, 0xBB, 0xBF]);
+				var blob = new Blob([bom, str], { type: type });
+				var url = (window.URL || window.webkitURL).createObjectURL(blob);
+				$a = $("#download_dummy");
+				$a.attr("download", filename);
+				$a.attr("href", url);
+				$a[0].click();
+			}
+			$("#download_ymm4").click(function () { // ダウンロード処理(ゆっくりムービーメーカー4台本ファイル)
+				var filter = [true, false, false, false, false, true, false]; // 出力フィルタ（名前、ファイル名（出力しない）、時間（出力しない）、長さ（出力しない）、スコア（出力しない）、候補1、候補2～（出力しない）
+				var str = getDownloadStr(filter, true);
+				var filename = decodeURI(window.location.href.split('/').pop().split('.').shift());
+
+				downloadStr(str, 'text/csv', filename + '_ymm4.csv', false);
+			});
+			$("#download_custom").click(function () { // ダウンロード処理
+				var filter = [true, true, true, false, false, true, false]; // 出力フィルタ（名前、ファイル名、時間、長さ（出力しない）、スコア（出力しない）、候補1、候補2～
+				filter[0] = $("#download_people").prop('checked');
+				filter[1] = $("#download_filename").prop('checked');
+				filter[2] = $("#download_time").prop('checked');
+				filter[6] = ($("input[name='download_text']:checked").val() == "all");
+				var isCSV = ($("input[name='download_type']:checked").val() == "csv");
+				var str = getDownloadStr(filter, isCSV, $("#download_header").prop('checked'));
+				var filename = decodeURI(window.location.href.split('/').pop().split('.').shift());
+
+				downloadStr(str, isCSV ? 'text/csv' : 'text/plain', filename + (isCSV ? 'csv' : 'txt'));
+			});
+			function saveEdit() { // 編集データ保存（ダウンロード）
+				var str = JSON.stringify({ projectHash: projectHash, personalData: personalData, editText: editText }, null, 4);
+				var filename = decodeURI($("#projectname").val());
+				window.api.apiSaveEditFile(str)
+				//downloadStr(str, 'json', filename + '_disnote.json');
+				/* // 名前を付けて保存（フォルダが毎回リセットされるので没）
+				const opts = {
+					suggestedName: editFileName,
+					types: [{
+						description: 'DisNote編集ファイル',
+						accept: {'application/json': ['.json']},
+					}]
+				};
+				const handle = await window.showSaveFilePicker(opts);
+				const writable = await handle.createWritable()
+				await writable.write(str)
+				await writable.close()
+				
+				editFileName = handle.name;
+				*/
+				edited = false; // 編集ファイルを保存したのでフラグを降ろす
+				updateTitle();
+			}
+			// 話者表示切替ダイアログ設定
+			$("#projectsetting").dialog({
+				autoOpen: false,
+				modal: true,
+				title: "プロジェクト設定",
+				closeOnEscape: true,
+				close: function (event, ui) { // ダイアログを閉じるときに表示非表示と話者名を変更
+					for (key in personalData) {
+						var pv = personalData[key];
+						// 名前変更
+						var name = $("#person_namesetting_" + pv["hash"]).val();
+						$(".person_name_" + pv["hash"]).text(name);
+
+						// 表示/非表示設定を反映
+						var personalId = "person_" + pv["hash"];
+						var val = $("#" + personalId + "_temp").prop("checked");
+						$("#" + personalId).val(val);
+					}
+
+					updateLineDisplay(); // 表示/非表示切り替え
+					savePersonalSetting(); // 話者設定保存
+					saveProjectSetting(); // プロジェクト設定保存
+					updateTitle();
+				},
+				width: "500",
+				open: function () { saveDialoguePos($(this)); },
+				resizeStop: function () { saveDialoguePos($(this)); },
+				dragStop: function () { saveDialoguePos($(this)); },
+			});
+			$("#open_projectsetting").click(function () {
+				$("#projectsetting").dialog("open");
+			});
+			$("#switch_people").on("click", function () {
+				$("#projectsetting").dialog("close");
+			});
+
+			// ダイアログ表示中にダイアログ外を押したら閉じる
+			$(document).on("click", ".ui-widget-overlay", function () {
+				$("#help").dialog("close");
+				$("#projectsetting").dialog("close");
+				$("#download").dialog("close");
+			});
+
+			// 選択行を適当に取得
+			function getDefaultCurrentTd() {
+				if ($currentTd) {
+					return $currentTd;
+				}
+				$prevtr = undefined;
+				$toptr = undefined;
+				$('#table').find('tr').each(function (index, element) {
+					var t = $(element).offset().top - $(window).scrollTop();
+					if (t > toptr_top && $prevtr.data('playTd')) {
+						$toptr = $prevtr; // 画面上最初に表示されているもの
 						return false;
 					}
 					$prevtr = $(element);
+				});
+				if ($toptr) { // 位置調整(進んで戻す)
+					$td = $toptr.data('playTd');
+					scrollToTop($td, false);
+					scrollToBottom($td, false);
+					return $td;
 				}
-			});
-			
-			var show = 0;
-			var total = 0;
-			// 話者ごとの表示/非表示設定
-			$(".person_input").each( function( index, element ){
-				updatePersonLineDisplay($(element));
-				total++;
-				if($(element).val()!= "false"){ show++;}
-			});
-			$("#peoplecount").text("(" + show + "/" + total + ")");
-			
-
-			// 元のtrを先頭に表示するようにスクロール位置を調整
-			scrollToTop($toptr, true);
-			
-			// 再検索
-			search(true);
-
-			if($("#projectsetting").dialog("isOpen")){ // スクロールで話者選択ウィンドウが遠くに行ってしまうことがあるので再表示
-				$("#projectsetting").dialog( "close" );
-				$("#projectsetting").dialog("open");
-			}
-		
-		}
-
-		// 認識できなかった行を表示
-		$("#notext").change(function(){
-			updateLineDisplay();
-			saveConfig();
-		});
-
-		// 時刻切り替え
-		function updateTimeMode(){
-			if($('#abstime').prop('checked')){
-				$(".abstime").css("display", "inline");
-				$(".reltime").css("display", "none");
-			}else{
-				$(".reltime").css("display", "inline");
-				$(".abstime").css("display", "none");
-			}
-		}
-		$("#abstime").change(function(){
-			updateTimeMode();
-			saveConfig();
-		});
-		
-		// 自動再生切り替え（設定保存のみ）
-		$("#autoplay").change(function(){
-			saveConfig();
-		});
-		
-		// 行内の表示する候補を変更($td：対象行、current：候補の番号)
-		function changeTextAbs($td, current){
-			changeCurrentTd($td);
-			$target = $td.parent().data('textTd');
-
-			var len = 0 + $target.data('textlen');
-			if(len <= 0){
-				return;
+				return undefined;
 			}
 
-			$target.data('current', current);
-			$target.find('div.text').text($target.data('text' + current));
-			
-			var title = (current + 1) + "/" + len;
-			var textId = $target.attr('id');
-			$("#" + textId + "_l").attr({"title": title });
-			$("#" + textId + "_r").attr({"title": title });
-			
-			var number = $td.data('number');
-			current = Number.isInteger(current) ? current : 0
-			selection[number] = String(current);
-			
-			var engines = $target.data('engines');
-			//console.log("engines=" + engines )
-
-			var engine = engines[current];
-			selection_engine[number] = engine;
-
-			$target.attr('title',getEnginName(engine));
-			$target.find('span.engine').text(getEnginName(engine))
-			
-			num = 0;
-			for(var i = 0;i < current; i++){
-				if(engines[i] == engine){
-					num++;
-				}
-			}
-			selection_engine_num[number] = String(num);
-			
-			//console.log("current=" + current + ", engine=" + engine + " engine_num=" + num)
-			//console.log("current=" + selection[number] + ", engine=" + selection_engine[number]  + " engine_num=" + selection_engine_num[number])
-			
-			saveProjectSelection();
-		}
-
-		// 行内の表示する候補を変更($td：対象行、d：候補の変更(+1 or -1))
-		function changeText($td, d){
-			$target = $td.parent().data('textTd');
-
-			var current = 0 + $target.data('current');
-			var len = 0 + $target.data('textlen');
-			if(len <= 0){
-				return;
-			}
-			current = (len + current + d) % len;
-			changeTextAbs($td, current);
-
-		}
-		
-		// ミリ秒から時間表記に変換
-		function getTimeStr(base, t){
-			date = new Date(base.getTime() + t);
-			d = ('0' + date.getHours()).slice(-2) + ":" + ('0' + date.getMinutes()).slice(-2) + ":" + ('0' + date.getSeconds()).slice(-2);
-			return d;
-		}
-		
-		// 現在選択されている行
-		$currentTd = undefined;
-		
-		// $tdを選択
-		function changeCurrentTd($td, seekOrgMedia = true){
-			var isChange = true;
-			if(!$td){
-				//
-			}else{
-				$td = $td.parent().data('playTd');
-				if(!$currentTd){
-					$currentTd = $td; // 未選択だった場合
-				}else if(!$td || $currentTd == $td){
-					isChange = false; // 変更なしの場合
-				}else{
-					// 選択済みで変更した場合
-					if($edittingtag){
-						submitTdText($currentTd, $("#editting_input").val()); // 編集中だったら反映させる
-					}
-					$currentTd = $td;
-				}
-			}
-			
-			if(isChange || !$currentTd){ // 違うtdを選んだ場合は、元の選択を外す
-				$(".current").removeClass('current');
-				editTdTextEnd();
-			}else{
-				return;
-			}
-			
-			// 再生中の行に色付け
-			if($currentTd ){
-				$currentTd.parent().addClass('current');
-				//console.log(0 + $currentTd.parent().data('time'));
-				
-				if(seekOrgMedia){
-					$("#orgmedia")[0].currentTime = $currentTd.parent().data('time');
-					$("#movie")[0].currentTime = $currentTd.parent().data('time');
-				}
-				$("#sound").attr({"src": $currentTd.data('filename') });
-			}
-		}
-		
-		// 次の行へ(d=1),前の行へ(d=-1)
-		function nextTd($td, d){
-			if(!$td){	return;}
-			var next_id = $td.data('number'); 
-			$nextPlayTd = null;
-			
-			do{ // 次の行を探す（非表示の場合はスキップ）
-				next_id += d;
-				$nextPlayTd = $("#play_" + next_id);
-				
-				if($nextPlayTd.length <= 0){	return null;} // 最後まで進んだ
-				
-			}while($nextPlayTd.parent().css('display') == "none")
-			
-			return $nextPlayTd;
-		
-		}
-		
-		// 音声再生
-		function play($td){
-			changeCurrentTd($td);
-
-			// ファイル名設定
-			$("#sound").attr({"src": $td.data('filename') });
-			// 再生
-			$("#sound")[0].play();
-		}
-		
-		// 再生終了
-		$("#sound").on("ended", function(){
-			if($('#autoplay').prop('checked')){ // 連続再生
-				$currentTd = nextTd($currentTd, +1); // 次の行へ
-
-				// 次の行を再生
-				if($currentTd){
-					play($currentTd);
-		
-					// 画面外に出ていた場合はスクロール
-					scrollToBottom($nextPlayTd, false);
-				}
-			}
-		});
-		
-		// 2つの音声を同時に再生できないようにする
-		$("#orgmedia").on("play", function(){
-			$("#sound")[0].pause();
-			$("#movie")[0].pause();
-		});
-		$("#sound").on("play", function(){
-			$("#orgmedia")[0].pause();
-			$("#movie")[0].pause();
-		});
-		$("#movie").on("play", function(){
-			$("#orgmedia")[0].pause();
-			$("#sound")[0].pause();
-		});
-		
-		// オリジナル音源の時間が動いたときに、currentTdを移動する
-		function changeCurrentTdByMedia($m){
-			var t = $m[0].currentTime.toFixed(2); // 桁数の違いにより数値の比較がおかしくなることがあるので桁数を揃える
-			if(mixedMediaIsMovie){
-				$("#movieThumbnail")[0].currentTime = t; // 動画のサムネイルを追いつかせる
-			}
-			
-			defaultCurrentTd();
-			var currentT = $currentTd.parent().data('time').toFixed(2); // 桁数の違いにより数値の比較がおかしくなることがあるので桁数を揃える
-			
-			$targettd = undefined;
-			if(currentT < t){ // オリジナル音源にcurrentTdを追いつかせる
-				$targettd = $currentTd;
-				do{
-					$tmptd = nextTd($targettd,1);
-					if(!$tmptd){
-						break;
-					}
-					if($tmptd.parent().data('time') > t){ // 追い抜く直前まで進める
-						break;
-					}
-					$targettd = $tmptd;
-				}while($targettd);
-			}else{ // オリジナル音源までcurrentTdを戻す
-				$targettd = $currentTd;
-				while($targettd){
-					if($targettd.parent().data('time') <= t){ // オリジナル音源の前まで戻る
-						break;
-					}
-					$targettd = nextTd($targettd,-1);
-				}
-			}
-			
-			if($targettd && $targettd != $currentTd){ // currentTd移動（0の移動をさせるとそこからまたイベントが走るのでそれを防ぐ）
-				changeCurrentTd($targettd, false); // シークしない
-				scrollToTop($currentTd, false);
-				scrollToBottom($currentTd, false);
-			}
-		}
-		$("#orgmedia").on("timeupdate ", function(){
-			changeCurrentTdByMedia($("#orgmedia"))
-		});
-		$("#movie").on("timeupdate ", function(){
-			changeCurrentTdByMedia($("#movie"))
-		});
-		
-		// ウィンドウスクロール時、ダイアログの位置を追随させる
-		$(window).on('scroll', function() {
-			[$("#movieDialogue"), $("#help"), $("#projectsetting"), $("#download") ].forEach(function($t){
-				$p = $t.parent();
-				if($p.css('display') != 'none') {
-					var top = $(window).scrollTop() + $p.data('objectTop');
-					$p.offset({ top: top});
-				}
-			});
-		}).trigger('scroll');
-		
-		// ダイアログの位置を覚える（ウィンドウがスクロールしたときに追随するため）
-		function saveDialoguePos($t){
-			$p = $t.parent();
-			var top = $p.offset().top  - $(window).scrollTop();
-			$p.data('objectTop',top);
-		}
-		
-		// 動画サムネイルクリックで動画ダイアログを開く
-		$("#movieThumbnail").on("click", function(){
-			$("#movieDialogue").dialog("open");
-			$("#orgmedia")[0].pause();
-			$("#orgmedia").css("display", "none"); // audioとサムネは隠す
-			$("#movieThumbnail").css("display", "none");
-		});
-		$("#movieDialogue").dialog({ // 動画ダイアログ
-			autoOpen: false, width:"400",
-			closeOnEscape:true ,
-			position: {my: "right", at: "right"},
-			collision: "flipfit",
-			resize: function() {
-				$(this).css("overflow", "hidden"); // リサイズ時のスクロールバー消し
-			},
-			open: function() {					saveDialoguePos($(this));		},
-			resizeStop: function() {		saveDialoguePos($(this));		},
-			dragStop: function() {			saveDialoguePos($(this));		},
-		});
-		
-		$("#movieDialogue").on("dialogclose", function(){
-			$("#orgmedia").css("display", "inline");
-			$("#movieThumbnail").css("display", "inline");
-			$("#movie")[0].pause();
-		});
-
-		// ヘルプダイアログ設定
-		$("#help").dialog({
-			autoOpen: false,
-			modal: true ,
-			title:"ショートカットキー", closeOnEscape:true,
-			width:"830",
-			open: function() {					saveDialoguePos($(this));	$("#aboutlink").blur();	},
-			resizeStop: function() {		saveDialoguePos($(this));		},
-			dragStop: function() {			saveDialoguePos($(this));		},
-		});
-		$( "#open_help" ).click(function() {
-			$("#help").dialog("open");
-		}); 
-		$("#close_help").on("click", function(){
-			$("#help").dialog( "close" );
-		});
-		
-		// ダウンロードダイアログ設定(ロードが完了するまでopenできない)
-		$("#download").dialog({
-			autoOpen: false,
-			modal: true ,
-			title:"ダウンロード",
-			closeOnEscape:true,
-			width:"500",
-			open: function() {					saveDialoguePos($(this));		},
-			resizeStop: function() {		saveDialoguePos($(this));		},
-			dragStop: function() {			saveDialoguePos($(this));		},
-			close: function(){					saveConfig();},
-		});
-		
-		function getDownloadStr(filter, isCSV, isHeader){ // ダウンロードするファイルの内容を文字列で返す
-			var str = data.map(function (orgLine, index) {
-				var line = orgLine.slice(); // 以下の処理で配列を破壊するので、ここで配列を値コピー
-				var name = line[0];
-				$tr = $("#tr_" + index);
-				line[0] = $("#person_namesetting_"  + personalData[name]["hash"]).val(); // 名前を表示名に変更
-				line[2] = $tr.find("td.time").find($('#abstime').prop('checked') ? "span.abstime" : "span.reltime").text(); // 相対時間か時刻か
-				
-				// 候補（現在選択中のものを先頭にもってくる）
-				$target = $tr.data('textTd');
-				var current = 0 + $target.data('current');
-				var len = $target.data('textlen');
-				for(var i = 0; i < len; i++){
-					line[5 + i] = $target.data('text' + (current + i) % len);
-				}
-				
-	
-				return line.filter(function (cell, index){
-					return filter[index < filter.length ? index : filter.length - 1]; // 設定に沿って出力列を決定(候補3以降は、候補2と同じ設定)
-				}).map(function (cell){
-					return isCSV ? `"${cell.replace(/\"/g, '\"\"')}"` : cell; // CSV形式の場合は "をエスケープして " で囲む
-				}).join(isCSV ? ',' : "\t");
-			}).filter(function (line, index) {
-				return $("#tr_" + index).css("display") != "none"; // 表示している行だけ出力する(先にfilterするとindexがずれるので最後にfilterする)
-			}).join('\r\n');
-			
-			if(isHeader){ // ヘッダ
-				var header = ["話者","ファイル名","時間","長さ","スコア","候補"];
-				var headerStr = header.filter(function (cell, index){
-					return filter[index < filter.length ? index : filter.length - 1]; // 設定に沿って出力列を決定(候補3以降は、候補2と同じ設定)
-				}).join(isCSV ? ',' : "\t");
-				str = headerStr + '\r\n' + str;
-			}
-			return str;
-		}
-		function downloadStr(str, type, filename){ // 文字列のファイルをダウンロードする
-			var bom = new Uint8Array([0xEF, 0xBB, 0xBF]);
-			var blob = new Blob([bom, str], { type: type });
-			var url = (window.URL || window.webkitURL).createObjectURL(blob);
-			$a = $("#download_dummy" );
-			$a.attr("download", filename);
-			$a.attr("href",url);
-			$a[0].click();
-		}
-		$( "#download_ymm4" ).click(function() { // ダウンロード処理(ゆっくりムービーメーカー4台本ファイル)
-			var filter = [true,false,false,false,false,true,false]; // 出力フィルタ（名前、ファイル名（出力しない）、時間（出力しない）、長さ（出力しない）、スコア（出力しない）、候補1、候補2～（出力しない）
-			var str = getDownloadStr(filter, true);
-			var filename = decodeURI(window.location.href.split('/').pop().split('.').shift());
-
-			downloadStr(str, 'text/csv', filename + '_ymm4.csv', false);
-		}); 
-		$( "#download_custom" ).click(function() { // ダウンロード処理
-			var filter = [true,true,true,false,false,true,false]; // 出力フィルタ（名前、ファイル名、時間、長さ（出力しない）、スコア（出力しない）、候補1、候補2～
-			filter[0] = $("#download_people").prop('checked');
-			filter[1] = $("#download_filename").prop('checked');
-			filter[2] = $("#download_time").prop('checked');
-			filter[6] = ($("input[name='download_text']:checked").val() == "all");
-			var isCSV = ($("input[name='download_type']:checked").val() == "csv");
-			var str = getDownloadStr(filter, isCSV, $("#download_header").prop('checked'));
-			var filename = decodeURI(window.location.href.split('/').pop().split('.').shift());
-
-			downloadStr(str, isCSV ? 'text/csv' : 'text/plain', filename  + (isCSV ? 'csv' : 'txt'));
-		}); 
-		function saveEdit(){ // 編集データ保存（ダウンロード）
-			var str = JSON.stringify({ projectHash : projectHash , personalData : personalData, editText : editText}, null, 4);
-			var filename = decodeURI($("#projectname").val());
-			window.api.apiSaveEditFile(str)
-			//downloadStr(str, 'json', filename + '_disnote.json');
-			/* // 名前を付けて保存（フォルダが毎回リセットされるので没）
-			const opts = {
-				suggestedName: editFileName,
-				types: [{
-					description: 'DisNote編集ファイル',
-					accept: {'application/json': ['.json']},
-				}]
-			};
-			const handle = await window.showSaveFilePicker(opts);
-			const writable = await handle.createWritable()
-			await writable.write(str)
-			await writable.close()
-			
-			editFileName = handle.name;
-			*/
-			edited = false; // 編集ファイルを保存したのでフラグを降ろす
-			updateTitle();
-		}
-		// 話者表示切替ダイアログ設定
-		$("#projectsetting").dialog({
-			autoOpen: false,
-			modal: true ,
-			title:"プロジェクト設定",
-			closeOnEscape:true,
-			close: function(event, ui){ // ダイアログを閉じるときに表示非表示と話者名を変更
-				for (key in personalData){
-					var pv = personalData[key];
-					// 名前変更
-					var name = $("#person_namesetting_" + pv["hash"]).val();
-					$(".person_name_"+ pv["hash"]).text(name);
-
-					// 表示/非表示設定を反映
-					var personalId = "person_" + pv["hash"];
-					var val = $("#" + personalId + "_temp").prop("checked");
-					$("#" + personalId).val(val);
-				}
-
-				updateLineDisplay(); // 表示/非表示切り替え
-				savePersonalSetting(); // 話者設定保存
-				saveProjectSetting(); // プロジェクト設定保存
-				updateTitle();
-			},
-			width:"500",
-			open: function() {					saveDialoguePos($(this));		},
-			resizeStop: function() {		saveDialoguePos($(this));		},
-			dragStop: function() {			saveDialoguePos($(this));		},
-		});
-		$( "#open_projectsetting" ).click(function() {
-			$("#projectsetting").dialog("open");
-		}); 
-		$("#switch_people").on("click", function(){
-			$("#projectsetting").dialog( "close" );
-		});
-		
-		// ダイアログ表示中にダイアログ外を押したら閉じる
-		$( document ).on( "click", ".ui-widget-overlay", function(){
-			$("#help").dialog( "close" );
-			$("#projectsetting").dialog( "close" );
-			$("#download").dialog( "close" );
-		});
-		
-		// 選択行を適当に取得
-		function getDefaultCurrentTd(){
-			if($currentTd){
-				return $currentTd;
-			}
-			$prevtr = undefined;
-			$toptr = undefined;
-			$('#table').find('tr').each( function( index, element ){
-				var t = $(element).offset().top -  $(window).scrollTop();
-				if(t > toptr_top && $prevtr.data('playTd')){
-					$toptr = $prevtr; // 画面上最初に表示されているもの
-					return false;
-				}
-				$prevtr = $(element);
-			});
-			if($toptr){ // 位置調整(進んで戻す)
-				$td = $toptr.data('playTd');
-				scrollToTop($td, false);
-				scrollToBottom($td, false);
-				return $td;
-			}
-			return undefined;
-		}
-		
-		// 選択行を適当に設定
-		function defaultCurrentTd(){
-			if($currentTd){
-				return ;
-			}
-			$currentTd = getDefaultCurrentTd();
-		}
-		
-
-		// 検索
-		var prevSearch = "";
-		var searchHit = false;
-		var searchHitCount = 0;
-		
-		function updateSearchResult(){// ヒット件数表示
-			if($currentTd && $currentTd.parent() && $currentTd.parent().hasClass("highlight")){
-				var count = $currentTd.parent().data("searchhit_count");
-				$("#search_result").text(count+"/"+searchHitCount);
-			}else if($("#search").val().trim().length > 0){
-				$("#search_result").text(searchHitCount);
-			}else{
-				$("#search_result").text("");
-			}
-			$(".searchbutton").css("opacity", searchHit ? "1" : "0.5");
-		}
-
-		function searchTr(i){ // 特定の行が検索にヒットするかどうかを確認（検索入力更新時か、tr追加時に呼ばれる）
-			var search = $("#search").val().trim();
-			if(search.length <= 0){
-				return;
-			}
-			
-			$tr = $("#tr_" + i);
-			if(!$tr.css('display') || $tr.css('display') == "none"){ // 未生成の行+非表示行は対象外とする
-				return;
-			}
-			for(k = textBase; k < data[i].length; k++){
-				if(!data[i][k]){
-					break;
-				}
-				if(data[i][k].indexOf(search) >= 0){
-					searchHit = true;
-					searchHitCount++;
-					$tr.addClass("highlight").data("searchhit_count",searchHitCount);
-					updateSearchResult();
+			// 選択行を適当に設定
+			function defaultCurrentTd() {
+				if ($currentTd) {
 					return;
 				}
-			}
-		}
-		function search(force){ // 全体検索
-			var search = $("#search").val().trim();
-			if(!force && search == prevSearch){	return;		}
-
-			$(".highlight").removeClass('highlight');
-			searchHit = false;
-			updateSearchResult();
-			if(search.length <= 0){
-				return;
-			}
-			prevSearch = search;
-			
-			var data = results;
-			len = data.length;
-
-			searchHitCount = 0;
-			for(i = 0; i < data.length; i++){
-				searchTr(i);
-			}
-		}
-		
-		// 次の行へ検索(d=1),前の行へ検索(d=-1)
-		function nextSearch(d){
-			if(!searchHit){				return;			}
-
-			defaultCurrentTd();
-
-			var next_id = $currentTd.data('number');
-			$nextPlayTd = null;
-			
-			do{ // 次の行を探す（非表示の場合はスキップ）
-				next_id += d;
-				$nextPlayTd = $("#play_" + next_id);
-				
-				if($nextPlayTd.length <= 0){	return null;} // 最後まで進んだ
-				
-			}while($nextPlayTd.parent().hasClass("highlight") == false)
-			
-			// 該当行にフォーカス
-			changeCurrentTd($nextPlayTd);
-			scrollToTop($currentTd, false);
-			scrollToBottom($currentTd, false);
-			
-			// 検索件数表示
-			updateSearchResult();
-			
-		}
-		
-		// 検索次
-		$("#search_next").click(function(){
-			nextSearch(1);
-		});
-		// 検索前
-		$("#search_prev").click(function(){
-			nextSearch(-1);
-		});
-
-		$("#search").keyup(function(){search()});
-		$("#search").change(function(){search()});
-		
-		// キーボード入力
-		$(document).on("keydown", function(e) {
-			if($("#projectsetting").dialog("isOpen")){ // 話者選択ダイアログ表示中
-				if(e.key == "ArrowUp" || e.key == "ArrowDown"){ // スクロール抑制
-					return false;
-				}
-				return true;
-			}
-			if($("#help").dialog("isOpen") || $("#download").dialog("isOpen")){ // その他のダイアログ表示中
-				return true;
-			}
-			if($edittingtag){	// 編集中
-				return true;
-			}
-			
-			if(e.code == "F3"){ // 検索
-				if(searchHit){ // 次へ検索
-					if(e.shiftKey){
-						nextSearch(-1);
-					}else{
-						nextSearch(1);
-					}
-					$("#search").blur(); 
-					return false;
-				}else{
-					$("#search").focus(); // 検索窓にフォーカス
-					return false;
-				}
-			}
-			
-			if($("#search").is(":focus")){ // 検索窓で入力中
-				if(e.key == "Enter"){ // Enter（次へ）
-					if(e.shiftKey){
-						nextSearch(-1);
-					}else{
-						nextSearch(1);
-					}
-
-					return false;
-				}
-				if(e.key == "Escape" ){ // ESC（フォーカス外す）
-					$("#search").blur(); 
-					return false;
-				}
-
-				return true; // 文字入力できるようにtrueを返す
-			}
-			
-			if(e.key == "Enter"){ // Enter
-				if($currentTd){
-					editTdTextStart($currentTd); // 既に行が選択されていたら編集開始
-				}else{
-					changeCurrentTd(getDefaultCurrentTd()); // 適当な行を選択する
-				}
-				return false;
+				$currentTd = getDefaultCurrentTd();
 			}
 
-			if(e.key == "Escape"){ // ESC
-				$currentTd = undefined;
-				changeCurrentTd($currentTd);
-				$("#sound")[0].stop();
-				return false;
-			}
-			
-			if(e.key == "ArrowUp"){ // ↑（行選択）
-				if(e.shiftKey	|| $currentTd){
-					defaultCurrentTd();
-					
-					$td = nextTd($currentTd, -1);
-					if($td){
-						changeCurrentTd($td);
-						scrollToTop($currentTd, false);
-					}
-					return false;
-				}
-			}
-			if(e.key == "ArrowDown"){ // ↓（行選択）
-				if(e.shiftKey	|| $currentTd){
-					defaultCurrentTd();
-					
-					$td = nextTd($currentTd, 1);
-					if($td){
-						changeCurrentTd($td);
-						scrollToBottom($currentTd, false);
-					}
-					return false;
-				}
-			}
-			
-			if(e.key == "ArrowRight"){ // →（候補選択）
-				if(e.shiftKey	|| $currentTd){
-					defaultCurrentTd();
-					changeText($currentTd, 1);
-					return false;
-				}
-			}
-			if(e.key == "ArrowLeft"){ // ←（候補選択）
-				if(e.shiftKey	|| $currentTd){
-					defaultCurrentTd();
-					changeText($currentTd, -1);
-					return false;
-				}
-			}
-					
-			if(e.key == " "){ // スペース（再生/停止）
 
-				if($currentTd){
-					if($("#sound").attr("src") != $currentTd.data('filename')){ // 行が変わっていたら再生し直し
-						play($currentTd);
-					}else{
-						if(!$("#sound")[0].paused){// 一時停止/再開
-							$("#sound")[0].pause();
-						}else{
-							$("#sound")[0].play();
-						}
-					}
-					return false;
-				}
-			}
-			
-			if(e.code == "KeyC"){ // C,c（コピー）
-				if($currentTd){
-					copyTdText($currentTd);
-					return false;
-				}
-			}
+			// 検索
+			var prevSearch = "";
+			var searchHit = false;
+			var searchHitCount = 0;
 
-			if(e.ctrlKey){
-				if(e.code == "KeyS"){ // Ctrl+S,s（保存）
-					saveEdit();
-					return false;
-				}
-			}
-
-			// 以下、通常のショートカットキーと重複しないように処理（Ctrl+Aなど）
-			if(e.ctrlKey){
-				return true;
-			}
-				
-			if(e.code == "KeyQ"){ // Q,q（「話者表示」のチェック切り替え）
-				$target = $("#showname");
-				$target.prop("checked",!$target.prop("checked")).change();
-				return false;
-			}
-			if(e.code == "KeyS"){ // S,s（「認識できなかった行を表示」のチェック切り替え）
-				$target = $("#notext");
-				$target.prop("checked",!$target.prop("checked")).change();
-				return false;
-			}
-			if(e.code == "KeyT"){ // T,t（「時刻表示」のチェック切り替え）
-				$target = $("#abstime");
-				$target.prop("checked",!$target.prop("checked")).change();
-				return false;
-			}
-			if(e.code == "KeyA"){ // A,a（連続再生のチェック切り替え）
-				$target = $("#autoplay");
-				$target.prop("checked",!$target.prop("checked")).change();
-				return false;
-			}
-			if(e.code == "KeyD"){ // D,d（ダウンロード）
-				$("#download").dialog("open");
-				return false;
-			}
-			if(e.code == "KeyP"){ // P,p（プロジェクト設定）
-				$("#projectsetting").dialog("open");
-				return false;
-			}
-			if(e.code == "KeyF"){ // F,f（検索窓にフォーカス）
-				$("#search").focus();
-				return false;
-			}
-			if(e.code == "KeyH"){ // H,h（ヘルプ）
-				$("#help").dialog("open");
-				return false;
-			}
-
-			
-		});
-		
-		// 編集開始
-		var editOptionSelected; // 候補選択のプルダウンが何を選択しているか
-		function editTdTextStart($target){
-			editTdTextEnd();
-			editOptionSelected = "";
-			
-			// テキストが表示されているタグが本体
-			$target = $target.parent().data('textTd');
-			
-			// 入力部品
-			$input = $("<input>").attr({"type": "text", "id" : "editting_input"});
-			$input.val($target.find('div.text').text().trim()); // 現在表示されている文字列が初期値
-			
-			// 選択候補
-			$select = $("<select>").attr({"id" : "editting_select"});
-			$select.append($("<option>").attr({"value" : ""}).text(""));
-			
-			var len = 0 + $target.data('textlen');
-			for(var i = 0; i < len; i++){
-				var text = $target.data('text' + i).trim();
-				$option = $("<option>").attr({"value" : text}).text(text);
-				$select.append($option);
-				
-				if(text == $input.val()){
-					$option.attr({"selected" : "selected"});
-					editOptionSelected = text;
-				}
-			}
-			
-			// キャンセル時のバックアップ
-			$backup = $("<input>").attr({"type": "hidden", "id" : "editting_backup"}).val($input.val());
-			
-			// 部品表示、元々のテキストを消す
-			$edittingtag = $("<span>").append($input).append($select).append($backup);
-			$target.find('div.text').text("").append($edittingtag);
-			$input.focus();
-			
-			$input.keydown(function(e) { // キー入力
-				if (e.key == "Enter") { // Enter（確定）
-					//console.log($input.val());
-					submitTdText($target, $input.val());
-					$td = nextTd($currentTd, +1); // 次の行へ
-					if($td){
-						changeCurrentTd($td);
-					}
-					return false;
-				}
-				if(e.key == "Escape" ){ // ESC（キャンセル）
-					editTdTextEnd();
-					return false;
-				}
-			});
-			
-			var selectOnChangeFunction = function(focusToText) { // 選択肢切り替え(on("change")イベントだと、focusの制御が難しかったのでclickとkeyupイベントで発生させる)
-				var v = $("#editting_select").val();
-				if(v && editOptionSelected != v){
-					
-					//$("#editting_input").val(v); // 普通に val(v) で設定するとundoが効かない。以下のようにすると効くようになる。
-					$("#editting_input").focus(); 
-					$("#editting_input").get(0).selectionStart = 0;
-					$("#editting_input").get(0).selectionEnd = $("#editting_input").val().length;
-					document.execCommand('insertText', false, v);
-					
-					// この時点で$("#editting_input") にフォーカスが移っているので、selectに戻す
-					if(!focusToText){
-						$("#editting_select").focus(); 
-					}
-					console.log(focusToText);
-					
-					editOptionSelected = v;
-				}
-			};
-			
-			$select.on("click", function(){ // クリックで選択肢を変更した場合、textにフォーカスを移す（選択肢表示中にEnterを押した場合もclickイベントが発生する）
-				selectOnChangeFunction(true);
-			});
-			$select.keyup(  function(e){ // 矢印キーで選択肢を変更した場合、selectにフォーカスを残す
-				selectOnChangeFunction(false);
-			});
-			
-		}
-		
-		// 編集を反映する
-		function submitTdText($target, val){
-			editTdTextEnd();
-
-			$target = $target.parent().data('textTd');
-			var key = $target.attr("id");
-			
-			var len = 0 + $target.data('textlen');
-
-			if(key in editText){ // 既存を書き換え
-				console.log("exists.");
-			}else{ // 新規の場合は新しく列を追加
-				len++;
-				$target.data('textlen', len);
-				
-				var engines = $target.data('engines');
-				$target.data('engines', engines + "E");
-			}
-			$target.data('text' + (len - 1), val); // 最後のデータに設定
-			
-			editText[key] = val;
-			console.log(key + ":" + val);
-			//$target.find('div.text').text(editText[key]);
-			changeTextAbs($target, len - 1);
-			
-			edited = true;
-			updateTitle();
-		}
-		
-		// 編集終了（入力タグを消す）入力は反映されない
-		function editTdTextEnd(){
-			if($edittingtag){
-				$edittingtag.parent().text($("#editting_backup").val()); // 戻す
-				$edittingtag.remove();
-			}
-			$edittingtag = null;
-		}
-		
-		
-		// クリップボードにテキストをコピー
-		function copyTdText($target){
-			changeCurrentTd($target);
-			
-			$target = $target.parent().data('textTd');
-			
-			var $clipboard = $('<textarea></textarea>');
-			$clipboard.text($target.find('div.text').text());
-			$('body').append($clipboard);
-
-			$clipboard.val($target.text());
-			$clipboard.select();
-			document.execCommand("Copy");
-			$clipboard.remove();
-		}
-		
-		// 行追加
-		function addTr(data, i){
-			var name = data[i][0];
-			
-			len = data.length;
-			
-			// 時刻
-			t = parseInt(data[i][2])
-			$timeTd = $("<td>").addClass("time");
-
-			
-			d = getTimeStr(new Date(2000,1,1), t)
-			$reltime = $("<span>").addClass("reltime").text(d);
-			$timeTd.append($reltime);
-
-			if(typeof baseDate !== "undefined"){ // 時刻情報あり
-				d = getTimeStr(baseDate, t);
-				$abstime = $("<span>").addClass("abstime").text(d);
-				$timeTd.append($abstime);
-				
-				if($('#abstime').prop('checked')){ // updateTimeModeと同じことをしている（が、ここでupdateTimeModeを呼び出すとガタガタする）
-					$reltime.css("display","none");
-				}else{
-					$abstime.css("display","none");
-				}
-			}
-			
-			// 話者
-			pv = personalData[name];
-			$nameTd = $("<td>").text($("#person_namesetting_"  + pv["hash"]).val()).addClass("name").addClass("person_name_" + pv["hash"]);
-			$nameTd.css("display", $('#showname').prop('checked') ? "table-cell" : "none"); // updateShowNameMode と同じことをしている（が、ここでupdateShowNameModeを呼び出すとガタガタする）
-			
-			// 再生ボタン
-			var playTdId = "play_" + i;
-			$play = $("<td>").addClass("play").attr({"title": "" }).data('filename',data[i][1]).attr({"id": playTdId }).data('number', i).on("click", function(){
-				play($(this));
-			});
-
-			// 候補
-			var textTdId = "text_" + i;
-			$textTd = $("<td>").attr({"id": textTdId }).addClass("text")
-			.on("click", function(){ 		changeCurrentTd($(this));	})	// クリックで選択	//	copyTdText($(this));
-			.on("dblclick", function(){ editTdTextStart($(this));	})	// ダブルクリックで編集
-			.append($("<div>").addClass("text")) // テキスト本体
-					.append($("<span>").addClass("engine")) // エンジン名
-			;
-			
-
-			// 左矢印
-			$left = $("<td>").attr({"id": textTdId + "_l"}).addClass("button").data('number', i).addClass("prev").on("click", function(){
-				changeText($(this), -1);
-			});
-
-			// 右矢印
-			$right = $("<td>").attr({"id": textTdId + "_r" }).addClass("button").data('number', i).addClass("next").on("click", function(){
-				changeText($(this), 1);
-			});
-
-			$tr = $("<tr>").addClass("line").attr({"id": "tr_" + i }).data('playTd', $play).data('textTd', $textTd).data('time',t / 1000);
-
-			$tableObj.append(
-				$tr
-					.append($timeTd) // 時間
-					.append($nameTd) // 話者名
-					.append($play)
-					//.append($("<td>").text(data[i][3]).addClass("score")) // スコア
-					//.append($("<td>").attr({"id":"td1_" + i }).text(data[i][1]).hide()) // ファイル名
-					.append($left)
-					.append($right)
-					.append($textTd)
-			);
-
-			// 5から先が候補(text<n>に代入
-			var k;
-			for(k = textBase; k < data[i].length; k++){
-				if(!data[i][k]){
-					break;
-				}
-				if(data[i][k].length > 0){
-					$textTd.data('text' + (k - textBase), data[i][k]);
-				}else{
-					break;
-				}
-			}
-			var textlen = k - textBase;
-			var current = parseInt(selection[i]); // どの候補を表示するかを設定から読み込む
-			var engines = data[i][textBase - 1].slice(0,textlen); // エンジンのIDの文字列（候補ごと）
-			//console.log("current=" + current + ", engine=" + selection_engine[i]  + " engine_num=" + selection_engine_num[i])
-
-			if(selection_engine[i] && selection_engine[i] != " "){ // このエンジンの何番目、という情報があったらそちらを優先
-				var engine_num = parseInt(selection_engine_num[i]);
-				if(!engine_num){ engine_num = 0;} // 何か変な文字が入ってたら0にする
-				
-				for(var n = 0;n < engines.length;n++){
-					if(engines[n] == selection_engine[i]){ // このエンジンの何番目
-						if(engine_num <= 0){
-							current = n;
-							break;
-						}
-						engine_num--;
-					}
-				}
-			}
-			if(!current){ current = 0;} // 何か変な文字が入ってたら0にする
-			if(current >= textlen){current = 0;} // 外にあふれていても0にする
-			
-			$textTd.find('div.text').text(data[i][textBase + current]) // 候補を表示
-			$textTd.data('textlen', textlen);
-			$textTd.data('current', current);
-			$textTd.data('engines', engines);
-			$textTd.attr('title',getEnginName(engines[current]));
-			$textTd.find('span.engine').text(getEnginName(engines[current]))
-
-			// ボタンに、いまどの候補を表示しているかを出す
-			$left.attr( {"title": (current + 1) + "/" + textlen });
-			$right.attr({"title": (current + 1) + "/" + textlen });
-
-			// 認識できたかどうかでクラスを設定
-			if(textlen <= 0){
-				$tr.addClass("notext");
-			}else{
-				$tr.addClass("textexists");
-			}
-
-			// 話者設定に従って表示非表示を切り替え
-			var personalId = "person_" + personalData[name]["hash"];
-			$tr.addClass(personalId);
-			updatePersonLineDisplay($("#" + personalId));
-			
-			// 今回追加したtrが検索にヒットするかどうかを再検索
-			searchTr(i);
-			
-			// 次の行へ
-			i++;
-			if (i < len){
-				$('#loading').text("loading... " + Math.ceil(100 * i / len) + "%");
-				setTimeout(addTr, 0, data, i); // 非同期の…実装が…ダサい…
-			}else{
-			//	$('#loading').css("display","none");
-				$('#loading').text("complete! 100%");
-				var $table = $('table');
-				search(true);
-				
-				$( "#open_download" ).click(function() { // ロードが完了したので、ダウンロードのダイアログを開けるようにする
-					$("#download").dialog("open");
-				}); 
-				$( "#open_download" ).css("opacity","1").css("cursor","pointer").attr("title","ダウンロード(D)");
-
-				$( "#save" ).click(function() { // ロードが完了したので、保存ボタンが使えるようにする
-					saveEdit();
-				}); 
-				$( "#save" ).css("opacity","1").css("cursor","pointer").attr("title","編集データ保存(Ctrl+S)");
-			}
-			//$("#table").floatThead({ // ヘッダ固定を試したけどしなくてもいいかな
-			//	position: 'absolute'
-			//});
-
-		}
-		
-		// IDから音声認識エンジン名を返す
-		function getEnginName(engine){
-			switch(engine){
-				case "G":	return "Google Speech API";
-				case "W": return "Wit.ai";
-				case "t": return "Whisper(tiny)";
-				case "b": return "Whisper(base)";
-				case "s": return "Whisper(small)";
-				case "m": return "Whisper(medium)";
-				case "l": return "Whisper(large)";
-				case "E": return "[Edit]";
-			}
-			return "";
-		}
-		
-		// localStrageに保存(保存できるサイズの上限はブラウザ依存だが、5MB上限の環境が多いようなので保存できると信じる)
-		function saveToLocalStorages(keys, values){
-			for(i = 0; i < keys.length; i++){
-				saveToLocalStorage(keys[i], values[i]);
-			}
-		}
-		function saveToLocalStorage(key, value){
-			try{
-				saveVal = JSON.stringify(value);
-				localStorage.setItem("DisNote_" + key, saveVal);
-			//	console.log("saveToLocalStorage:" + saveVal);
-			}catch (e){
-			}
-		}
-		
-		// localStorageから読み込み
-		function loadFromLocalStorage(key){
-			try{
-				return JSON.parse(localStorage.getItem("DisNote_" + key));
-			} catch(e){
-				return new Object();
-			}
-		}
-
-		// 設定保存（DisNOTE全体の設定）
-		var CONFIG_KEY = "CONFIG";
-		function saveConfig(){
-			var config = new Object();
-			config["showname"] = $("#showname").prop("checked");
-			config["notext"] = $("#notext").prop("checked");
-			config["abstime"] = $("#abstime").prop("checked");
-			config["autoplay"] = $("#autoplay").prop("checked");
-			config["download_people"] = $("#download_people").prop('checked');
-			config["download_filename"] = $("#download_filename").prop('checked');
-			config["download_time"] = $("#download_time").prop('checked');
-			config["download_text"] = $("input[name='download_text']:checked").val();
-			config["download_header"] = $("#download_header").prop('checked');
-			config["download_type"] = $("input[name='download_type']:checked").val();
-
-			saveToLocalStorage(CONFIG_KEY, config);
-		}
-		// 設定読み込み（DisNOTE全体の設定）
-		function loadConfig(){
-			var config = loadFromLocalStorage(CONFIG_KEY);
-			if(config){
-				if(config.showname){	$("#showname").prop("checked", true);	}
-				if(config.notext){	$("#notext").prop("checked", true);	}
-				if(config.abstime){	$("#abstime").prop("checked", true);	}
-				if(config.autoplay){	$("#autoplay").prop("checked", true);	}
-				if(config.download_people){	$("#download_people").prop("checked", true);	}
-				if(config.download_filename){	$("#download_filename").prop("checked", true);	}
-				if(config.download_time){	$("#download_time").prop("checked", true);	}
-				if(config.download_text){	$("input[name='download_text']").val([config.download_text]);	}
-				if(config.download_header){	$("#download_header").prop("checked", true);	}
-				if(config.download_type){	$("input[name='download_type']").val([config.download_type]);	}
-
-			}else{ // 初期設定
-				$("#showname").prop("checked", true);
-				$("#download_people").prop("checked", true);
-				$("#download_filename").prop("checked", true);
-				$("#download_time").prop("checked", true);
-				$("#download_header").prop("checked", true);
-			}
-		}
-		
-		// プロジェクト設定保存
-		var PROJECT_SETTING_KEY = projectHash + "_PROJECT_SETTING";
-		function saveProjectSetting(){
-			var setting = {};
-			setting["projectname"] = $("#projectname").val(); // プロジェクト名
-			saveToLocalStorage(PROJECT_SETTING_KEY,setting);
-		}
-		// プロジェクト設定読み込み
-		function loadProjectSetting(){
-			var setting = loadFromLocalStorage(PROJECT_SETTING_KEY);
-			$("#projectname").val((setting && "projectname" in setting) ? setting["projectname"] : defaultTitle);
-		}
-		// 話者設定保存（プロジェクト単位の設定）
-		var PERSONAL_SETTING_KEY = projectHash + "_SETTING";
-		function savePersonalSetting(){
-			for (key in personalData){
-				var pv = personalData[key];
-				
-				var personalId = "person_" + pv["hash"]; // 表示/非表示
-				pv["show"] = $("#" + personalId).val();
-				
-				var nameSettingId = "person_namesetting_" + pv["hash"]; // 表示名
-				pv["displayname"] = $("#" + nameSettingId).val();
-			}
-			saveToLocalStorage(PERSONAL_SETTING_KEY,personalData);
-		}
-		// 話者設定読み込み（プロジェクト単位の設定）
-		function loadPersonalSetting(){
-			var setting = loadFromLocalStorage(PERSONAL_SETTING_KEY);
-			for (key in setting){
-				var pv = setting[key];
-				
-				var personalId = "person_" + pv["hash"]; // 表示/非表示(hiddenとcheckbox両方に反映)
-				$("#" + personalId).val(pv["show"]);
-				$("#" + personalId + "_temp").prop("checked", (pv["show"] != "false")); 
-
-				var nameSettingId = "person_namesetting_" + pv["hash"]; // 表示名
-				$("#" + nameSettingId).val(pv["displayname"]);
-			}
-		}
-		
-		// 行ごとの候補選択設定保存（操作のたびに保存すると保存頻度が高くなるので、最後の操作からN秒後に保存するようにする）
-		var PROJECT_SELECTION_KEY= projectHash + "_SELECTION";
-		var PROJECT_SELECTION_ENGINE_KEY= projectHash + "_ENGINE_SELECTION";
-		var PROJECT_SELECTION_ENGINE_NUM_KEY= projectHash + "_ENGINE_NUM_SELECTION";
-		
- 		var selectionTimeoutId = undefined;
-		function saveProjectSelection(){
-			if (typeof selectionTimeoutId === 'number') {
-				clearTimeout(selectionTimeoutId);
-			}
-			selectionTimeoutId = setTimeout(saveToLocalStorages, 10 * 1000, 
-				[PROJECT_SELECTION_ENGINE_KEY,PROJECT_SELECTION_ENGINE_NUM_KEY],
-				[{"selection_engine":selection_engine.join("")},{"selection_engine_num":selection_engine_num.join("")}]
-			);
-		}
-		// 行ごとの候補選択設定読み込み
-		function loadProjectSelection(){ // 何番目の候補を表示しているか（旧バージョンでの記録方法）
-			var s = loadFromLocalStorage(PROJECT_SELECTION_KEY);
-			var s2;
-			if(s && s["selection"]){
-				s2 = s["selection"].split(""); // 文字列で入っているので、1文字ずつの配列にする
-			}else{
-				s2 = new Array();
-			}
-			
-			for(var i = s2.length; i < data.length; i++){ // 未定義部分に0を詰める
-				s2.push("0");
-			}
-			return s2;
-		}
-		function loadProjectSelectionEngine(){ // どのエンジンの結果を表示しているか
-			var s = loadFromLocalStorage(PROJECT_SELECTION_ENGINE_KEY);
-			var s2;
-			if(s && s["selection_engine"]){
-				s2 = s["selection_engine"].split(""); // 文字列で入っているので、1文字ずつの配列にする
-			}else{
-				s2 = new Array();
-			}
-			
-			for(var i = s2.length; i < data.length; i++){ // 未定義部分に" "を詰める
-				s2.push(" ");
-			}
-			return s2;
-		}
-		function loadProjectSelectionEngineNum(){ // エンジンの中の、何番目の候補を表示しているか
-			var s = loadFromLocalStorage(PROJECT_SELECTION_ENGINE_NUM_KEY);
-			var s2;
-			if(s && s["selection_engine_num"]){
-				s2 = s["selection_engine_num"].split(""); // 文字列で入っているので、1文字ずつの配列にする
-			}else{
-				s2 = new Array();
-			}
-			
-			for(var i = s2.length; i < data.length; i++){ // 未定義部分に" "を詰める
-				s2.push("0");
-			}
-			return s2;
-		}
-		
-		function updateTitle(){
-			document.title = (edited ? "(*)" : "") + $("#projectname").val() + " DisNOTE";
-		}
-		
-		// ファイルのドラッグ＆ドロップ
-		$(document).on("dragover", function(e){ // ファイルをドラッグしたときに、通常の動き（ファイルを別タブで開く）をしないようにする
-			e.preventDefault();
-		});
-		
-		$(document).on("dragenter", function(e){ // ファイルをドラッグできそうな雰囲気にする
-			e.preventDefault();
-			$("#draggable").css("display","block");
-			//console.log(e.originalEvent.dataTransfer.items[0].type);
-		});
-		$("#draggable").on("dragleave", function(e){ // dragenterの状態を解除
-			$("#draggable").css("display","none");
-			e.preventDefault();
-		});
-		$("#draggable_close").on("click", function(e){ // クローズ（何かの原因でドラッグの画面が消え無くなった場合に使う）
-			$("#draggable").css("display","none");
-		});
-		
-		// 編集データ読み込み(key=tdのid,value=編集テキスト の辞書データ)
-		function loadEditData(editText){
-			$("#draggable").css("cursor","wait");
-			var keys = Object.keys(editText);
-			keys.sort();
-			
-			for (key of keys){
-				$target = $("#" + key);
-				if($target[0]){ // 既にテキスト行が存在する場合
-					submitTdText($target, editText[key]); // 設定
-					delete editText[key]; // 読み込むデータから除外
-					console.log(key);
+			function updateSearchResult() {// ヒット件数表示
+				if ($currentTd && $currentTd.parent() && $currentTd.parent().hasClass("highlight")) {
+					var count = $currentTd.parent().data("searchhit_count");
+					$("#search_result").text(count + "/" + searchHitCount);
+				} else if ($("#search").val().trim().length > 0) {
+					$("#search_result").text(searchHitCount);
 				} else {
-					break;
+					$("#search_result").text("");
+				}
+				$(".searchbutton").css("opacity", searchHit ? "1" : "0.5");
+			}
+
+			function searchTr(i) { // 特定の行が検索にヒットするかどうかを確認（検索入力更新時か、tr追加時に呼ばれる）
+				var search = $("#search").val().trim();
+				if (search.length <= 0) {
+					return;
+				}
+
+				$tr = $("#tr_" + i);
+				if (!$tr.css('display') || $tr.css('display') == "none") { // 未生成の行+非表示行は対象外とする
+					return;
+				}
+				for (k = textBase; k < data[i].length; k++) {
+					if (!data[i][k]) {
+						break;
+					}
+					if (data[i][k].indexOf(search) >= 0) {
+						searchHit = true;
+						searchHitCount++;
+						$tr.addClass("highlight").data("searchhit_count", searchHitCount);
+						updateSearchResult();
+						return;
+					}
+				}
+			}
+			function search(force) { // 全体検索
+				var search = $("#search").val().trim();
+				if (!force && search == prevSearch) { return; }
+
+				$(".highlight").removeClass('highlight');
+				searchHit = false;
+				updateSearchResult();
+				if (search.length <= 0) {
+					return;
+				}
+				prevSearch = search;
+
+				var data = results;
+				len = data.length;
+
+				searchHitCount = 0;
+				for (i = 0; i < data.length; i++) {
+					searchTr(i);
 				}
 			}
 
-			if(Object.keys(editText).length > 0){
-				setTimeout(loadEditData, 100, editText); // まだ読み込みが終わっていないので、非同期で少し待って再読み込み
-			}else{
-				$("#draggable").css("display","none");
-				$("#draggable").css("cursor","auto");
-				//alert("編集データを読み込みました");
-				edited = false; // 画面反映中に edited がtrueになるので、ここでフラグを降ろす
+			// 次の行へ検索(d=1),前の行へ検索(d=-1)
+			function nextSearch(d) {
+				if (!searchHit) { return; }
+
+				defaultCurrentTd();
+
+				var next_id = $currentTd.data('number');
+				$nextPlayTd = null;
+
+				do { // 次の行を探す（非表示の場合はスキップ）
+					next_id += d;
+					$nextPlayTd = $("#play_" + next_id);
+
+					if ($nextPlayTd.length <= 0) { return null; } // 最後まで進んだ
+
+				} while ($nextPlayTd.parent().hasClass("highlight") == false)
+
+				// 該当行にフォーカス
+				changeCurrentTd($nextPlayTd);
+				scrollToTop($currentTd, false);
+				scrollToBottom($currentTd, false);
+
+				// 検索件数表示
+				updateSearchResult();
+
+			}
+
+			// 検索次
+			$("#search_next").click(function () {
+				nextSearch(1);
+			});
+			// 検索前
+			$("#search_prev").click(function () {
+				nextSearch(-1);
+			});
+
+			$("#search").keyup(function () { search() });
+			$("#search").change(function () { search() });
+
+			// キーボード入力
+			$(document).on("keydown", function (e) {
+				if ($("#projectsetting").dialog("isOpen")) { // 話者選択ダイアログ表示中
+					if (e.key == "ArrowUp" || e.key == "ArrowDown") { // スクロール抑制
+						return false;
+					}
+					return true;
+				}
+				if ($("#help").dialog("isOpen") || $("#download").dialog("isOpen")) { // その他のダイアログ表示中
+					return true;
+				}
+				if ($edittingtag) {	// 編集中
+					return true;
+				}
+
+				if (e.code == "F3") { // 検索
+					if (searchHit) { // 次へ検索
+						if (e.shiftKey) {
+							nextSearch(-1);
+						} else {
+							nextSearch(1);
+						}
+						$("#search").blur();
+						return false;
+					} else {
+						$("#search").focus(); // 検索窓にフォーカス
+						return false;
+					}
+				}
+
+				if ($("#search").is(":focus")) { // 検索窓で入力中
+					if (e.key == "Enter") { // Enter（次へ）
+						if (e.shiftKey) {
+							nextSearch(-1);
+						} else {
+							nextSearch(1);
+						}
+
+						return false;
+					}
+					if (e.key == "Escape") { // ESC（フォーカス外す）
+						$("#search").blur();
+						return false;
+					}
+
+					return true; // 文字入力できるようにtrueを返す
+				}
+
+				if (e.key == "Enter") { // Enter
+					if ($currentTd) {
+						editTdTextStart($currentTd); // 既に行が選択されていたら編集開始
+					} else {
+						changeCurrentTd(getDefaultCurrentTd()); // 適当な行を選択する
+					}
+					return false;
+				}
+
+				if (e.key == "Escape") { // ESC
+					$currentTd = undefined;
+					changeCurrentTd($currentTd);
+					$("#sound")[0].stop();
+					return false;
+				}
+
+				if (e.key == "ArrowUp") { // ↑（行選択）
+					if (e.shiftKey || $currentTd) {
+						defaultCurrentTd();
+
+						$td = nextTd($currentTd, -1);
+						if ($td) {
+							changeCurrentTd($td);
+							scrollToTop($currentTd, false);
+						}
+						return false;
+					}
+				}
+				if (e.key == "ArrowDown") { // ↓（行選択）
+					if (e.shiftKey || $currentTd) {
+						defaultCurrentTd();
+
+						$td = nextTd($currentTd, 1);
+						if ($td) {
+							changeCurrentTd($td);
+							scrollToBottom($currentTd, false);
+						}
+						return false;
+					}
+				}
+
+				if (e.key == "ArrowRight") { // →（候補選択）
+					if (e.shiftKey || $currentTd) {
+						defaultCurrentTd();
+						changeText($currentTd, 1);
+						return false;
+					}
+				}
+				if (e.key == "ArrowLeft") { // ←（候補選択）
+					if (e.shiftKey || $currentTd) {
+						defaultCurrentTd();
+						changeText($currentTd, -1);
+						return false;
+					}
+				}
+
+				if (e.key == " ") { // スペース（再生/停止）
+
+					if ($currentTd) {
+						if ($("#sound").attr("src") != $currentTd.data('filename')) { // 行が変わっていたら再生し直し
+							play($currentTd);
+						} else {
+							if (!$("#sound")[0].paused) {// 一時停止/再開
+								$("#sound")[0].pause();
+							} else {
+								$("#sound")[0].play();
+							}
+						}
+						return false;
+					}
+				}
+
+				if (e.code == "KeyC") { // C,c（コピー）
+					if ($currentTd) {
+						copyTdText($currentTd);
+						return false;
+					}
+				}
+
+				if (e.ctrlKey) {
+					if (e.code == "KeyS") { // Ctrl+S,s（保存）
+						saveEdit();
+						return false;
+					}
+				}
+
+				// 以下、通常のショートカットキーと重複しないように処理（Ctrl+Aなど）
+				if (e.ctrlKey) {
+					return true;
+				}
+
+				if (e.code == "KeyQ") { // Q,q（「話者表示」のチェック切り替え）
+					$target = $("#showname");
+					$target.prop("checked", !$target.prop("checked")).change();
+					return false;
+				}
+				if (e.code == "KeyS") { // S,s（「認識できなかった行を表示」のチェック切り替え）
+					$target = $("#notext");
+					$target.prop("checked", !$target.prop("checked")).change();
+					return false;
+				}
+				if (e.code == "KeyT") { // T,t（「時刻表示」のチェック切り替え）
+					$target = $("#abstime");
+					$target.prop("checked", !$target.prop("checked")).change();
+					return false;
+				}
+				if (e.code == "KeyA") { // A,a（連続再生のチェック切り替え）
+					$target = $("#autoplay");
+					$target.prop("checked", !$target.prop("checked")).change();
+					return false;
+				}
+				if (e.code == "KeyD") { // D,d（ダウンロード）
+					$("#download").dialog("open");
+					return false;
+				}
+				if (e.code == "KeyP") { // P,p（プロジェクト設定）
+					$("#projectsetting").dialog("open");
+					return false;
+				}
+				if (e.code == "KeyF") { // F,f（検索窓にフォーカス）
+					$("#search").focus();
+					return false;
+				}
+				if (e.code == "KeyH") { // H,h（ヘルプ）
+					$("#help").dialog("open");
+					return false;
+				}
+
+
+			});
+
+			// 編集開始
+			var editOptionSelected; // 候補選択のプルダウンが何を選択しているか
+			function editTdTextStart($target) {
+				editTdTextEnd();
+				editOptionSelected = "";
+
+				// テキストが表示されているタグが本体
+				$target = $target.parent().data('textTd');
+
+				// 入力部品
+				$input = $("<input>").attr({ "type": "text", "id": "editting_input" });
+				$input.val($target.find('div.text').text().trim()); // 現在表示されている文字列が初期値
+
+				// 選択候補
+				$select = $("<select>").attr({ "id": "editting_select" });
+				$select.append($("<option>").attr({ "value": "" }).text(""));
+
+				var len = 0 + $target.data('textlen');
+				for (var i = 0; i < len; i++) {
+					var text = $target.data('text' + i).trim();
+					$option = $("<option>").attr({ "value": text }).text(text);
+					$select.append($option);
+
+					if (text == $input.val()) {
+						$option.attr({ "selected": "selected" });
+						editOptionSelected = text;
+					}
+				}
+
+				// キャンセル時のバックアップ
+				$backup = $("<input>").attr({ "type": "hidden", "id": "editting_backup" }).val($input.val());
+
+				// 部品表示、元々のテキストを消す
+				$edittingtag = $("<span>").append($input).append($select).append($backup);
+				$target.find('div.text').text("").append($edittingtag);
+				$input.focus();
+
+				$input.keydown(function (e) { // キー入力
+					if (e.key == "Enter") { // Enter（確定）
+						//console.log($input.val());
+						submitTdText($target, $input.val());
+						$td = nextTd($currentTd, +1); // 次の行へ
+						if ($td) {
+							changeCurrentTd($td);
+						}
+						return false;
+					}
+					if (e.key == "Escape") { // ESC（キャンセル）
+						editTdTextEnd();
+						return false;
+					}
+				});
+
+				var selectOnChangeFunction = function (focusToText) { // 選択肢切り替え(on("change")イベントだと、focusの制御が難しかったのでclickとkeyupイベントで発生させる)
+					var v = $("#editting_select").val();
+					if (v && editOptionSelected != v) {
+
+						//$("#editting_input").val(v); // 普通に val(v) で設定するとundoが効かない。以下のようにすると効くようになる。
+						$("#editting_input").focus();
+						$("#editting_input").get(0).selectionStart = 0;
+						$("#editting_input").get(0).selectionEnd = $("#editting_input").val().length;
+						document.execCommand('insertText', false, v);
+
+						// この時点で$("#editting_input") にフォーカスが移っているので、selectに戻す
+						if (!focusToText) {
+							$("#editting_select").focus();
+						}
+						console.log(focusToText);
+
+						editOptionSelected = v;
+					}
+				};
+
+				$select.on("click", function () { // クリックで選択肢を変更した場合、textにフォーカスを移す（選択肢表示中にEnterを押した場合もclickイベントが発生する）
+					selectOnChangeFunction(true);
+				});
+				$select.keyup(function (e) { // 矢印キーで選択肢を変更した場合、selectにフォーカスを残す
+					selectOnChangeFunction(false);
+				});
+
+			}
+
+			// 編集を反映する
+			function submitTdText($target, val) {
+				editTdTextEnd();
+
+				$target = $target.parent().data('textTd');
+				var key = $target.attr("id");
+
+				var len = 0 + $target.data('textlen');
+
+				if (key in editText) { // 既存を書き換え
+					console.log("exists.");
+				} else { // 新規の場合は新しく列を追加
+					len++;
+					$target.data('textlen', len);
+
+					var engines = $target.data('engines');
+					$target.data('engines', engines + "E");
+				}
+				$target.data('text' + (len - 1), val); // 最後のデータに設定
+
+				editText[key] = val;
+				console.log(key + ":" + val);
+				//$target.find('div.text').text(editText[key]);
+				changeTextAbs($target, len - 1);
+
+				edited = true;
 				updateTitle();
 			}
-		}
-		
-		function loadEditDataWrap(file){
-			try{
-				file = JSON.parse(file);
-				
-				if( file.projectHash == projectHash){
-					editTextTmp = file.editText;
-					loadEditData(file.editText);
-					return; // 正常に読み込み開始
-				}else{
-					result = "編集ファイルの読み込みに失敗しました。違う音声ファイルの編集ファイルです。";
+
+			// 編集終了（入力タグを消す）入力は反映されない
+			function editTdTextEnd() {
+				if ($edittingtag) {
+					$edittingtag.parent().text($("#editting_backup").val()); // 戻す
+					$edittingtag.remove();
 				}
-				
-			} catch (error){
-				result = "編集ファイルの読み込みに失敗しました。jsonファイルではありません。";
+				$edittingtag = null;
 			}
-			$("#draggable").css("display","none");
-			alert(result);
-			reader.readAsText(e.originalEvent.dataTransfer.files[0]);
-		}
-		$(document).on("drop", function(e){ // 実際に読み込む
-			e.preventDefault();
 
-			var reader = new FileReader();
 
-			reader.onload = function (e) {
-				try{
-					file = JSON.parse(reader.result);
-					
-					if( file.projectHash == projectHash){
+			// クリップボードにテキストをコピー
+			function copyTdText($target) {
+				changeCurrentTd($target);
+
+				$target = $target.parent().data('textTd');
+
+				var $clipboard = $('<textarea></textarea>');
+				$clipboard.text($target.find('div.text').text());
+				$('body').append($clipboard);
+
+				$clipboard.val($target.text());
+				$clipboard.select();
+				document.execCommand("Copy");
+				$clipboard.remove();
+			}
+
+			// 行追加
+			function addTr(data, i) {
+				var name = data[i][0];
+
+				len = data.length;
+
+				// 時刻
+				t = parseInt(data[i][2])
+				$timeTd = $("<td>").addClass("time");
+
+
+				d = getTimeStr(new Date(2000, 1, 1), t)
+				$reltime = $("<span>").addClass("reltime").text(d);
+				$timeTd.append($reltime);
+
+				if (typeof baseDate !== "undefined") { // 時刻情報あり
+					d = getTimeStr(baseDate, t);
+					$abstime = $("<span>").addClass("abstime").text(d);
+					$timeTd.append($abstime);
+
+					if ($('#abstime').prop('checked')) { // updateTimeModeと同じことをしている（が、ここでupdateTimeModeを呼び出すとガタガタする）
+						$reltime.css("display", "none");
+					} else {
+						$abstime.css("display", "none");
+					}
+				}
+
+				// 話者
+				pv = personalData[name];
+				$nameTd = $("<td>").text($("#person_namesetting_" + pv["hash"]).val()).addClass("name").addClass("person_name_" + pv["hash"]);
+				$nameTd.css("display", $('#showname').prop('checked') ? "table-cell" : "none"); // updateShowNameMode と同じことをしている（が、ここでupdateShowNameModeを呼び出すとガタガタする）
+
+				// 再生ボタン
+				var playTdId = "play_" + i;
+				$play = $("<td>").addClass("play").attr({ "title": "" }).data('filename', data[i][1]).attr({ "id": playTdId }).data('number', i).on("click", function () {
+					play($(this));
+				});
+
+				// 候補
+				var textTdId = "text_" + i;
+				$textTd = $("<td>").attr({ "id": textTdId }).addClass("text")
+					.on("click", function () { changeCurrentTd($(this)); })	// クリックで選択	//	copyTdText($(this));
+					.on("dblclick", function () { editTdTextStart($(this)); })	// ダブルクリックで編集
+					.append($("<div>").addClass("text")) // テキスト本体
+					.append($("<span>").addClass("engine")) // エンジン名
+					;
+
+
+				// 左矢印
+				$left = $("<td>").attr({ "id": textTdId + "_l" }).addClass("button").data('number', i).addClass("prev").on("click", function () {
+					changeText($(this), -1);
+				});
+
+				// 右矢印
+				$right = $("<td>").attr({ "id": textTdId + "_r" }).addClass("button").data('number', i).addClass("next").on("click", function () {
+					changeText($(this), 1);
+				});
+
+				$tr = $("<tr>").addClass("line").attr({ "id": "tr_" + i }).data('playTd', $play).data('textTd', $textTd).data('time', t / 1000);
+
+				$tableObj.append(
+					$tr
+						.append($timeTd) // 時間
+						.append($nameTd) // 話者名
+						.append($play)
+						//.append($("<td>").text(data[i][3]).addClass("score")) // スコア
+						//.append($("<td>").attr({"id":"td1_" + i }).text(data[i][1]).hide()) // ファイル名
+						.append($left)
+						.append($right)
+						.append($textTd)
+				);
+
+				// 5から先が候補(text<n>に代入
+				var k;
+				for (k = textBase; k < data[i].length; k++) {
+					if (!data[i][k]) {
+						break;
+					}
+					if (data[i][k].length > 0) {
+						$textTd.data('text' + (k - textBase), data[i][k]);
+					} else {
+						break;
+					}
+				}
+				var textlen = k - textBase;
+				var current = parseInt(selection[i]); // どの候補を表示するかを設定から読み込む
+				var engines = data[i][textBase - 1].slice(0, textlen); // エンジンのIDの文字列（候補ごと）
+				//console.log("current=" + current + ", engine=" + selection_engine[i]  + " engine_num=" + selection_engine_num[i])
+
+				if (selection_engine[i] && selection_engine[i] != " ") { // このエンジンの何番目、という情報があったらそちらを優先
+					var engine_num = parseInt(selection_engine_num[i]);
+					if (!engine_num) { engine_num = 0; } // 何か変な文字が入ってたら0にする
+
+					for (var n = 0; n < engines.length; n++) {
+						if (engines[n] == selection_engine[i]) { // このエンジンの何番目
+							if (engine_num <= 0) {
+								current = n;
+								break;
+							}
+							engine_num--;
+						}
+					}
+				}
+				if (!current) { current = 0; } // 何か変な文字が入ってたら0にする
+				if (current >= textlen) { current = 0; } // 外にあふれていても0にする
+
+				$textTd.find('div.text').text(data[i][textBase + current]) // 候補を表示
+				$textTd.data('textlen', textlen);
+				$textTd.data('current', current);
+				$textTd.data('engines', engines);
+				$textTd.attr('title', getEnginName(engines[current]));
+				$textTd.find('span.engine').text(getEnginName(engines[current]))
+
+				// ボタンに、いまどの候補を表示しているかを出す
+				$left.attr({ "title": (current + 1) + "/" + textlen });
+				$right.attr({ "title": (current + 1) + "/" + textlen });
+
+				// 認識できたかどうかでクラスを設定
+				if (textlen <= 0) {
+					$tr.addClass("notext");
+				} else {
+					$tr.addClass("textexists");
+				}
+
+				// 話者設定に従って表示非表示を切り替え
+				var personalId = "person_" + personalData[name]["hash"];
+				$tr.addClass(personalId);
+				updatePersonLineDisplay($("#" + personalId));
+
+				// 今回追加したtrが検索にヒットするかどうかを再検索
+				searchTr(i);
+
+				// 次の行へ
+				i++;
+				if (i < len) {
+					$('#loading').text("loading... " + Math.ceil(100 * i / len) + "%");
+					setTimeout(addTr, 0, data, i); // 非同期の…実装が…ダサい…
+				} else {
+					//	$('#loading').css("display","none");
+					$('#loading').text("complete! 100%");
+					var $table = $('table');
+					search(true);
+
+					$("#open_download").click(function () { // ロードが完了したので、ダウンロードのダイアログを開けるようにする
+						$("#download").dialog("open");
+					});
+					$("#open_download").css("opacity", "1").css("cursor", "pointer").attr("title", "ダウンロード(D)");
+
+					$("#save").click(function () { // ロードが完了したので、保存ボタンが使えるようにする
+						saveEdit();
+					});
+					$("#save").css("opacity", "1").css("cursor", "pointer").attr("title", "編集データ保存(Ctrl+S)");
+				}
+				//$("#table").floatThead({ // ヘッダ固定を試したけどしなくてもいいかな
+				//	position: 'absolute'
+				//});
+
+			}
+
+			// IDから音声認識エンジン名を返す
+			function getEnginName(engine) {
+				switch (engine) {
+					case "G": return "Google Speech API";
+					case "W": return "Wit.ai";
+					case "t": return "Whisper(tiny)";
+					case "b": return "Whisper(base)";
+					case "s": return "Whisper(small)";
+					case "m": return "Whisper(medium)";
+					case "l": return "Whisper(large)";
+					case "E": return "[Edit]";
+				}
+				return "";
+			}
+
+			// localStrageに保存(保存できるサイズの上限はブラウザ依存だが、5MB上限の環境が多いようなので保存できると信じる)
+			function saveToLocalStorages(keys, values) {
+				for (i = 0; i < keys.length; i++) {
+					saveToLocalStorage(keys[i], values[i]);
+				}
+			}
+			function saveToLocalStorage(key, value) {
+				try {
+					saveVal = JSON.stringify(value);
+					localStorage.setItem("DisNote_" + key, saveVal);
+					//	console.log("saveToLocalStorage:" + saveVal);
+				} catch (e) {
+				}
+			}
+
+			// localStorageから読み込み
+			function loadFromLocalStorage(key) {
+				try {
+					return JSON.parse(localStorage.getItem("DisNote_" + key));
+				} catch (e) {
+					return new Object();
+				}
+			}
+
+			// 設定保存（DisNOTE全体の設定）
+			var CONFIG_KEY = "CONFIG";
+			function saveConfig() {
+				var config = new Object();
+				config["showname"] = $("#showname").prop("checked");
+				config["notext"] = $("#notext").prop("checked");
+				config["abstime"] = $("#abstime").prop("checked");
+				config["autoplay"] = $("#autoplay").prop("checked");
+				config["download_people"] = $("#download_people").prop('checked');
+				config["download_filename"] = $("#download_filename").prop('checked');
+				config["download_time"] = $("#download_time").prop('checked');
+				config["download_text"] = $("input[name='download_text']:checked").val();
+				config["download_header"] = $("#download_header").prop('checked');
+				config["download_type"] = $("input[name='download_type']:checked").val();
+
+				saveToLocalStorage(CONFIG_KEY, config);
+			}
+			// 設定読み込み（DisNOTE全体の設定）
+			function loadConfig() {
+				var config = loadFromLocalStorage(CONFIG_KEY);
+				if (config) {
+					if (config.showname) { $("#showname").prop("checked", true); }
+					if (config.notext) { $("#notext").prop("checked", true); }
+					if (config.abstime) { $("#abstime").prop("checked", true); }
+					if (config.autoplay) { $("#autoplay").prop("checked", true); }
+					if (config.download_people) { $("#download_people").prop("checked", true); }
+					if (config.download_filename) { $("#download_filename").prop("checked", true); }
+					if (config.download_time) { $("#download_time").prop("checked", true); }
+					if (config.download_text) { $("input[name='download_text']").val([config.download_text]); }
+					if (config.download_header) { $("#download_header").prop("checked", true); }
+					if (config.download_type) { $("input[name='download_type']").val([config.download_type]); }
+
+				} else { // 初期設定
+					$("#showname").prop("checked", true);
+					$("#download_people").prop("checked", true);
+					$("#download_filename").prop("checked", true);
+					$("#download_time").prop("checked", true);
+					$("#download_header").prop("checked", true);
+				}
+			}
+
+			// プロジェクト設定保存
+			var PROJECT_SETTING_KEY = projectHash + "_PROJECT_SETTING";
+			function saveProjectSetting() {
+				var setting = {};
+				setting["projectname"] = $("#projectname").val(); // プロジェクト名
+				saveToLocalStorage(PROJECT_SETTING_KEY, setting);
+			}
+			// プロジェクト設定読み込み
+			function loadProjectSetting() {
+				var setting = loadFromLocalStorage(PROJECT_SETTING_KEY);
+				$("#projectname").val((setting && "projectname" in setting) ? setting["projectname"] : defaultTitle);
+			}
+			// 話者設定保存（プロジェクト単位の設定）
+			var PERSONAL_SETTING_KEY = projectHash + "_SETTING";
+			function savePersonalSetting() {
+				for (key in personalData) {
+					var pv = personalData[key];
+
+					var personalId = "person_" + pv["hash"]; // 表示/非表示
+					pv["show"] = $("#" + personalId).val();
+
+					var nameSettingId = "person_namesetting_" + pv["hash"]; // 表示名
+					pv["displayname"] = $("#" + nameSettingId).val();
+				}
+				saveToLocalStorage(PERSONAL_SETTING_KEY, personalData);
+			}
+			// 話者設定読み込み（プロジェクト単位の設定）
+			function loadPersonalSetting() {
+				var setting = loadFromLocalStorage(PERSONAL_SETTING_KEY);
+				for (key in setting) {
+					var pv = setting[key];
+
+					var personalId = "person_" + pv["hash"]; // 表示/非表示(hiddenとcheckbox両方に反映)
+					$("#" + personalId).val(pv["show"]);
+					$("#" + personalId + "_temp").prop("checked", (pv["show"] != "false"));
+
+					var nameSettingId = "person_namesetting_" + pv["hash"]; // 表示名
+					$("#" + nameSettingId).val(pv["displayname"]);
+				}
+			}
+
+			// 行ごとの候補選択設定保存（操作のたびに保存すると保存頻度が高くなるので、最後の操作からN秒後に保存するようにする）
+			var PROJECT_SELECTION_KEY = projectHash + "_SELECTION";
+			var PROJECT_SELECTION_ENGINE_KEY = projectHash + "_ENGINE_SELECTION";
+			var PROJECT_SELECTION_ENGINE_NUM_KEY = projectHash + "_ENGINE_NUM_SELECTION";
+
+			var selectionTimeoutId = undefined;
+			function saveProjectSelection() {
+				if (typeof selectionTimeoutId === 'number') {
+					clearTimeout(selectionTimeoutId);
+				}
+				selectionTimeoutId = setTimeout(saveToLocalStorages, 10 * 1000,
+					[PROJECT_SELECTION_ENGINE_KEY, PROJECT_SELECTION_ENGINE_NUM_KEY],
+					[{ "selection_engine": selection_engine.join("") }, { "selection_engine_num": selection_engine_num.join("") }]
+				);
+			}
+			// 行ごとの候補選択設定読み込み
+			function loadProjectSelection() { // 何番目の候補を表示しているか（旧バージョンでの記録方法）
+				var s = loadFromLocalStorage(PROJECT_SELECTION_KEY);
+				var s2;
+				if (s && s["selection"]) {
+					s2 = s["selection"].split(""); // 文字列で入っているので、1文字ずつの配列にする
+				} else {
+					s2 = new Array();
+				}
+
+				for (var i = s2.length; i < data.length; i++) { // 未定義部分に0を詰める
+					s2.push("0");
+				}
+				return s2;
+			}
+			function loadProjectSelectionEngine() { // どのエンジンの結果を表示しているか
+				var s = loadFromLocalStorage(PROJECT_SELECTION_ENGINE_KEY);
+				var s2;
+				if (s && s["selection_engine"]) {
+					s2 = s["selection_engine"].split(""); // 文字列で入っているので、1文字ずつの配列にする
+				} else {
+					s2 = new Array();
+				}
+
+				for (var i = s2.length; i < data.length; i++) { // 未定義部分に" "を詰める
+					s2.push(" ");
+				}
+				return s2;
+			}
+			function loadProjectSelectionEngineNum() { // エンジンの中の、何番目の候補を表示しているか
+				var s = loadFromLocalStorage(PROJECT_SELECTION_ENGINE_NUM_KEY);
+				var s2;
+				if (s && s["selection_engine_num"]) {
+					s2 = s["selection_engine_num"].split(""); // 文字列で入っているので、1文字ずつの配列にする
+				} else {
+					s2 = new Array();
+				}
+
+				for (var i = s2.length; i < data.length; i++) { // 未定義部分に" "を詰める
+					s2.push("0");
+				}
+				return s2;
+			}
+
+			function updateTitle() {
+				document.title = (edited ? "(*)" : "") + $("#projectname").val() + " DisNOTE";
+			}
+
+			// ファイルのドラッグ＆ドロップ
+			$(document).on("dragover", function (e) { // ファイルをドラッグしたときに、通常の動き（ファイルを別タブで開く）をしないようにする
+				e.preventDefault();
+			});
+
+			$(document).on("dragenter", function (e) { // ファイルをドラッグできそうな雰囲気にする
+				e.preventDefault();
+				$("#draggable").css("display", "block");
+				//console.log(e.originalEvent.dataTransfer.items[0].type);
+			});
+			$("#draggable").on("dragleave", function (e) { // dragenterの状態を解除
+				$("#draggable").css("display", "none");
+				e.preventDefault();
+			});
+			$("#draggable_close").on("click", function (e) { // クローズ（何かの原因でドラッグの画面が消え無くなった場合に使う）
+				$("#draggable").css("display", "none");
+			});
+
+			// 編集データ読み込み(key=tdのid,value=編集テキスト の辞書データ)
+			function loadEditData(editText) {
+				$("#draggable").css("cursor", "wait");
+				var keys = Object.keys(editText);
+				keys.sort();
+
+				for (key of keys) {
+					$target = $("#" + key);
+					if ($target[0]) { // 既にテキスト行が存在する場合
+						submitTdText($target, editText[key]); // 設定
+						delete editText[key]; // 読み込むデータから除外
+						console.log(key);
+					} else {
+						break;
+					}
+				}
+
+				if (Object.keys(editText).length > 0) {
+					setTimeout(loadEditData, 100, editText); // まだ読み込みが終わっていないので、非同期で少し待って再読み込み
+				} else {
+					$("#draggable").css("display", "none");
+					$("#draggable").css("cursor", "auto");
+					//alert("編集データを読み込みました");
+					edited = false; // 画面反映中に edited がtrueになるので、ここでフラグを降ろす
+					updateTitle();
+				}
+			}
+
+			function loadEditDataWrap(file) {
+				try {
+					file = JSON.parse(file);
+
+					if (file.projectHash == projectHash) {
 						editTextTmp = file.editText;
 						loadEditData(file.editText);
 						return; // 正常に読み込み開始
-					}else{
+					} else {
 						result = "編集ファイルの読み込みに失敗しました。違う音声ファイルの編集ファイルです。";
 					}
-					
-				} catch (error){
+
+				} catch (error) {
 					result = "編集ファイルの読み込みに失敗しました。jsonファイルではありません。";
 				}
-				$("#draggable").css("display","none");
+				$("#draggable").css("display", "none");
 				alert(result);
+				reader.readAsText(e.originalEvent.dataTransfer.files[0]);
 			}
-			reader.readAsText(e.originalEvent.dataTransfer.files[0]);
+			$(document).on("drop", function (e) { // 実際に読み込む
+				e.preventDefault();
+
+				var reader = new FileReader();
+
+				reader.onload = function (e) {
+					try {
+						file = JSON.parse(reader.result);
+
+						if (file.projectHash == projectHash) {
+							editTextTmp = file.editText;
+							loadEditData(file.editText);
+							return; // 正常に読み込み開始
+						} else {
+							result = "編集ファイルの読み込みに失敗しました。違う音声ファイルの編集ファイルです。";
+						}
+
+					} catch (error) {
+						result = "編集ファイルの読み込みに失敗しました。jsonファイルではありません。";
+					}
+					$("#draggable").css("display", "none");
+					alert(result);
+				}
+				reader.readAsText(e.originalEvent.dataTransfer.files[0]);
+			});
+
+			//$(window).on("beforeunload", function() { // 未保存でページを抜けようとしたら確認
+			//	if(edited){
+			//		return "確認";
+			//	}
+			//});
+
+			// --- ここからページ読み込み終了時の処理 ---
+			var data = results;
+			$tableObj = $("#tbody");
+			var selection = loadProjectSelection();
+			var selection_engine = loadProjectSelectionEngine();
+			var selection_engine_num = loadProjectSelectionEngineNum();
+
+			if (typeof baseDate === "undefined") { // craigの開始時間情報がない場合、時刻表示のcheckbox表示しない
+				$("#abstime").prop("disabled", true);
+				$("#timelabel").css("display", "none")
+			}
+
+			// 話者設定画面の表を作成
+			for (key in personalData) {
+				var pv = personalData[key];
+
+				var personalId = "person_" + pv["hash"];
+				$input = $("<input>").prop("type", "checkbox").prop("id", personalId + "_temp").prop("checked", true); // checkboxで表示非表示を切り替えるが、画面を閉じるまで反映しない
+				$hidden = $("<input>").prop("type", "hidden").prop("id", personalId).addClass("person_input").val($input.prop("checked")); // こちらが設定値の本体
+				$checkboxTd = $("<td>").append($("<label>").append($input).append($hidden));
+
+				$filenameTd = $("<td>").append($("<p>").text(pv["orgfile"]).attr({ "title": pv["orgfile"] }).addClass("orgfile"));
+
+				var nameSettingId = "person_namesetting_" + pv["hash"];
+				$nameTd = $("<td>").append($("<input>").attr("id", nameSettingId).prop("type", "input").val(pv["name"])).addClass("name");
+
+				$("#peopletable").append($("<tr>").append($checkboxTd).append($filenameTd).append($nameTd));
+			}
+
+			// 初期化処理
+			loadConfig();
+			loadPersonalSetting();
+			loadProjectSetting();
+			updateShowNameMode();
+			updateSearchResult();
+			updateTimeMode();
+			updateLineDisplay();
+			updateTitle();
+			$("#version").text(version);
+
+			$("#orgmedia").attr({ "src": mixedMediafile });
+			if (mixedMediaIsMovie) {
+				$("#movieThumbnail").attr({ "src": mixedMediafile });
+				$("#movie").attr({ "src": mixedMediafile });
+			} else {
+				$(".movieThumbnail").css("display", "none")
+			}
+
+			// 認識結果行の追加を始める
+			addTr(data, 0);
+
 		});
-		
-		//$(window).on("beforeunload", function() { // 未保存でページを抜けようとしたら確認
-		//	if(edited){
-		//		return "確認";
-		//	}
-		//});
-		
-		// --- ここからページ読み込み終了時の処理 ---
-		var data = results;
-		$tableObj = $("#tbody");
-		var selection = loadProjectSelection();
-		var selection_engine = loadProjectSelectionEngine();
-		var selection_engine_num = loadProjectSelectionEngineNum();
 
-		if(typeof baseDate === "undefined"){ // craigの開始時間情報がない場合、時刻表示のcheckbox表示しない
-			$("#abstime").prop("disabled", true);
-			$("#timelabel").css("display", "none")
-		}
-
-		// 話者設定画面の表を作成
-		for (key in personalData){
-			var pv = personalData[key];
-			
-			var personalId = "person_" + pv["hash"];
-			$input  = $("<input>").prop("type","checkbox").prop("id",personalId + "_temp").prop("checked", true); // checkboxで表示非表示を切り替えるが、画面を閉じるまで反映しない
-			$hidden = $("<input>").prop("type","hidden").prop("id",personalId).addClass("person_input").val($input.prop("checked")); // こちらが設定値の本体
-			$checkboxTd = $("<td>").append($("<label>").append($input).append($hidden));
-			
-			$filenameTd = $("<td>").append($("<p>").text(pv["orgfile"]).attr({"title": pv["orgfile"] }).addClass("orgfile"));
-			
-			var nameSettingId = "person_namesetting_" + pv["hash"];
-			$nameTd = $("<td>").append($("<input>").attr("id",nameSettingId).prop("type","input").val(pv["name"])).addClass("name");
-			
-			$("#peopletable").append($("<tr>").append($checkboxTd).append($filenameTd).append($nameTd));
-		}
-		
-		// 初期化処理
-		loadConfig();
-		loadPersonalSetting();
-		loadProjectSetting();
-		updateShowNameMode();
-		updateSearchResult();
-		updateTimeMode();
-		updateLineDisplay();
-		updateTitle();
-		$("#version").text(version);
-		
-		$("#orgmedia").attr({"src": mixedMediafile });
-		if(mixedMediaIsMovie){
-			$("#movieThumbnail").attr({"src": mixedMediafile });
-			$("#movie").attr({"src": mixedMediafile });
-		}else{
-			$(".movieThumbnail").css("display", "none")
-		}
-
-		// 認識結果行の追加を始める
-		addTr(data, 0);
-
-	});
-
-RESULTS
-defaultTitle = "TITLE";
+		RESULTS
+		defaultTitle = "TITLE";
 
 	</script>
 
 </head>
+
 <body>
-<div class="container">
-	<div class="main">
-		<div id="loading" class="loading"></div>
-		
-		<div id="projectsetting" style="display:none">
-			<div class="group">
-				<div>
-					<span class="caption">プロジェクト名</span>
-				</div>
-				<div style="text-align: right;margin-bottom:3px;width:100%;">
-					<input type="text" id="projectname" style="width:300px"/>
-				</div>
-			</div>
-			<div class="group">
-				<div>
-					<span class="caption">話者設定</span>
-				</div>
-				<table id="peopletable">
-					<tr>
-						<th>表示</th><th>音声ファイル名</th><th>名前</th>
-					</tr>
+	<div class="container">
+		<div class="main">
+			<div id="loading" class="loading"></div>
 
-				</table>
-			</div>
-					<!-- <input type="button" id="switch_people" value="閉じる"> -->
-		</div>
-		
-		<div id="help" style="display:none">
-			<div>
-				<span class="caption">通常</span>
-				<table class="helptable">
-					<tr><th>Key</th><th>説明</th></tr>
-					<tr><td>Enter</td><td>選択モードON</td></tr>
-					<tr><td>Ctrl+S</td><td><div class="icon save"></div>編集データ保存</td></tr>
-					<tr><td>D</td>    <td><div class="icon download"></div>ダウンロード</td></tr>
-					<tr><td>P</td>    <td><div class="icon people"></div>プロジェクト設定</td></tr>
-					<tr><td>F,F3</td> <td><div class="icon search"></div>検索</td></tr>
-					<tr><td>H</td>    <td><div class="icon help"></div>この画面を表示</td></tr>
-					<tr><td>Q</td>    <td><input type="checkbox" disabled checked>話者表示</td></tr>
-					<tr><td>S</td>    <td><input type="checkbox" disabled checked>認識できなかった行を表示</td></tr>
-					<tr><td>T</td>    <td><input type="checkbox" disabled checked>時刻表示 <span style="font-size:small">※時刻情報がある場合のみ</span></td></tr>
-					<tr><td>A</td>    <td><input type="checkbox" disabled checked>連続再生</td></tr>
-				</table>
-			</div>
-			<div>
-				<span class="caption">選択モード</span>
-				<table class="helptable">
-					<tr><th>Key</th><th>説明</th></tr>
-					<tr><td>Enter,F2</td><td>編集モード開始</td></tr>
-					<tr><td>ESC</td> <td>選択モードOFF</td></tr>
-					<tr><td>↑↓</td><td>行選択</td></tr>
-					<tr><td>←→</td><td>候補選択</td></tr>
-					<tr><td>Space</td><td>再生/停止</td></tr>
-					<tr><td>C</td><td>コピー</td></tr>
-				</table>
-			</div>
-			<div>
-				<span class="caption">編集モード時</span>
-				<table class="helptable">
-					<tr><th>Key</th><th>説明</th></tr>
-					<tr><td>Enter</td><td>確定</td></tr>
-					<tr><td>ESC</td> <td>編集破棄</td></tr>
-				</table>
-				
-			</div>
-			<div class="about">
-				<a href="https://roji3.jpn.org/disnote/" target="_blank" id="aboutlink">DisNOTE <span id="version"></span></a>
-			</div>
-		</div>
+			<div id="projectsetting" style="display:none">
+				<div class="group">
+					<div>
+						<span class="caption">プロジェクト名</span>
+					</div>
+					<div style="text-align: right;margin-bottom:3px;width:100%;">
+						<input type="text" id="projectname" style="width:300px" />
+					</div>
+				</div>
+				<div class="group">
+					<div>
+						<span class="caption">話者設定</span>
+					</div>
+					<table id="peopletable">
+						<tr>
+							<th>表示</th>
+							<th>音声ファイル名</th>
+							<th>名前</th>
+						</tr>
 
-		<div id="download" style="display:none">
-			<div class="group">
-				<div>
-					<span class="caption">ゆっくりMovieMaker4台本形式 ダウンロード</span>
+					</table>
 				</div>
-				<div class="dlbtn">
-					<span id="download_ymm4" class="download">
-						<span href="javascript:void(0)">ダウンロード</span>
-					</span>
-				</div>
+				<!-- <input type="button" id="switch_people" value="閉じる"> -->
 			</div>
-			<div class="group">
+
+			<div id="help" style="display:none">
 				<div>
-					<span class="caption">カスタムダウンロード</span>
-				
+					<span class="caption">通常</span>
 					<table class="helptable">
 						<tr>
-							<td>話者</td>
+							<th>Key</th>
+							<th>説明</th>
+						</tr>
+						<tr>
+							<td>Enter</td>
+							<td>選択モードON</td>
+						</tr>
+						<tr>
+							<td>Ctrl+S</td>
 							<td>
-								<label><input id="download_people" type="checkbox">出力する</label>
+								<div class="icon save"></div>編集データ保存
 							</td>
 						</tr>
 						<tr>
-							<td>ファイル名</td>
+							<td>D</td>
 							<td>
-								<label><input id="download_filename" type="checkbox">出力する</label>
+								<div class="icon download"></div>ダウンロード
 							</td>
 						</tr>
 						<tr>
-							<td>時間</td>
+							<td>P</td>
 							<td>
-								<label><input id="download_time"   type="checkbox">出力する</label>
+								<div class="icon people"></div>プロジェクト設定
 							</td>
 						</tr>
 						<tr>
-							<td>候補</td>
+							<td>F,F3</td>
 							<td>
-								<label><input name="download_text" type="radio" value="one">表示中の候補のみ出力する</label><br>
-								<label><input name="download_text" type="radio" value="all" checked>すべての候補を出力する</label>
+								<div class="icon search"></div>検索
 							</td>
 						</tr>
 						<tr>
-							<td>ヘッダ行</td>
+							<td>H</td>
 							<td>
-								<label><input id="download_header"   type="checkbox" >出力する</label>
+								<div class="icon help"></div>この画面を表示
 							</td>
 						</tr>
 						<tr>
-							<td>出力形式</td>
-							<td>
-								<label><input name="download_type" type="radio" value="csv" checked>CSV</label><br>
-								<label><input name="download_type" type="radio" value="txt">タブ区切りtext</label>
-							</td>
+							<td>Q</td>
+							<td><input type="checkbox" disabled checked>話者表示</td>
+						</tr>
+						<tr>
+							<td>S</td>
+							<td><input type="checkbox" disabled checked>認識できなかった行を表示</td>
+						</tr>
+						<tr>
+							<td>T</td>
+							<td><input type="checkbox" disabled checked>時刻表示 <span
+									style="font-size:small">※時刻情報がある場合のみ</span></td>
+						</tr>
+						<tr>
+							<td>A</td>
+							<td><input type="checkbox" disabled checked>連続再生</td>
 						</tr>
 					</table>
 				</div>
-				<div class="dlbtn">
-					<span id="download_custom" class="download">
-						<span href="javascript:void(0)">ダウンロード</span>
-					</span>
+				<div>
+					<span class="caption">選択モード</span>
+					<table class="helptable">
+						<tr>
+							<th>Key</th>
+							<th>説明</th>
+						</tr>
+						<tr>
+							<td>Enter,F2</td>
+							<td>編集モード開始</td>
+						</tr>
+						<tr>
+							<td>ESC</td>
+							<td>選択モードOFF</td>
+						</tr>
+						<tr>
+							<td>↑↓</td>
+							<td>行選択</td>
+						</tr>
+						<tr>
+							<td>←→</td>
+							<td>候補選択</td>
+						</tr>
+						<tr>
+							<td>Space</td>
+							<td>再生/停止</td>
+						</tr>
+						<tr>
+							<td>C</td>
+							<td>コピー</td>
+						</tr>
+					</table>
+				</div>
+				<div>
+					<span class="caption">編集モード時</span>
+					<table class="helptable">
+						<tr>
+							<th>Key</th>
+							<th>説明</th>
+						</tr>
+						<tr>
+							<td>Enter</td>
+							<td>確定</td>
+						</tr>
+						<tr>
+							<td>ESC</td>
+							<td>編集破棄</td>
+						</tr>
+					</table>
+
+				</div>
+				<div class="about">
+					<a href="https://roji3.jpn.org/disnote/" target="_blank" id="aboutlink">DisNOTE <span
+							id="version"></span></a>
 				</div>
 			</div>
-			<a id="download_dummy" style="display:none" >dummy</a>
-		</div>
 
-		<div id="draggable" style="display:none">
-			<span id="draggable_close">×</span>
-		</div>
-		
-		<div class="header">
-			<div id="save" class="push icon save" title="編集データ保存(Ctrl+S) (※ロードが完了するまでお待ちください)" style="opacity:0.5;cursor: auto;"></div>
-			<div id="open_download" class="push icon download" title="ダウンロード(D) (※ロードが完了するまでお待ちください)" style="opacity:0.5;cursor: auto;"></div>
-			<div id="open_projectsetting" class="push icon people" title="プロジェクト設定(P)" ></div><div id="peoplecount"></div>
-			<div id="search_icon" class="icon search"  ></div>
-			<div><input type="text" id="search"></div>
-			<div id="search_prev" class="push icon searchbutton"></div>
-			<div id="search_next" class="push icon searchbutton"></div>
-			<div id="open_help" class="push icon help" title="説明(H)" ></div>
-		</div>
-		<span id="search_result" ></span>
-
-		<div class="footer" >
-			<table id="foottable">
-				<tr>
-					<td >
-						<audio id="sound" class="sound" src="" controls></audio>
-					</td>
-					<td class="check">
-						<span class="check">
-							<label><input type="checkbox" id="showname" ><span>話者表示(Q)</span></label><br>
-							<label><input type="checkbox" id="notext"><span>認識できなかった行を表示(S)</span></label><br>
-							<label id="timelabel"><input type="checkbox" id="abstime" ><span>時刻表示(T)</span></label>
-							<label><input type="checkbox" id="autoplay"><span>連続再生(A)</span></label><br>
+			<div id="download" style="display:none">
+				<div class="group">
+					<div>
+						<span class="caption">ゆっくりMovieMaker4台本形式 ダウンロード</span>
+					</div>
+					<div class="dlbtn">
+						<span id="download_ymm4" class="download">
+							<span href="javascript:void(0)">ダウンロード</span>
 						</span>
-					</td>
-					<td class="orgmedia">
-						<audio id="orgmedia" controls></audio>
-					</td>
-				</tr>
+					</div>
+				</div>
+				<div class="group">
+					<div>
+						<span class="caption">カスタムダウンロード</span>
+
+						<table class="helptable">
+							<tr>
+								<td>話者</td>
+								<td>
+									<label><input id="download_people" type="checkbox">出力する</label>
+								</td>
+							</tr>
+							<tr>
+								<td>ファイル名</td>
+								<td>
+									<label><input id="download_filename" type="checkbox">出力する</label>
+								</td>
+							</tr>
+							<tr>
+								<td>時間</td>
+								<td>
+									<label><input id="download_time" type="checkbox">出力する</label>
+								</td>
+							</tr>
+							<tr>
+								<td>候補</td>
+								<td>
+									<label><input name="download_text" type="radio" value="one">表示中の候補のみ出力する</label><br>
+									<label><input name="download_text" type="radio" value="all"
+											checked>すべての候補を出力する</label>
+								</td>
+							</tr>
+							<tr>
+								<td>ヘッダ行</td>
+								<td>
+									<label><input id="download_header" type="checkbox">出力する</label>
+								</td>
+							</tr>
+							<tr>
+								<td>出力形式</td>
+								<td>
+									<label><input name="download_type" type="radio" value="csv" checked>CSV</label><br>
+									<label><input name="download_type" type="radio" value="txt">タブ区切りtext</label>
+								</td>
+							</tr>
+						</table>
+					</div>
+					<div class="dlbtn">
+						<span id="download_custom" class="download">
+							<span href="javascript:void(0)">ダウンロード</span>
+						</span>
+					</div>
+				</div>
+				<a id="download_dummy" style="display:none">dummy</a>
+			</div>
+
+			<div id="draggable" style="display:none">
+				<span id="draggable_close">×</span>
+			</div>
+
+			<div class="header">
+				<div id="save" class="push icon save" title="編集データ保存(Ctrl+S) (※ロードが完了するまでお待ちください)"
+					style="opacity:0.5;cursor: auto;"></div>
+				<div id="open_download" class="push icon download" title="ダウンロード(D) (※ロードが完了するまでお待ちください)"
+					style="opacity:0.5;cursor: auto;"></div>
+				<div id="open_projectsetting" class="push icon people" title="プロジェクト設定(P)"></div>
+				<div id="peoplecount"></div>
+				<div id="search_icon" class="icon search"></div>
+				<div><input type="text" id="search"></div>
+				<div id="search_prev" class="push icon searchbutton"></div>
+				<div id="search_next" class="push icon searchbutton"></div>
+				<div id="open_help" class="push icon help" title="説明(H)"></div>
+			</div>
+			<span id="search_result"></span>
+
+			<div class="footer">
+				<table id="foottable">
+					<tr>
+						<td>
+							<audio id="sound" class="sound" src="" controls></audio>
+						</td>
+						<td class="check">
+							<span class="check">
+								<label><input type="checkbox" id="showname"><span>話者表示(Q)</span></label><br>
+								<label><input type="checkbox" id="notext"><span>認識できなかった行を表示(S)</span></label><br>
+								<label id="timelabel"><input type="checkbox" id="abstime"><span>時刻表示(T)</span></label>
+								<label><input type="checkbox" id="autoplay"><span>連続再生(A)</span></label><br>
+							</span>
+						</td>
+						<td class="orgmedia">
+							<audio id="orgmedia" controls></audio>
+						</td>
+					</tr>
+				</table>
+			</div>
+
+			<div class="movieThumbnail">
+				<video id="movieThumbnail"></video>
+			</div>
+			<div id="movieDialogue" style="display:none">
+				<video id="movie" controls></video>
+			</div>
+
+			<table id="table" class="thead main">
+				<thead>
+					<tr id="head">
+						<th>時間</th>
+						<th class="name">話者</th>
+						<th></th>
+						<th></th>
+						<th></th>
+						<th>候補</th>
+					</tr>
+				</thead>
+				<tbody id="tbody">
+				</tbody>
+
 			</table>
+
+
+
 		</div>
-
-		<div class="movieThumbnail">
-			<video id="movieThumbnail"></video >
-		</div>
-		<div id="movieDialogue" style="display:none">
-			<video id="movie" controls></video >
-		</div>
-
-		<table id="table" class="thead main">
-			<thead>
-				<tr id="head">
-					<th >時間</th>
-					<th class="name">話者</th>
-					<th ></th>
-					<th ></th>
-					<th ></th>
-					<th >候補</th>
-				</tr>
-			</thead>
-			<tbody id="tbody">
-			</tbody>
-
-		</table>
-		
-
-		
 	</div>
-</div>
 </body>
+
 </html>
