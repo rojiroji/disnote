@@ -87,6 +87,9 @@ const createWindow = () => {
         return;
       }
     });
+
+    // 子プロセスを落とす
+    killChildProcess();
   });
 
   // メインウィンドウが閉じられたときの処理
@@ -285,13 +288,13 @@ function getProject(filePaths) {
 }
 
 /**
- * プロジェクトの編集ボタンを押下 → 編集開始。
+ * プロジェクトの編集ボタンを押下 → 編集開始。 // TODO：編集開始としたいが、現在は音声認識開始の処理になっている
  * js/main.js        reloadProjects -> editbutton.addEventListener('click',' ...
  * -> js/preload.js  editProject
  * -> index.js       editProject
-* @returns 
+ * @returns 
  */
-
+let childProcess = null;
 ipcMain.handle('editProject', (event, projectId) => {
   console.log("editProject:" + projectId);
 
@@ -302,7 +305,7 @@ ipcMain.handle('editProject', (event, projectId) => {
   let args = ["--files"].concat(project.files.map(file => {
     return file.fullpath;
   }));
-  const childProcess = spawn(env.engine, args, { encoding: env.encoding }); // エンジンのサブプロセスを起動
+  childProcess = spawn(env.engine, args, { encoding: env.encoding }); // エンジンのサブプロセスを起動
   let recfiles = [];
   let multitracks = false;
 
@@ -352,6 +355,7 @@ ipcMain.handle('editProject', (event, projectId) => {
     }
 
     mainWindow.webContents.send('engineClose', code); // engineClose(main.js)に渡す
+    //childProcess = null; // nullの代入は行わない。
   });
 
   /**
@@ -420,6 +424,25 @@ ipcMain.handle('editProject', (event, projectId) => {
   }
 });
 
+/**
+ * 音声認識エンジンキャンセル
+ * js/main.js        reloadProjects -> 音声認識のdialogのキャンセルボタン：click: function () 
+ * -> js/preload.js  cancelRecognize
+ * -> index.js       cancelRecognize
+*/
+ipcMain.handle('cancelRecognize', (event) => {
+  console.log("cancelRecognize");
+  killChildProcess();
+});
+
+/**
+ * 子プロセスを落とす
+ */
+function killChildProcess(){
+  if (childProcess != null) { // 既に落ちたプロセスに再度killしても副作用はないようなので状態は見ない
+    childProcess.kill('SIGTERM');  // TODO:SIGTERMで終了して、上手く落ちなかったらSIGKILLで落とす
+  }
+}
 
 /**
  * プロジェクトのfolderボタンを押下 → フォルダを開く。
