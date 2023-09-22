@@ -39,6 +39,8 @@ try {
   config.maximize = false;
   config.x = undefined;
   config.y = undefined;
+  config.isusewitai = false;
+  config.witaitoken = "";
 }
 
 // メインウィンドウ
@@ -298,7 +300,7 @@ function getProject(filePaths) {
  * @returns 
  */
 let childProcess = null;
-ipcMain.handle('recognizeProject', (event, projectId, witaitoken) => {
+ipcMain.handle('recognizeProject', (event, projectId, isusewitai,witaitoken) => {
   console.log("recognizeProject:" + projectId);
 
   // projectIdでproject取得
@@ -310,7 +312,9 @@ ipcMain.handle('recognizeProject', (event, projectId, witaitoken) => {
   }))
 
   // wit.aiのtoken(画面で指定していない場合は"none"を明示)
-  args.push("--witaitoken", witaitoken.length > 0 ? witaitoken : "none");
+  args.push("--witaitoken", isusewitai ? witaitoken : "none");
+  config.isusewitai = isusewitai;
+  config.witaitoken = witaitoken;
 
   childProcess = spawn(env.engine, args, { encoding: env.encoding }); // エンジンのサブプロセスを起動
   let recfiles = [];
@@ -466,6 +470,20 @@ ipcMain.handle('openProjectFolder', (event, projectId) => {
 
   // フォルダを開く
   shell.openPath(project.dir);
+});
+
+
+/**
+ * コンフィグの情報を取得
+ * js/main.js        window.addEventListener('load', async (event) =>
+ * -> js/preload.js  getConfig
+ * -> index.js       getConfig
+* @returns 
+ */
+ipcMain.handle('getConfig', (event) => {
+  console.log("getConfig:");
+
+  return config
 });
 
 /**

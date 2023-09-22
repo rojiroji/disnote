@@ -6,25 +6,24 @@ $(function () {
     title: "音声認識",
     buttons: [
       {
-        id:"start_recognize",
+        id: "start_recognize",
         text: "音声認識開始",
         click: async function () {
           // wit.aiのtoken（チェックボックスが入っていなければ無視）
-          let witaitoken = $("#witaitoken").val();
-          if ($("#engine_witai").prop("checked")) {
+          const witaitoken = $("#witaitoken").val();
+          const isusewitai = $("#engine_witai").prop("checked");
+          if (isusewitai) {
             if (witaitoken.length <= 0) {
               alert("wit.aiのトークンが入力されていません");
               return false;
             }
-          } else {
-            witaitoken = "";
           }
-          $("#start_recognize").prop("disabled",true);//二度押し防止 
+          $("#start_recognize").prop("disabled", true);//二度押し防止 
           $("#recognize_initialized").text("音声認識エンジンを起動しています…");
 
           rec_progress = {}; // 進捗リセット
           rec_process_running = true; // プロセス起動中のフラグを立てる
-          await window.api.recognizeProject(projectid, witaitoken); // 認識開始
+          await window.api.recognizeProject(projectid, isusewitai, witaitoken); // 認識開始
           updateCuiProgress("音声認識準備中");
         }
       },
@@ -59,13 +58,13 @@ $(function () {
 
 });
 
- // 音声認識エンジンキャンセル
-function cancelRecognize(){
-  if(rec_process_running){
-    if(confirm("音声認識を中断しますか？")){
-      $("#progress_button").text("閉じる").prop("disabled",true); // 二度押し防止
+// 音声認識エンジンキャンセル
+function cancelRecognize() {
+  if (rec_process_running) {
+    if (confirm("音声認識を中断しますか？")) {
+      $("#progress_button").text("閉じる").prop("disabled", true); // 二度押し防止
       window.api.cancelRecognize();
-    }else{
+    } else {
       return false;
     }
   }
@@ -91,6 +90,10 @@ let rec_process_running = false; // 音声認識エンジンの状況
  */
 window.addEventListener('load', async (event) => {
   reloadProjects(); // プロジェクト一覧描画
+  let config =  await window.api.getConfig(); // コンフィグ取得
+  console.log(config);
+  $("#engine_witai").prop("checked",config.isusewitai);
+  $("#witaitoken").val(config.witaitoken);
 
   /* callback登録 */
   window.api.on("engineStdout", engineStdout); // DisNOTEエンジンの標準出力を受け取る
@@ -141,7 +144,7 @@ async function reloadProjects() {
 
       // TODO：認識ボタン押下時に以下の処理
       $("#recognize").dialog("open");
-      $("#start_recognize").prop("disabled",false); // ボタンを復活させる
+      $("#start_recognize").prop("disabled", false); // ボタンを復活させる
       $("#recognize_initialized").text("　");
     });
   }
@@ -179,7 +182,7 @@ function checkedAudioFiles(tableHtml) {
   }
 
   $("#recognize").dialog("close"); // エンジン起動のダイアログを閉じる
-  $("#progress_button").text("音声認識中断").prop("disabled",false); // ボタンを復活させる
+  $("#progress_button").text("音声認識中断").prop("disabled", false); // ボタンを復活させる
   $("#progress").dialog("open"); // サイズがここで確定するのでダイアログを開く
   /*
     const windowWidth = window.innerWidth || document.documentElement.clientWidth || document.body.clientWidth;
@@ -286,17 +289,17 @@ function findIndexInArray(arr, target) {
 /**
  * プロジェクトの情報を書き換える
  */
-function rewriteProjectInfo(project){
+function rewriteProjectInfo(project) {
   console.log(project);
   console.log(`#project_times_${project.id} div.recognized span`);
   $(`#project_title_${project.id}`).text(project.title);
-  $(`#project_times_${project.id} div.recognized`).prop("title",project.recognized_time);
+  $(`#project_times_${project.id} div.recognized`).prop("title", project.recognized_time);
   $(`#project_times_${project.id} div.recognized span`).text(project.recognized_time.substring(0, 10)); // 日付のところ(yyyy/MM/dd)だけ切り取る
-  $(`#project_times_${project.id} div.modified`).prop("title",project.modified_time);
+  $(`#project_times_${project.id} div.modified`).prop("title", project.modified_time);
   $(`#project_times_${project.id} div.modified span`).text(project.modified_time.substring(0, 10)); // 日付のところ(yyyy/MM/dd)だけ切り取る
-  $(`#project_times_${project.id} div.access`).prop("title",project.access_time);
+  $(`#project_times_${project.id} div.access`).prop("title", project.access_time);
   $(`#project_times_${project.id} div.access span`).text(project.access_time.substring(0, 10)); // 日付のところ(yyyy/MM/dd)だけ切り取る
-  
+
 }
 // DisNOTEエンジンの標準出力を受け取る
 function engineStdout(logbody) {
@@ -312,12 +315,12 @@ function engineStderr(outputLine) {
 // DisNOTEエンジンの終了コードを受け取る
 function engineClose(code) {
   console.log("engine exit code=" + code);
-  $("#progress_button").text("閉じる").prop("disabled",false); // ただの閉じるボタンにする
-  if(code == 0){
+  $("#progress_button").text("閉じる").prop("disabled", false); // ただの閉じるボタンにする
+  if (code == 0) {
     alert("正常に音声認識が完了しました");
-  }else if(code == null){
+  } else if (code == null) {
     // キャンセル
-  }else{
+  } else {
     alert("音声認識が上手くいきませんでした。ログを見てみてください。\ncode=" + code);
   }
   rec_process_running = false; // とにかくプロセスは落ちた
