@@ -300,7 +300,7 @@ function getProject(filePaths) {
  * @returns 
  */
 let childProcess = null;
-ipcMain.handle('recognizeProject', (event, projectId, isusewitai,witaitoken) => {
+ipcMain.handle('recognizeProject', (event, projectId, isusewitai, witaitoken) => {
   console.log("recognizeProject:" + projectId);
 
   // projectIdでproject取得
@@ -409,19 +409,26 @@ ipcMain.handle('recognizeProject', (event, projectId, isusewitai,witaitoken) => 
             .replaceAll("${track}", multitracks ? "track" + (recfile.trackindex + 1) : "")
             .replaceAll("${index}", recfile.index);
         }
+        tableHtml += '<tr class="main"><td colspan="3">最終処理</td>' +
+          '<td class="progress"><div class="progress-container"><progress id="progress_last" value="0" max="100"></progress>' +
+          '<div class="custom-text" id="percent_last">0.0%</div></div></td>';
 
         tableHtml += '</table>';
         mainWindow.webContents.send('checkedAudioFiles', tableHtml);
-        mainWindow.webContents.send('updateCuiProgress', "音声認識処理中");
+        mainWindow.webContents.send('updateCuiProgress', "音声認識処理中"); 21
+        mainWindow.webContents.send('updateLastProgress', 0);
         break;
       case "merge_mp3": // 音声マージ
         mainWindow.webContents.send('updateCuiProgress', "音声ファイルマージ中");
+        mainWindow.webContents.send('updateLastProgress', 50);
         break;
       case "merge_end": // 処理終了
         mainWindow.webContents.send('updateCuiProgress', "音声認識完了");
+        mainWindow.webContents.send('updateLastProgress', 100);
+
         project.result = info.result;
         project.recognized_time = timeToLocalString(new Date()); // 認識結果登録
-        mainWindow.webContents.send('rewriteProjectInfo',project);
+        mainWindow.webContents.send('rewriteProjectInfo', project);
         break;
       default: // その他の進捗
         if (typeof info.index !== 'undefined') { // 特定の音声ファイルの進捗

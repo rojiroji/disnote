@@ -90,9 +90,9 @@ let rec_process_running = false; // 音声認識エンジンの状況
  */
 window.addEventListener('load', async (event) => {
   reloadProjects(); // プロジェクト一覧描画
-  let config =  await window.api.getConfig(); // コンフィグ取得
+  let config = await window.api.getConfig(); // コンフィグ取得
   console.log(config);
-  $("#engine_witai").prop("checked",config.isusewitai);
+  $("#engine_witai").prop("checked", config.isusewitai);
   $("#witaitoken").val(config.witaitoken);
 
   /* callback登録 */
@@ -103,6 +103,7 @@ window.addEventListener('load', async (event) => {
   window.api.on("updateCuiProgress", updateCuiProgress); // CUIの進捗文字列表示
   window.api.on("checkedAudioFiles", checkedAudioFiles); // 音声ファイルの進捗テーブルの作成
   window.api.on("updateAudioFileProgress", updateAudioFileProgress); // 音声ファイルの進捗テーブルの更新
+  window.api.on("updateLastProgress", updateLastProgress); // 最終処理の進捗テーブルの更新
   window.api.on("rewriteProjectInfo", rewriteProjectInfo); // プロジェクトの情報を再表示
 
 });
@@ -192,6 +193,7 @@ function checkedAudioFiles(tableHtml) {
   console.log(`ウィンドウの高さ: ${windowHeight}`);
   */
 }
+
 
 // 音声ファイルの進捗テーブルの更新
 function updateAudioFileProgress(info) {
@@ -287,11 +289,18 @@ function findIndexInArray(arr, target) {
 }
 
 /**
+ * 最終処理の進捗を更新する
+ */
+function updateLastProgress(progress) {
+  document.querySelector(`#progress_last`).value = progress;
+  document.querySelector(`#percent_last`).innerText = progress.toFixed(1) + "%";
+}
+
+/**
  * プロジェクトの情報を書き換える
  */
 function rewriteProjectInfo(project) {
   console.log(project);
-  console.log(`#project_times_${project.id} div.recognized span`);
   $(`#project_title_${project.id}`).text(project.title);
   $(`#project_times_${project.id} div.recognized`).prop("title", project.recognized_time);
   $(`#project_times_${project.id} div.recognized span`).text(project.recognized_time.substring(0, 10)); // 日付のところ(yyyy/MM/dd)だけ切り取る
