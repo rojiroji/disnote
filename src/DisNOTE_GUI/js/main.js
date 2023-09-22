@@ -1,17 +1,76 @@
 $(function () {
+
+  $("#recognize").dialog({ // 認識設定
+    autoOpen: false,
+    modal: true,
+    title: "音声認識",
+    buttons: [
+      {
+        id:"start_recognize",
+        text: "音声認識開始",
+        click: async function () {
+          // wit.aiのtoken（チェックボックスが入っていなければ無視）
+          let witaitoken = $("#witaitoken").val();
+          if ($("#engine_witai").prop("checked")) {
+            if (witaitoken.length <= 0) {
+              alert("wit.aiのトークンが入力されていません");
+              return false;
+            }
+          } else {
+            witaitoken = "";
+          }
+          $("#start_recognize").prop("disabled",true);//二度押し防止 
+          $("#recognize_initialized").text("音声認識エンジンを起動しています…");
+
+          rec_progress = {}; // 進捗リセット
+          rec_process_running = true; // プロセス起動中のフラグを立てる
+          await window.api.editProject(projectid, witaitoken); // 認識開始（TODO：いま関数名がおかしい）
+          updateCuiProgress("音声認識準備中");
+        }
+      },
+      {
+        text: "キャンセル",
+        click: async function () {
+          $(this).dialog("close");
+        }
+      },
+    ],
+    width: "500",
+  });
+
   $("#progress").dialog({ // 認識進捗
     autoOpen: false,
     modal: true,
     title: "音声認識",
-    closeOnEscape: true,
-    close: function (event, ui) { // ダイアログを閉じるときの処理
-      
-
+    buttons: [
+      {
+        text: "", // ボタン名は動的に変える
+        id: "progress_button",
+        click: async function () {
+          cancelRecognize();
+        }
+      },
+    ],
+    beforeClose: function (event, ui) { // ダイアログを閉じるときの処理
+      return cancelRecognize();
     },
-    position:{ my: "center", at: "center top+200px"}, // 何故か縦の中央に来てくれないのでこの値を設定
     width: "500",
   });
+
 });
+
+ // 音声認識エンジンキャンセル
+function cancelRecognize(){
+  if(rec_process_running){
+    if(confirm("音声認識を中断しますか？")){
+      $("#progress_button").text("閉じる").prop("disabled",true); // 二度押し防止
+      window.api.cancelRecognize();
+    }else{
+      return false;
+    }
+  }
+  return true;
+}
 /*
 document.addEventListener('drop', (e) => {
   e.preventDefault();
@@ -25,6 +84,7 @@ document.addEventListener('drop', (e) => {
 */
 
 let rec_progress; // 音声認識の進捗 
+let rec_process_running = false; // 音声認識エンジンの状況
 
 /**
  * 起動時
@@ -65,6 +125,7 @@ document.addEventListener('drop', async (e) => {
 /**
  * プロジェクト一覧再描画
  */
+let projectid
 async function reloadProjects() {
   let table = await window.api.getProjectsTable();
   document.querySelector('#projects').innerHTML = table;
@@ -74,15 +135,14 @@ async function reloadProjects() {
   for (const editbutton of editbuttons) {
     // console.log("projectid=" + editbutton.getAttribute("projectid"));
     editbutton.addEventListener('click', async (e) => {
-      let projectid = e.currentTarget.getAttribute("projectid"); // ボタンにはprojetid属性がついている
+      projectid = e.currentTarget.getAttribute("projectid"); // ボタンにはprojetid属性がついている
       //console.log("editbutton click:" + projectid);
 
-      // TODO：認識ボタン押下時に以下の処理
-      rec_progress = {}; // 進捗リセット
-      await window.api.editProject(projectid);
-      updateCuiProgress("音声認識準備中");
-      $("#progress").dialog("open");
 
+      // TODO：認識ボタン押下時に以下の処理
+      $("#recognize").dialog("open");
+      $("#start_recognize").prop("disabled",false); // ボタンを復活させる
+      $("#recognize_initialized").text("　");
     });
   }
 
@@ -111,6 +171,23 @@ function updateCuiProgress(text) {
 // 音声ファイルの進捗テーブルの作成
 function checkedAudioFiles(tableHtml) {
   document.querySelector('#progress_table').innerHTML = tableHtml;
+
+  // witaiを使わない場合は進捗を進めないのでその旨を表示
+  if (!$("#engine_witai").prop("checked")) {
+    $("div.witaiprogress").text("skip");
+    $("progress.witaiprogress").val(100);
+  }
+
+  $("#recognize").dialog("close"); // エンジン起動のダイアログを閉じる
+  $("#progress_button").text("音声認識中断").prop("disabled",false); // ボタンを復活させる
+  $("#progress").dialog("open"); // サイズがここで確定するのでダイアログを開く
+  /*
+    const windowWidth = window.innerWidth || document.documentElement.clientWidth || document.body.clientWidth;
+  const windowHeight = window.innerHeight || document.documentElement.clientHeight || document.body.clientHeight;
+  
+  console.log(`ウィンドウの幅: ${windowWidth}`);
+  console.log(`ウィンドウの高さ: ${windowHeight}`);
+  */
 }
 
 // 音声ファイルの進捗テーブルの更新
@@ -142,6 +219,7 @@ function updateAudioFileProgress(info) {
     percent_tag = document.querySelector(`#percent_main_${index}`);
     thread = "main";
   }
+
 
   /**
    * rec_progressのフォーマット
@@ -220,5 +298,7 @@ function engineStderr(outputLine) {
 
 // DisNOTEエンジンの終了コードを受け取る
 function engineClose(code) {
-  //alert("engine exit code=" + code);
+  console.log("engine exit code=" + code);
+  rec_process_running = false; // とにかくプロセスは落ちた
+  $("#progress_button").text("閉じる").prop("disabled",false); // ただの閉じるボタンにする
 }

@@ -195,7 +195,7 @@ ipcMain.handle('getProjectsTable', (event) => {
       .replaceAll("${item.recognized_time}", item.recognized_time)
       .replaceAll("${item.modified_time}", item.modified_time)
       .replaceAll("${item.access_time}", item.access_time)
-      .replaceAll("${item.recognized_date}", item.recognized_time.substring(0, 10))
+      .replaceAll("${item.recognized_date}", item.recognized_time.substring(0, 10)) // 日付のところ(yyyy/MM/dd)だけ切り取る
       .replaceAll("${item.modified_date}", item.modified_time.substring(0, 10))
       .replaceAll("${item.access_date}", item.access_time.substring(0, 10))
       .replaceAll("${item.id}", item.id)
@@ -298,7 +298,7 @@ function getProject(filePaths) {
  * @returns 
  */
 let childProcess = null;
-ipcMain.handle('editProject', (event, projectId) => {
+ipcMain.handle('editProject', (event, projectId, witaitoken) => {
   console.log("editProject:" + projectId);
 
   // projectIdでproject取得
@@ -307,7 +307,11 @@ ipcMain.handle('editProject', (event, projectId) => {
   // projectに登録されたfullpathを取得
   let args = ["--files"].concat(project.files.map(file => {
     return file.fullpath;
-  }));
+  }))
+  
+  // wit.aiのtoken(画面で指定していない場合は"none"を明示)
+  args.push("--witaitoken", witaitoken.length > 0 ? witaitoken : "none");
+  
   childProcess = spawn(env.engine, args, { encoding: env.encoding }); // エンジンのサブプロセスを起動
   let recfiles = [];
   let multitracks = false;
@@ -358,7 +362,7 @@ ipcMain.handle('editProject', (event, projectId) => {
     }
 
     mainWindow.webContents.send('engineClose', code); // engineClose(main.js)に渡す
-    //childProcess = null; // nullの代入は行わない。
+    //childProcess = null; // 非同期でおかしくなるかもしれないのでnullにしない
   });
 
   /**
