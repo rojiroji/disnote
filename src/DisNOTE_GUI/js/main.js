@@ -47,16 +47,14 @@ $(function () {
         text: "", // ボタン名は動的に変える
         id: "progress_button",
         click: async function () {
-          if(cancelRecognize()){
-            $(this).dialog("close");
-          }
+          $(this).dialog("close");
         }
       },
     ],
     beforeClose: function (event, ui) { // ダイアログを閉じるときの処理
       return cancelRecognize();
     },
-    width: "500",
+    width: "640",
   });
 
 });
@@ -314,6 +312,13 @@ function engineStderr(outputLine) {
 // DisNOTEエンジンの終了コードを受け取る
 function engineClose(code) {
   console.log("engine exit code=" + code);
-  rec_process_running = false; // とにかくプロセスは落ちた
   $("#progress_button").text("閉じる").prop("disabled",false); // ただの閉じるボタンにする
+  if(code == 0){
+    alert("正常に音声認識が完了しました");
+  }else if(code == null){
+    // キャンセル
+  }else{
+    alert("音声認識が上手くいきませんでした。ログを見てみてください。\ncode=" + code);
+  }
+  rec_process_running = false; // とにかくプロセスは落ちた
 }
