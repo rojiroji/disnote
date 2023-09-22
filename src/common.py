@@ -51,6 +51,7 @@ def logForGui(logger, stage, input_file=None, info=None, progress=0, max=None):
     outinfo["progress"] = progress
     outinfo["max"] = max
     logger.info(LOG_FOR_GUI + json.dumps(outinfo))
+    logger.handlers[0].flush() # 標準出力を強制的にflush
 
 
 # 認識対象の音声ファイル情報のmap（key=ファイル名 setAudioFileInfo
@@ -513,7 +514,7 @@ def getLogger(srcfile):
     )
 
     # loggerに2つのハンドラを設定
-    logger.addHandler(handler1)
+    logger.addHandler(handler1) # 0番目は標準出力であること（logForGuiでflushするため）
     logger.addHandler(handler2)
 
     return logger
