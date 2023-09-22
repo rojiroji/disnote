@@ -11,7 +11,7 @@ contextBridge.exposeInMainWorld(
   getProjectsTable: () => ipcRenderer.invoke("getProjectsTable") // プロジェクトリストのtableを取得
     .then(result => result)
     .catch(err => console.log(err)),
-  editProject: (projectId,witaitoken) => ipcRenderer.invoke("editProject", projectId, witaitoken) // プロジェクト編集
+  recognizeProject: (projectId,witaitoken) => ipcRenderer.invoke("recognizeProject", projectId, witaitoken) // 音声認識開始
     .then(result => result)
     .catch(err => console.log(err)),
   openProjectFolder: (projectId) => ipcRenderer.invoke("openProjectFolder", projectId) // プロジェクトのファイルが置いてあるフォルダを開く
