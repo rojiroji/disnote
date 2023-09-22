@@ -1,0 +1,30 @@
+<tr class="main">
+    <td class="orgfile" rowspan="3">${orgfile}</td>
+    <td class="track" rowspan="3">${track}</td>
+    <td class="stage" id="stage_${index}">${track}</td>
+    <td class="progress main">
+        <div class="progress-container">
+            <progress id="progress_main_${index}" value="0" max="100"></progress>
+            <div class="custom-text" id="percent_main_${index}" >0.0%</div>
+        </div>
+
+    </td>
+</tr>
+<tr>
+    <td class="enginename">　音声認識(Google)</td>
+    <td class="progress google">
+        <div class="progress-container">
+            <progress id="progress_google_${index}" value="0" max="100"></progress>
+            <div class="custom-text" id="percent_google_${index}">0.0%</div>
+        </div>
+    </td>
+</tr>
+<tr class="progress_witai">
+    <td class="enginename">　音声認識(wit.ai)</td>
+    <td class="progress witai">
+        <div class="progress-container">
+            <progress id="progress_witai_${index}" class="witaiprogress" value="0" max="100"></progress>
+            <div class="custom-text witaiprogress" id="percent_witai_${index}">0.0%</div>
+        </div> 
+    </td>
+</tr>

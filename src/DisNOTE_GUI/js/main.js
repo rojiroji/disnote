@@ -24,7 +24,7 @@ $(function () {
 
           rec_progress = {}; // 進捗リセット
           rec_process_running = true; // プロセス起動中のフラグを立てる
-          await window.api.editProject(projectid, witaitoken); // 認識開始（TODO：いま関数名がおかしい）
+          await window.api.recognizeProject(projectid, witaitoken); // 認識開始
           updateCuiProgress("音声認識準備中");
         }
       },
@@ -47,7 +47,9 @@ $(function () {
         text: "", // ボタン名は動的に変える
         id: "progress_button",
         click: async function () {
-          cancelRecognize();
+          if(cancelRecognize()){
+            $(this).dialog("close");
+          }
         }
       },
     ],
@@ -100,7 +102,7 @@ window.addEventListener('load', async (event) => {
   window.api.on("updateCuiProgress", updateCuiProgress); // CUIの進捗文字列表示
   window.api.on("checkedAudioFiles", checkedAudioFiles); // 音声ファイルの進捗テーブルの作成
   window.api.on("updateAudioFileProgress", updateAudioFileProgress); // 音声ファイルの進捗テーブルの更新
-
+  window.api.on("rewriteProjectInfo", rewriteProjectInfo); // プロジェクトの情報を再表示
 
 });
 
@@ -271,8 +273,6 @@ function updateAudioFileProgress(info) {
     percent_tag.innerText = rec_progress[index][thread]["progress"][info.stage].toFixed(1) + "%";
   }
   console.log(rec_progress);
-
-
 }
 
 // 文字列の配列からindexを返す
@@ -285,6 +285,21 @@ function findIndexInArray(arr, target) {
   return -1; // 文字列が見つからなかった場合、-1を返す
 }
 
+/**
+ * プロジェクトの情報を書き換える
+ */
+function rewriteProjectInfo(project){
+  console.log(project);
+  console.log(`#project_times_${project.id} div.recognized span`);
+  $(`#project_title_${project.id}`).text(project.title);
+  $(`#project_times_${project.id} div.recognized`).prop("title",project.recognized_time);
+  $(`#project_times_${project.id} div.recognized span`).text(project.recognized_time.substring(0, 10)); // 日付のところ(yyyy/MM/dd)だけ切り取る
+  $(`#project_times_${project.id} div.modified`).prop("title",project.modified_time);
+  $(`#project_times_${project.id} div.modified span`).text(project.modified_time.substring(0, 10)); // 日付のところ(yyyy/MM/dd)だけ切り取る
+  $(`#project_times_${project.id} div.access`).prop("title",project.access_time);
+  $(`#project_times_${project.id} div.access span`).text(project.access_time.substring(0, 10)); // 日付のところ(yyyy/MM/dd)だけ切り取る
+  
+}
 // DisNOTEエンジンの標準出力を受け取る
 function engineStdout(logbody) {
   document.querySelector('#enginestdout').innerText = logbody; // TODO

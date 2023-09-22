@@ -1,5 +1,5 @@
 <tr class="title">
-    <td colspan="4" class="title left">
+    <td colspan="4" class="title left" id="project_title_${item.id}">
         ${item.title}
     </td>
     <td class="buttons big-icon" rowspan="2">
@@ -39,14 +39,14 @@
     <td class="left">
         ${name_o}
     </td>
-    <td class="times">
-        <div class="icon time item" title="認識日時：${item.recognized_time}">
+    <td class="times" id="project_times_${item.id}">
+        <div class="icon time item recognized" title="認識日時：${item.recognized_time}">
             <img src="img/recognize.png"><span>${item.recognized_date}</span>
         </div>
-        <div class="icon time item" title="編集日時：${item.modified_time}">
+        <div class="icon time item modified" title="編集日時：${item.modified_time}">
             <img src="img/edit.png"><span>${item.modified_date}</span>
         </div>
-        <div class="icon time item" title="最終閲覧日時：${item.access_time}">
+        <div class="icon time item access" title="最終閲覧日時：${item.access_time}">
             <img src="img/show.png"><span>${item.access_date}</span>
         </div>
     </td>

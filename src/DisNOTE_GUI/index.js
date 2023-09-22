@@ -291,15 +291,15 @@ function getProject(filePaths) {
 }
 
 /**
- * プロジェクトの編集ボタンを押下 → 編集開始。 // TODO：編集開始としたいが、現在は音声認識開始の処理になっている
+ * プロジェクトの音声認識ボタンを押下 → 音声認識開始
  * js/main.js        reloadProjects -> editbutton.addEventListener('click',' ...
- * -> js/preload.js  editProject
- * -> index.js       editProject
+ * -> js/preload.js  recognizeProject
+ * -> index.js       recognizeProject
  * @returns 
  */
 let childProcess = null;
-ipcMain.handle('editProject', (event, projectId, witaitoken) => {
-  console.log("editProject:" + projectId);
+ipcMain.handle('recognizeProject', (event, projectId, witaitoken) => {
+  console.log("recognizeProject:" + projectId);
 
   // projectIdでproject取得
   const project = projects.find((project) => project.id == projectId);
@@ -308,10 +308,10 @@ ipcMain.handle('editProject', (event, projectId, witaitoken) => {
   let args = ["--files"].concat(project.files.map(file => {
     return file.fullpath;
   }))
-  
+
   // wit.aiのtoken(画面で指定していない場合は"none"を明示)
   args.push("--witaitoken", witaitoken.length > 0 ? witaitoken : "none");
-  
+
   childProcess = spawn(env.engine, args, { encoding: env.encoding }); // エンジンのサブプロセスを起動
   let recfiles = [];
   let multitracks = false;
@@ -330,7 +330,7 @@ ipcMain.handle('editProject', (event, projectId, witaitoken) => {
       const guilogpos = outputLine.indexOf(GUIMARK);
       if (guilogpos > -1) {
         let logbody = outputLine.slice(guilogpos + GUIMARK.length)// ログ本体を抽出
-        updateProgress(logbody, recfiles, multitracks);
+        updateProgress(project, logbody, recfiles, multitracks);
         //mainWindow.webContents.send('engineStdout', logbody); // engineStdout(main.js)に渡す
       }
     }
@@ -353,12 +353,8 @@ ipcMain.handle('editProject', (event, projectId, witaitoken) => {
     console.log(`Child process exited with code ${code} / projectId = ${projectId}`);
 
     if (code == 0) { // 成功時
-      project.recognized_time = timeToLocalString(new Date());
-
       // 更新したのでプロジェクトリスト出力
       writeProjects();
-
-      // TODO 再描画
     }
 
     mainWindow.webContents.send('engineClose', code); // engineClose(main.js)に渡す
@@ -391,7 +387,7 @@ ipcMain.handle('editProject', (event, projectId, witaitoken) => {
    * @param {*} logbody ログ(json形式であること)
    * @param {*} recfiles  音声ファイルの情報の一覧
    */
-  function updateProgress(logbody, recfiles, multitracks) {
+  function updateProgress(project, logbody, recfiles, multitracks) {
     console.log("updateProgress:" + logbody);
     const info = JSON.parse(logbody); // TODO parseできなかった場合
     switch (info.stage) {
@@ -419,6 +415,9 @@ ipcMain.handle('editProject', (event, projectId, witaitoken) => {
         break;
       case "merge_end": // 処理終了
         mainWindow.webContents.send('updateCuiProgress', "音声認識完了");
+        project.result = info.result;
+        project.recognized_time = timeToLocalString(new Date()); // 認識結果登録
+        mainWindow.webContents.send('rewriteProjectInfo',project);
         break;
       default: // その他の進捗
         if (typeof info.index !== 'undefined') { // 特定の音声ファイルの進捗
