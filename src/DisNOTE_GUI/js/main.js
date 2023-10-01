@@ -19,11 +19,11 @@ $(function () {
             }
           }
           $("#start_recognize").prop("disabled", true);//二度押し防止 
-          $("#recognize_initialized").text("音声認識エンジンを起動しています…");
+          $("#recognize_initialized").text("音声認識の準備中…");
 
           rec_progress = {}; // 進捗リセット
           rec_process_running = true; // プロセス起動中のフラグを立てる
-          await window.api.recognizeProject(projectid, isusewitai, witaitoken); // 認識開始
+          window.api.recognizeProject(projectid, isusewitai, witaitoken); // 認識開始
           updateCuiProgress("音声認識準備中");
         }
       },
