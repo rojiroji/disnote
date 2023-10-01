@@ -41,6 +41,8 @@ try {
   config.y = undefined;
   config.isusewitai = false;
   config.witaitoken = "";
+  config.project_sort_key = "id";
+  config.project_sort_order = "desc"; // ソート順のデフォルトは降順
 }
 
 // メインウィンドウ
@@ -177,8 +179,31 @@ function writeProjects() {
 * @returns 
  */
 ipcMain.handle('getProjectsTable', (event) => {
+  // 選択したソートキーでソート
+  projects.sort((a, b) => {
+    if (!config.project_sort_key) {
+      config.project_sort_key = "id";
+    }
+    const valA = a[config.project_sort_key];
+    const valB = b[config.project_sort_key];
+    let ret = 0;
+
+    if (valA < valB) {
+      ret = -1;
+    }
+    if (valA > valB) {
+      ret = 1;
+    }
+    if (ret) {
+      return ret * (config.project_sort_order == "desc" ? 1 : -1);
+    }
+    return (a["id"] - b["id"]) * (config.project_sort_order == "desc" ? 1 : -1);
+  });
+
   let tableHtml = '<table class="projects">';
-  tableHtml += template_projects_header.replaceAll("${order}", "↓");
+
+  // ヘッダ(ソート順など)
+  tableHtml += template_projects_header;
 
   // テーブルボディを作成
   for (const item of projects) {
@@ -490,6 +515,23 @@ ipcMain.handle('openProjectFolder', (event, projectId) => {
 ipcMain.handle('getConfig', (event) => {
   console.log("getConfig:");
 
+  return config
+});
+
+/**
+ * コンフィグの情報を更新
+ * js/main.js        reloadProjects =>
+ * -> js/preload.js  updateConfig
+ * -> index.js       updateConfig
+* @returns 
+ */
+ipcMain.handle('updateConfig', (event, project_sort_key, switch_project_sort_order) => {
+  console.log("updateConfig:");
+
+  config.project_sort_key = project_sort_key;
+  if (switch_project_sort_order) {
+    config.project_sort_order = (config.project_sort_order == "desc") ? "asc" : "desc";
+  }
   return config
 });
 

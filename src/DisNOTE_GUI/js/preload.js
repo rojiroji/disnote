@@ -8,6 +8,9 @@ contextBridge.exposeInMainWorld(
   getConfig: () => ipcRenderer.invoke("getConfig") // コンフィグを取得
     .then(result => result)
     .catch(err => console.log(err)),
+  updateConfig: (project_sort_key, switch_project_sort_order) => ipcRenderer.invoke("updateConfig", project_sort_key, switch_project_sort_order) // コンフィグを更新
+    .then(result => result)
+    .catch(err => console.log(err)),
   dropMediaFiles: (filePaths) => ipcRenderer.invoke("dropMediaFiles", filePaths) // 音声ファイル読み込み
     .then(result => result)
     .catch(err => console.log(err)),

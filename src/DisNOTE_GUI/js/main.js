@@ -90,6 +90,7 @@ let rec_process_running = false; // 音声認識エンジンの状況
  */
 window.addEventListener('load', async (event) => {
   reloadProjects(); // プロジェクト一覧描画
+
   let config = await window.api.getConfig(); // コンフィグ取得
   console.log(config);
   $("#engine_witai").prop("checked", config.isusewitai);
@@ -134,6 +135,18 @@ async function reloadProjects() {
   let table = await window.api.getProjectsTable();
   document.querySelector('#projects').innerHTML = table;
 
+  let config = await window.api.getConfig(); // コンフィグ取得
+  $("#project_sort_key").val(config.project_sort_key); // ソート条件再生成
+  $("#project_sort_order").text(config.project_sort_order == "desc" ? "↑" : "↓");
+
+  document.querySelector('#project_sort_key').addEventListener('change', async (e) => { // ソート条件変更
+    await window.api.updateConfig($("#project_sort_key").val(), false);
+    await reloadProjects();
+  });
+  document.querySelector('#project_sort_order').addEventListener('click', async (e) => { // 降順/照準変更
+    await window.api.updateConfig($("#project_sort_key").val(), true);
+    await reloadProjects();
+  });
   // プロジェクトごとの編集ボタンにイベントを追加
   const editbuttons = document.querySelectorAll("button.edit");
   for (const editbutton of editbuttons) {
