@@ -60,6 +60,7 @@ const createWindow = () => {
       // レンダラーのグローバル（window や document など）と Node.js 環境の両方にアクセスできます。
       preload: path.join(__dirname, "js/preload.js"),
     },
+    icon: __dirname + '/favicon.ico'
   });
   mainWindow.setMenuBarVisibility(false); // メニューバー非表示
   if (config.maximize) {
