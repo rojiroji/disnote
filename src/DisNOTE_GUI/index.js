@@ -266,9 +266,9 @@ function createProjectJsonData(filePaths) {
   const jsonData = {
     id: 'id',
     created_time: localTimeString,
-    recognized_time: "未認識",
-    modified_time: "未認識",
-    access_time: "未認識",
+    recognized_time: "-",
+    modified_time: "-",
+    access_time: "-",
 
     title: localTimeString,
     status: 'recognizing',
