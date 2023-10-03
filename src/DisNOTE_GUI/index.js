@@ -148,6 +148,7 @@ ipcMain.handle('dropMediaFiles', (event, filePaths) => {
     projects.push(jsonData);
   } else {
     project.modified_time = new Date().toISOString();
+    project.enabled = true; // 無効化していたプロジェクトを復活させる
   }
 
   // プロジェクトリスト出力
@@ -208,6 +209,9 @@ ipcMain.handle('getProjectsTable', (event) => {
 
   // テーブルボディを作成
   for (const item of projects) {
+    if (!item.enabled) {
+      continue; // 無効化したプロジェクトは表示しない
+    }
     let name_e = "";//偶数番号の名前
     let name_o = "";//奇数番号の名前
     for (const [index, file] of item.files.entries()) {
@@ -505,6 +509,24 @@ ipcMain.handle('openProjectFolder', (event, projectId) => {
   shell.openPath(project.dir);
 });
 
+/**
+ * プロジェクト無効化（画面では"削除"という表現をしているが、実際はenabledフラグを落としているだけ）
+ * js/main.js        document.querySelector('#disable_project').addEventListener('click',
+ * -> js/preload.js  disableProject
+ * -> index.js       disableProject
+* @returns 
+ */
+
+ipcMain.handle('disableProject', (event, projectId) => {
+  console.log("disableProject:" + projectId);
+
+  // projectIdでproject取得
+  const project = projects.find((project) => project.id == projectId);
+  project.enabled = false; // 無効化
+
+  // プロジェクトリスト出力
+  writeProjects();
+});
 
 /**
  * コンフィグの情報を取得

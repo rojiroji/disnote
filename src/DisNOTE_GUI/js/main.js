@@ -106,7 +106,6 @@ window.addEventListener('load', async (event) => {
   window.api.on("updateAudioFileProgress", updateAudioFileProgress); // 音声ファイルの進捗テーブルの更新
   window.api.on("updateLastProgress", updateLastProgress); // 最終処理の進捗テーブルの更新
   window.api.on("rewriteProjectInfo", rewriteProjectInfo); // プロジェクトの情報を再表示
-
 });
 
 /**
@@ -147,6 +146,16 @@ async function reloadProjects() {
     await window.api.updateConfig($("#project_sort_key").val(), true);
     await reloadProjects();
   });
+
+  document.querySelector('#disable_project').addEventListener('click', async (e) => { // プロジェクト無効化
+    if (confirm("プロジェクトを削除しますか？\nもう一度同じファイルを登録すると復活します")) {
+      await window.api.disableProject(projectid);
+      alert("プロジェクトを削除しました");
+      $("#recognize").dialog("close");
+      await reloadProjects();
+    }
+  });
+
   // プロジェクトごとの編集ボタンにイベントを追加
   const editbuttons = document.querySelectorAll("button.edit");
   for (const editbutton of editbuttons) {

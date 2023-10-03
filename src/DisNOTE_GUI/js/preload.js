@@ -23,6 +23,9 @@ contextBridge.exposeInMainWorld(
   openProjectFolder: (projectId) => ipcRenderer.invoke("openProjectFolder", projectId) // プロジェクトのファイルが置いてあるフォルダを開く
     .then(result => result)
     .catch(err => console.log(err)),
+  disableProject: (projectId) => ipcRenderer.invoke("disableProject", projectId) // プロジェクト無効化
+    .then(result => result)
+    .catch(err => console.log(err)),
   cancelRecognize: () => ipcRenderer.invoke("cancelRecognize") // 音声認識エンジンキャンセル
     .then(result => result)
     .catch(err => console.log(err)),
