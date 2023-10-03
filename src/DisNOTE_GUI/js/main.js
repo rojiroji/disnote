@@ -162,10 +162,15 @@ async function reloadProjects() {
     // console.log("projectid=" + editbutton.getAttribute("projectid"));
     editbutton.addEventListener('click', async (e) => {
       projectid = e.currentTarget.getAttribute("projectid"); // ボタンにはprojetid属性がついている
-      //console.log("editbutton click:" + projectid);
+      
+    });
+  }
 
-
-      // TODO：認識ボタン押下時に以下の処理
+  // プロジェクトごとのrecognizeボタンにイベントを追加
+  const recognizebuttons = document.querySelectorAll("button.recognize");
+  for (const recognizebutton of recognizebuttons) {
+    recognizebutton.addEventListener('click', async (e) => {
+      projectid = e.currentTarget.getAttribute("projectid"); // ボタンにはprojetid属性がついている
       $("#recognize").dialog("open");
       $("#start_recognize").prop("disabled", false); // ボタンを復活させる
       $("#recognize_initialized").text("　");
