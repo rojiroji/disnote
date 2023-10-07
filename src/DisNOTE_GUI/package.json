@@ -7,7 +7,7 @@
   "scripts": {
     "start": "set ELECTRON_DEBUG=true&electron .",
     "release_start": "electron .",
-    "build_win": "electron-packager ./ DisNOTE --overwrite --platform=win32 arch=x64 --ignore=\"node_modules\""
+    "build_win": "electron-packager ./ DisNOTE --overwrite --platform=win32 arch=x64 --icon=favicon.ico --ignore=\"^/projects.json\" --ignore=\"^/config.json\"  --ignore=\"^/backup/\" "
   },
   "author": "",
   "license": "ISC",
