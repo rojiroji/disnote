@@ -19,6 +19,7 @@ $(function () {
             }
           }
           $("#start_recognize").prop("disabled", true);//二度押し防止 
+          $("#cancel_recognize").prop("disabled", true);//二度押し防止 
           $("#recognize_initialized").text("音声認識の準備中…");
 
           rec_progress = {}; // 進捗リセット
@@ -28,6 +29,7 @@ $(function () {
         }
       },
       {
+        id: "cancel_recognize",
         text: "キャンセル",
         click: async function () {
           $(this).dialog("close");
@@ -162,7 +164,7 @@ async function reloadProjects() {
     // console.log("projectid=" + editbutton.getAttribute("projectid"));
     editbutton.addEventListener('click', async (e) => {
       projectid = e.currentTarget.getAttribute("projectid"); // ボタンにはprojetid属性がついている
-      
+
     });
   }
 
@@ -173,6 +175,7 @@ async function reloadProjects() {
       projectid = e.currentTarget.getAttribute("projectid"); // ボタンにはprojetid属性がついている
       $("#recognize").dialog("open");
       $("#start_recognize").prop("disabled", false); // ボタンを復活させる
+      $("#cancel_recognize").prop("disabled", false);// ボタンを復活させる          
       $("#recognize_initialized").text("　");
     });
   }
