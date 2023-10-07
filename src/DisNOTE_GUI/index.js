@@ -232,7 +232,8 @@ ipcMain.handle('getProjectsTable', (event) => {
       .replaceAll("${item.access_date}", item.access_time.substring(0, 10))
       .replaceAll("${item.id}", item.id)
       .replaceAll("${name_e}", name_e)
-      .replaceAll("${name_o}", name_o);
+      .replaceAll("${name_o}", name_o)
+      .replaceAll("${item.edit_disabled}", (item.recognized_time.length > 10) ? "" : "disabled");
   }
 
   tableHtml += '</table>';
