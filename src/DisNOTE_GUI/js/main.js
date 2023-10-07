@@ -164,7 +164,7 @@ async function reloadProjects() {
     // console.log("projectid=" + editbutton.getAttribute("projectid"));
     editbutton.addEventListener('click', async (e) => {
       projectid = e.currentTarget.getAttribute("projectid"); // ボタンにはprojetid属性がついている
-
+      window.api.editProject(projectid); // 編集開始
     });
   }
 

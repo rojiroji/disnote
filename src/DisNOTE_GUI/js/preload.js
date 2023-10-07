@@ -2,7 +2,7 @@ const { contextBridge, ipcRenderer } = require('electron');
 
 contextBridge.exposeInMainWorld(
   'api', {
-  apiLoadFile: (path) => ipcRenderer.invoke("apiLoadFile", path) // htmlファイルとjsonファイル読み込み
+  editProject: (projectId) => ipcRenderer.invoke("editProject", projectId) // htmlファイルとjsonファイル読み込み
     .then(result => result)
     .catch(err => console.log(err)),
   getConfig: () => ipcRenderer.invoke("getConfig") // コンフィグを取得

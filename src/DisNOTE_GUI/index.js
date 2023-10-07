@@ -565,17 +565,31 @@ ipcMain.handle('updateConfig', (event, project_sort_key, switch_project_sort_ord
  * -> js/preload.js  apiLoadFile
  * -> index.js       apiLoadFile
  */
-let load_filename = ""  /* 拡張子無しのファイル名 */
-
+let editFileName = ""  /* 拡張子無しのファイル名 */
 
 /**
- * htmlファイルの読み込み（同時に編集ファイルも読み込む）
+ * プロジェクトの編集ボタンを押下 → htmlファイルの読み込み（同時に編集ファイルも読み込む）
+ * js/main.js        editProject -> editbutton.addEventListener('click',' ...
+ * -> js/preload.js  editProject
+ * -> index.js       editProject
+ * @returns 
  */
-ipcMain.handle('apiLoadFile', async (event, arg) => {
-  load_filename = arg.split('.')[0]
-  mainWindow.loadFile(arg)
+ipcMain.handle('editProject', async (event, projectId) => {
+  const project = projects.find((project) => project.id == projectId);
+
+  // .html から .json のフルパスを取得
+  const extension = path.extname(project.result);
+  if (extension) {
+    // 拡張子を置き換える
+    editFileName = project.result.replace(new RegExp(`${extension}$`), '.json'); // 最後の一致のみ
+  } else {
+    // 拡張子がない場合は ".json" を追加する
+    editFileName = `${project.result}.json`;
+  }
+
+  mainWindow.loadFile(project.result)
     .then(_ => {
-      result = readFile(load_filename + ".json")
+      result = loadEditFile(editFileName)
       /* 同一フォルダに編集済みデータがある場合は読み込む */
       if (result != null) {
         /* BOMが付いている場合は外す */
@@ -588,12 +602,12 @@ ipcMain.handle('apiLoadFile', async (event, arg) => {
 })
 
 /**
- * 編集ファイルの読み込み
+ * プロジェクトの編集ファイルの読み込み
  * @param {string} path ファイルパス
  * 
  * @return ファイル読み込み結果
  */
-function readFile(path) {
+function loadEditFile(path) {
   try {
     fs.accessSync(path)
     return fs.readFileSync(path, 'utf8', (err, data) => {
@@ -615,7 +629,7 @@ function readFile(path) {
  * -> index.js       apiSaveEditFile
  */
 ipcMain.handle('apiSaveEditFile', async (event, arg) => {
-  let path = load_filename + ".json";
+  let path = editFileName;
   let data = arg;
   try {
     return fs.writeFile(path, data, (err) => {
