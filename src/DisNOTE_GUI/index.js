@@ -386,12 +386,6 @@ ipcMain.handle('recognizeProject', (event, projectId, isusewitai, witaitoken) =>
 
   childProcess.on('close', (code) => {
     console.log(`Child process exited with code ${code} / projectId = ${projectId}`);
-
-    if (code == 0) { // 成功時
-      // 更新したのでプロジェクトリスト出力
-      writeProjects();
-    }
-
     mainWindow.webContents.send('engineClose', code); // engineClose(main.js)に渡す
     //childProcess = null; // 非同期でおかしくなるかもしれないのでnullにしない
   });
@@ -459,6 +453,7 @@ ipcMain.handle('recognizeProject', (event, projectId, isusewitai, witaitoken) =>
 
         project.result = info.result;
         project.recognized_time = timeToLocalString(new Date()); // 認識結果登録
+        writeProjects(); // 更新したのでプロジェクトリスト出力
         mainWindow.webContents.send('rewriteProjectInfo', project);
         break;
       default: // その他の進捗
@@ -574,8 +569,12 @@ let editFileName = ""  /* 拡張子無しのファイル名 */
  * -> index.js       editProject
  * @returns 
  */
+let edittingProject;
 ipcMain.handle('editProject', async (event, projectId) => {
   const project = projects.find((project) => project.id == projectId);
+
+  project.access_time = timeToLocalString(new Date()); // 閲覧時間更新
+  writeProjects(); // 更新したのでプロジェクトリスト出力
 
   // .html から .json のフルパスを取得
   const extension = path.extname(project.result);
@@ -596,6 +595,7 @@ ipcMain.handle('editProject', async (event, projectId) => {
         if (result.charCodeAt(0) === 0xFEFF) {
           result = result.substr(1);
         }
+        edittingProject = project;
         mainWindow.webContents.send('apiLoadEditData', result);
       }
     });
@@ -636,6 +636,8 @@ ipcMain.handle('apiSaveEditFile', async (event, arg) => {
       if (err) {
         throw err
       }
+      edittingProject.modified_time = timeToLocalString(new Date()); // 編集時間更新
+      writeProjects(); // 更新したのでプロジェクトリスト出力
       return true
     });
   } catch (err) {
