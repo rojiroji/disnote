@@ -572,6 +572,7 @@ let editFileName = ""  /* 拡張子無しのファイル名 */
 let edittingProject;
 ipcMain.handle('editProject', async (event, projectId) => {
   const project = projects.find((project) => project.id == projectId);
+  edittingProject = project;
 
   project.access_time = timeToLocalString(new Date()); // 閲覧時間更新
   writeProjects(); // 更新したのでプロジェクトリスト出力
@@ -595,7 +596,6 @@ ipcMain.handle('editProject', async (event, projectId) => {
         if (result.charCodeAt(0) === 0xFEFF) {
           result = result.substr(1);
         }
-        edittingProject = project;
         mainWindow.webContents.send('apiLoadEditData', result);
       }
     });
@@ -631,11 +631,20 @@ function loadEditFile(path) {
 ipcMain.handle('apiSaveEditFile', async (event, arg) => {
   let path = editFileName;
   let data = arg;
+  let jsonData = JSON.parse(data);
   try {
     return fs.writeFile(path, data, (err) => {
       if (err) {
         throw err
       }
+      console.log(data);
+      Object.values(jsonData.personalData).forEach(person => { // 音声ファイルごとの表示名を更新
+        file = edittingProject.files.find((file) => file.filename == person.orgfile);
+        if (file) {
+          file.name = person.displayname;
+        }
+      });
+      edittingProject.title = jsonData.projectName; // プロジェクトのタイトルを更新  
       edittingProject.modified_time = timeToLocalString(new Date()); // 編集時間更新
       writeProjects(); // 更新したのでプロジェクトリスト出力
       return true

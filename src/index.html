@@ -495,7 +495,7 @@
 				downloadStr(str, isCSV ? 'text/csv' : 'text/plain', filename + (isCSV ? 'csv' : 'txt'));
 			});
 			function saveEdit() { // 編集データ保存（ダウンロード）
-				var str = JSON.stringify({ projectHash: projectHash, personalData: personalData, editText: editText }, null, 4);
+				var str = JSON.stringify({ projectName: $("#projectname").val(),projectHash: projectHash, personalData: personalData, editText: editText }, null, 4);
 				var filename = decodeURI($("#projectname").val());
 				window.api.apiSaveEditFile(str)
 				//downloadStr(str, 'json', filename + '_disnote.json');
@@ -1399,8 +1399,9 @@
 			}
 
 			function loadEditDataWrap(file) {
+				
+				file = JSON.parse(file);
 				try {
-					file = JSON.parse(file);
 
 					if (file.projectHash == projectHash) {
 						editTextTmp = file.editText;
