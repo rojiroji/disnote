@@ -18,7 +18,7 @@ console.log("env. " + JSON.stringify(env));
 // logger設定
 log4js.configure({
   appenders: {
-    system: { type: 'file', filename: 'log/disnote_gui.log', maxLogSize: 5000, backups: 4 }
+    system: { type: 'file', filename: 'log/disnote_gui.log', maxLogSize: 5 * 1024 * 1024, backups: 4 }
   },
   categories: {
     default: { appenders: ['system'], level: env.loglevel },
