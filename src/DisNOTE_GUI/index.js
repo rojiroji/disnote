@@ -3,7 +3,7 @@ const { ipcMain, app, BrowserWindow, shell } = require("electron");
 const localShortcut = require("electron-localshortcut");
 
 const path = require("path");
-const fs = require('fs');
+const fs = require('fs-extra');
 const { spawn } = require('child_process');
 const encoding = require('encoding-japanese');
 
@@ -276,9 +276,8 @@ function createProjectJsonData(filePaths) {
     access_time: "-",
 
     title: localTimeString,
-    status: 'recognizing',
     dir: path.dirname(filePaths[0]),
-    result: 'xxx',
+    result: '',
     files: [],
     enabled: true
   };
@@ -577,17 +576,47 @@ ipcMain.handle('editProject', async (event, projectId) => {
   project.access_time = timeToLocalString(new Date()); // 閲覧時間更新
   writeProjects(); // 更新したのでプロジェクトリスト出力
 
-  // .html から .json のフルパスを取得
-  const extension = path.extname(project.result);
-  if (extension) {
-    // 拡張子を置き換える
-    editFileName = project.result.replace(new RegExp(`${extension}$`), '.json'); // 最後の一致のみ
-  } else {
-    // 拡張子がない場合は ".json" を追加する
-    editFileName = `${project.result}.json`;
+  // 編集ファイルを探す。 .js から .json のフルパスを取得
+  editFileName = changeExtension(project.result, ".json");
+  // 開くhtmlファイルを探す。 .js から .html のフルパスを取得
+  const dsthtmlfile = changeExtension(project.result, ".html");
+
+  // htmlファイルを作る
+  const srchtmlfile = env.htmldir + "index.html";
+
+  try {
+    // 元になるファイルと認識結果を読み込む
+    const srcContent = fs.readFileSync(srchtmlfile, 'binary');
+    const decodedSrcContent = encoding.convert(srcContent, {
+      from: 'SJIS', to: 'UNICODE', type: 'string',
+    });
+    const jsContent = fs.readFileSync(project.result, 'binary');
+    const decodedJsContent = encoding.convert(jsContent, {
+      from: 'SJIS', to: 'UNICODE', type: 'string',
+    });
+
+    // "RESULTS" を認識結果で置換
+    const dstContent = decodedSrcContent.replace('RESULTS', decodedJsContent);
+
+    // 置換結果を書き込み
+    fs.writeFileSync(dsthtmlfile, encoding.convert(dstContent, {
+      from: 'UNICODE', to: 'SJIS', type: 'string',
+    }), 'binary');
+
+  } catch (error) {
+    console.error('An error occurred:', error);
+    return;
   }
 
-  mainWindow.loadFile(project.result)
+  try {
+    // 画像ファイルなどが入ったディレクトリを編集ファイルと同じフォルダに上書きコピー
+    fs.copySync(env.htmldir + "htmlfiles", path.dirname(dsthtmlfile) + "/htmlfiles");
+    console.log('Directory copied successfully.');
+  } catch (err) {
+    console.error('Error copying directory:', err);
+  }
+
+  mainWindow.loadFile(dsthtmlfile) // 画面遷移
     .then(_ => {
       result = loadEditFile(editFileName)
       /* 同一フォルダに編集済みデータがある場合は読み込む */
@@ -599,6 +628,24 @@ ipcMain.handle('editProject', async (event, projectId) => {
         mainWindow.webContents.send('apiLoadEditData', result);
       }
     });
+
+  /**
+   * ファイルパスの拡張子を変更したものを返す
+   * @param {*} filepath ファイルのパス
+   * @param {*} toext 変更後の拡張子
+   */
+  function changeExtension(filepath, toext) {
+    const extension = path.extname(filepath);
+    let changedPath;
+    if (extension) {
+      // 拡張子を置き換える
+      changedPath = filepath.replace(new RegExp(`${extension}$`), toext); // 最後の一致のみ
+    } else {
+      // 拡張子がない場合は ".json" を追加する
+      changedPath = `${filepath}.json`;
+    }
+    return changedPath;
+  }
 })
 
 /**

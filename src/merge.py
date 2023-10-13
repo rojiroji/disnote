@@ -221,7 +221,7 @@ def main(input_files, arg_files):
             f.write("\n")
 
     # 終了ログ
-    common.logForGui(logger, "merge_end", info={"result": os.path.abspath(htmlfile)})
+    common.logForGui(logger, "merge_end", info={"result": os.path.abspath(jsfile)})
 
     logger.info("すべての処理が完了しました！")
     logger.info("【出力ファイル】")
