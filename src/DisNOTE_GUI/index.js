@@ -6,7 +6,23 @@ const path = require("path");
 const fs = require('fs-extra');
 const { spawn } = require('child_process');
 const encoding = require('encoding-japanese');
+const log4js = require('log4js')
 
+// リリース版or開発環境で異なる設定を読み込み
+const env = JSON.parse(fs.readFileSync(path.join(__dirname, 'env.json'), 'utf8'));
+console.log("env. " + JSON.stringify(env));
+
+// logger設定
+log4js.configure({
+  appenders: {
+    system: { type: 'file', filename: 'log/disnote_gui.log', maxLogSize: 5000, backups: 4 }
+  },
+  categories: {
+    default: { appenders: ['system'], level: env.loglevel},
+  }
+});
+const logger = log4js.getLogger('system');
+logger.info("DisNote GUI");
 
 // プロジェクトリスト読み込み
 const projectsFilePath = path.join(__dirname, 'projects.json');
@@ -14,7 +30,7 @@ let projects = [];
 try {
   projects = JSON.parse(fs.readFileSync(projectsFilePath, 'utf8'));
 } catch (err) {
-  console.log(err); // ファイルがない場合は何もしない
+  // ファイルがない場合は何もしない
 }
 
 // プロジェクト一覧表示のテンプレート読み込み
@@ -23,9 +39,6 @@ const template_projects_body = fs.readFileSync(path.join(__dirname, 'template_pr
 const template_projects_name = fs.readFileSync(path.join(__dirname, 'template_projects_name.html'), 'utf8');
 const template_file_progress = fs.readFileSync(path.join(__dirname, 'template_file_progress.html'), 'utf8');
 
-// リリース版or開発環境で異なる設定を読み込み
-const env = JSON.parse(fs.readFileSync(path.join(__dirname, 'env.json'), 'utf8'));
-console.log("env. " + JSON.stringify(env));
 
 // ユーザーごとの設定を読み込み
 const configFilePath = path.join(__dirname, 'config.json');
@@ -33,7 +46,7 @@ let config = {};
 try {
   config = JSON.parse(fs.readFileSync(configFilePath, 'utf8'));
 } catch (err) {
-  console.log(err); // ファイルがない場合は何もしない
+  //console.log(err); // ファイルがない場合はデフォルト設定
   config.width = 1200;
   config.height = 800;
   config.maximize = false;
@@ -88,10 +101,11 @@ const createWindow = () => {
 
     fs.writeFile(configFilePath, JSON.stringify(config, null, 4), (err) => {
       if (err) {
-        console.error(err);
+        logger.error(err);
         return;
       }
     });
+    logger.info("DisNote GUI:exit.");
 
     // 子プロセスを落とす
     killChildProcess();
@@ -163,7 +177,7 @@ function writeProjects() {
   if (projects.length > 0) {
     fs.writeFile(projectsFilePath, JSON.stringify(projects, null, 4), (err) => {
       if (err) {
-        console.error(err);
+        logger.error(err);
         mainWindow.webContents.send('output-error', err.message);
         return;
       }
@@ -331,7 +345,7 @@ function getProject(filePaths) {
  */
 let childProcess = null;
 ipcMain.handle('recognizeProject', (event, projectId, isusewitai, witaitoken) => {
-  console.log("recognizeProject:" + projectId);
+  logger.debug("recognizeProject:" + projectId);
 
   // projectIdでproject取得
   const project = projects.find((project) => project.id == projectId);
@@ -358,7 +372,7 @@ ipcMain.handle('recognizeProject', (event, projectId, isusewitai, witaitoken) =>
     for (var i = 0; i < lines.length - 1; i++) {
       var line = lines[i];
       const outputLine = line.trim();
-      //console.log(outputLine);
+      logger.debug(outputLine);
 
       const GUIMARK = "[PROGRESS]"; // GUI向けに出力されたログ
       const guilogpos = outputLine.indexOf(GUIMARK);
@@ -378,13 +392,13 @@ ipcMain.handle('recognizeProject', (event, projectId, isusewitai, witaitoken) =>
     for (var i = 0; i < lines.length - 1; i++) {
       var line = lines[i];
       const outputLine = line.trim();
-      //console.log(outputLine);
+      logger.debug(outputLine);
       mainWindow.webContents.send('engineStderr', outputLine); // engineStderr(main.js)に渡す
     }
   });
 
   childProcess.on('close', (code) => {
-    console.log(`Child process exited with code ${code} / projectId = ${projectId}`);
+    logger.info(`Child process exited with code ${code} / projectId = ${projectId}`);
     mainWindow.webContents.send('engineClose', code); // engineClose(main.js)に渡す
     //childProcess = null; // 非同期でおかしくなるかもしれないのでnullにしない
   });
@@ -416,7 +430,7 @@ ipcMain.handle('recognizeProject', (event, projectId, isusewitai, witaitoken) =>
    * @param {*} recfiles  音声ファイルの情報の一覧
    */
   function updateProgress(project, logbody, recfiles, multitracks) {
-    console.log("updateProgress:" + logbody);
+    logger.debug("updateProgress:" + logbody);
     const info = JSON.parse(logbody); // TODO parseできなかった場合
     switch (info.stage) {
       case "setAudioFileInfo": // 音声ファイル登録
@@ -473,7 +487,7 @@ ipcMain.handle('recognizeProject', (event, projectId, isusewitai, witaitoken) =>
  * -> index.js       cancelRecognize
 */
 ipcMain.handle('cancelRecognize', (event) => {
-  console.log("cancelRecognize");
+  logger.info("cancelRecognize");
   killChildProcess();
 });
 
@@ -495,7 +509,7 @@ function killChildProcess() {
  */
 
 ipcMain.handle('openProjectFolder', (event, projectId) => {
-  console.log("openProjectFolder:" + projectId);
+  logger.debug("openProjectFolder:" + projectId);
 
   // projectIdでproject取得
   const project = projects.find((project) => project.id == projectId);
@@ -513,7 +527,7 @@ ipcMain.handle('openProjectFolder', (event, projectId) => {
  */
 
 ipcMain.handle('disableProject', (event, projectId) => {
-  console.log("disableProject:" + projectId);
+  logger.debug("disableProject:" + projectId);
 
   // projectIdでproject取得
   const project = projects.find((project) => project.id == projectId);
@@ -531,7 +545,7 @@ ipcMain.handle('disableProject', (event, projectId) => {
 * @returns 
  */
 ipcMain.handle('getConfig', (event) => {
-  console.log("getConfig:");
+  logger.debug("getConfig:");
 
   return config
 });
@@ -544,7 +558,7 @@ ipcMain.handle('getConfig', (event) => {
 * @returns 
  */
 ipcMain.handle('updateConfig', (event, project_sort_key, switch_project_sort_order) => {
-  console.log("updateConfig:");
+  logger.debug("updateConfig:");
 
   config.project_sort_key = project_sort_key;
   if (switch_project_sort_order) {
@@ -604,16 +618,16 @@ ipcMain.handle('editProject', async (event, projectId) => {
     }), 'binary');
 
   } catch (error) {
-    console.error('An error occurred:', error);
+    logger.error('An error occurred:', error);
     return;
   }
 
   try {
     // 画像ファイルなどが入ったディレクトリを編集ファイルと同じフォルダに上書きコピー
     fs.copySync(env.htmldir + "htmlfiles", path.dirname(dsthtmlfile) + "/htmlfiles");
-    console.log('Directory copied successfully.');
+    logger.debug('Directory copied successfully.');
   } catch (err) {
-    console.error('Error copying directory:', err);
+    logger.error('Error copying directory:', err);
   }
 
   mainWindow.loadFile(dsthtmlfile) // 画面遷移
@@ -664,7 +678,7 @@ function loadEditFile(path) {
       return data
     });
   } catch (err) {
-    console.error('no file:' + path)
+    logger.error('no file:' + path)
     return null
   }
 }
@@ -684,7 +698,7 @@ ipcMain.handle('apiSaveEditFile', async (event, arg) => {
       if (err) {
         throw err
       }
-      console.log(data);
+      logger.debug(data);
       Object.values(jsonData.personalData).forEach(person => { // 音声ファイルごとの表示名を更新
         file = edittingProject.files.find((file) => file.filename == person.orgfile);
         if (file) {
@@ -697,8 +711,8 @@ ipcMain.handle('apiSaveEditFile', async (event, arg) => {
       return true
     });
   } catch (err) {
-    console.error('save err:' + path)
-    console.error(err)
+    logger.error('save err:' + path)
+    logger.error(err)
     return false
   }
 })
