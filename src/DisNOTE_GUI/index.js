@@ -1,5 +1,5 @@
 // アプリケーション作成用のモジュールを読み込み
-const { ipcMain, app, BrowserWindow, shell } = require("electron");
+const { ipcMain, app, dialog, BrowserWindow, shell } = require("electron");
 const localShortcut = require("electron-localshortcut");
 
 const path = require("path");
@@ -7,6 +7,9 @@ const fs = require('fs-extra');
 const { spawn } = require('child_process');
 const encoding = require('encoding-japanese');
 const log4js = require('log4js')
+
+// 編集画面の編集フラグ
+let edited = false;
 
 // リリース版or開発環境で異なる設定を読み込み
 const env = JSON.parse(fs.readFileSync(path.join(__dirname, 'env.json'), 'utf8'));
@@ -60,6 +63,8 @@ try {
 
 // メインウィンドウ
 var mainWindow;
+let isClose = false;
+let isSaveAndExit = false;
 
 const createWindow = () => {
   // メインウィンドウを作成します
@@ -91,7 +96,43 @@ const createWindow = () => {
     mainWindow.webContents.openDevTools();
   }
   // メインウィンドウが閉じるときの処理
-  mainWindow.on("close", () => {
+
+  function checkSaveDialog(isClosing) {
+    const text = isClosing ? "終了" : "ホームに戻る";
+    const num = dialog.showMessageBox({
+      type: 'warning',
+      buttons: [`保存して${text}`, `保存せずに${text}`, 'キャンセル'],
+      title: 'DisNote',
+      message: "編集中のデータがあります。" + (isClosing ? "終了しますか？" : "ホームに戻りますか？"),
+      noLink: true
+    }).then((val) => {
+      switch (val.response) {
+        case 0:// 保存して終了 or ホームに戻る
+          if (isClosing) {
+            isSaveAndExit = true;
+          }
+          mainWindow.webContents.send('apiSaveEditNotify'); // 保存通知
+          break;
+        case 1: // 保存せずに終了 or ホームに戻る
+          if (isClosing && mainWindow) {
+            isClose = true;
+            app.quit();
+          }
+          break;
+      }
+    });
+
+  }
+
+  mainWindow.on("close", async (e) => {
+    if (isClose === false && edited) {
+      e.preventDefault();
+      checkSaveDialog(true);
+      return;
+    }
+
+    // ここから終了処理
+
     // コンフィグ保存
     config.width = mainWindow.getBounds().width;
     config.height = mainWindow.getBounds().height;
@@ -188,15 +229,11 @@ ipcMain.handle('dropMediaFiles', (event, filePaths) => {
  */
 function writeProjects() {
   if (projects.length > 0) {
-    fs.writeFile(projectsFilePath, JSON.stringify(projects, null, 4), (err) => {
-      if (err) {
-        logger.error(err);
-        mainWindow.webContents.send('output-error', err.message);
-        return;
-      }
-
-      mainWindow.webContents.send('output-success', projectsFilePath);
-    });
+    try {
+      fs.writeFileSync(projectsFilePath, JSON.stringify(projects, null, 4));
+    } catch (err) {
+      logger.error(err);
+    }
   }
 }
 
@@ -600,6 +637,8 @@ ipcMain.handle('editProject', async (event, projectId) => {
   const project = projects.find((project) => project.id == projectId);
   edittingProject = project;
 
+  edited = false;
+
   project.access_time = timeToLocalString(new Date()); // 閲覧時間更新
   writeProjects(); // 更新したのでプロジェクトリスト出力
 
@@ -722,6 +761,11 @@ ipcMain.handle('apiSaveEditFile', async (event, arg) => {
       edittingProject.title = jsonData.projectName; // プロジェクトのタイトルを更新  
       edittingProject.modified_time = timeToLocalString(new Date()); // 編集時間更新
       writeProjects(); // 更新したのでプロジェクトリスト出力
+
+      if (isSaveAndExit) { // 保存して終了する
+        isClose = true;
+        app.quit();
+      }
       return true
     });
   } catch (err) {
@@ -730,6 +774,17 @@ ipcMain.handle('apiSaveEditFile', async (event, arg) => {
     return false
   }
 })
+
+
+/**
+ * 編集フラグの上げ下げ
+ * index.html        setEdited
+ * -> js/preload.js  setEdited
+ * -> index.js       setEdited
+ */
+ipcMain.handle('setEdited', async (event, e) => {
+  edited = e;
+});
 
 /**
  * ショートカットキーを登録する

@@ -32,6 +32,10 @@ contextBridge.exposeInMainWorld(
   apiSaveEditFile: (path) => ipcRenderer.invoke("apiSaveEditFile", path) // 保存
     .then(result => result)
     .catch(err => console.log(err)),
+  setEdited: (edited) => ipcRenderer.invoke("setEdited", edited) // 編集フラグの上げ下げ
+    .then(result => result)
+    .catch(err => console.log(err)),
+
   on: (channel, callback) => {
     ipcRenderer.on(channel, (_event, arg) => callback(arg))
   },

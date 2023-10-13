@@ -23,7 +23,8 @@
 				window.api.on("apiSaveEditNotify", saveEdit); // Ctrl+Sのイベント
 				window.api.on("apiLoadEditData", (arg) => { // htmlファイル読み込み完了イベント
 					loadEditFile(arg); // argに編集データが入っている。読み込み。
-				})
+				});				
+
 				$("#aboutlink").attr("target", ""); // target="_blank"だとelectronがイベントを拾ってくれないので変更する
 			}
 
@@ -31,6 +32,15 @@
 			var editText = {};
 			var edited = false;
 			//var editFileName = "";
+
+			function setEdited(e){ // 編集中かどうかを保持
+				if(edited != e){
+					edited = e;
+					if(isElectron){
+						window.api.setEdited(edited); // electron側で保持
+					}
+				}
+			}
 
 			// 話者
 			var people = {};
@@ -531,7 +541,7 @@
 				
 				editFileName = handle.name;
 				*/
-				edited = false; // 編集ファイルを保存したのでフラグを降ろす
+				setEdited(false); // 編集ファイルを保存したのでフラグを降ろす
 				updateTitle();
 			}
 			// 話者表示切替ダイアログ設定
@@ -996,7 +1006,7 @@
 				//$target.find('div.text').text(editText[key]);
 				changeTextAbs($target, len - 1);
 
-				edited = true;
+				setEdited(true);
 				updateTitle();
 			}
 
@@ -1410,7 +1420,7 @@
 					$("#draggable").css("display", "none");
 					$("#draggable").css("cursor", "auto");
 					//alert("編集データを読み込みました");
-					edited = false; // 画面反映中に edited がtrueになるので、ここでフラグを降ろす
+					setEdited(false); // 画面反映中に edited がtrueになるので、ここでフラグを降ろす
 					updateTitle();
 				}
 			}
@@ -1448,11 +1458,14 @@
 				reader.readAsText(e.originalEvent.dataTransfer.files[0]);
 			});
 
-			//$(window).on("beforeunload", function() { // 未保存でページを抜けようとしたら確認
-			//	if(edited){
-			//		return "確認";
-			//	}
-			//});
+			if (!isElectron) {
+				$(window).on("beforeunload", function () { // 未保存でページを抜けようとしたら確認(electronの場合は自前で確認する)
+					if (edited) {
+						return "確認";
+					}
+				});
+			}
+
 
 			// --- ここからページ読み込み終了時の処理 ---
 			var data = results;
