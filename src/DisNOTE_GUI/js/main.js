@@ -339,7 +339,7 @@ function rewriteProjectInfo(project) {
   $(`#project_times_${project.id} div.modified span`).text(project.modified_time.substring(0, 10)); // 日付のところ(yyyy/MM/dd)だけ切り取る
   $(`#project_times_${project.id} div.access`).prop("title", project.access_time);
   $(`#project_times_${project.id} div.access span`).text(project.access_time.substring(0, 10)); // 日付のところ(yyyy/MM/dd)だけ切り取る
-
+  $(`#project_editbutton_${project.id}`).prop("disabled", (project.recognized_time.length > 10) ? false : true); // 編集ボタン
 }
 // DisNOTEエンジンの標準出力を受け取る
 function engineStdout(logbody) {
