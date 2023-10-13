@@ -165,7 +165,7 @@ def main(input_file):
                 logger,
                 "conv_audio",
                 input_file,
-                progress=id + 1,
+                progress=id,
                 max=queuesize,
             )
     # 終了したことをiniファイルに保存

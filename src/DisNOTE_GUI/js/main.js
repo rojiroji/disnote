@@ -294,9 +294,9 @@ function updateAudioFileProgress(info) {
 
   // 現在のステージを表示
   document.querySelector(`#stage_${index}`).innerHTML = {
-    "setAudioFileInfo": "他音声準備待ち(1/7)", "seg": "無音解析中(2/7)", "split": "音声分割設定中(3/7)",
+    "setAudioFileInfo": "準備中(1/7)", "seg": "無音解析中(2/7)", "split": "音声分割設定中(3/7)",
     "split_audio": "音声分割中(4/7)", "prepare": "音声認識開始待ち(5/7)", "rec": "音声認識中(6/7)",
-    "conv_audio": "音声変換処理(7/7)"
+    "conv_audio": "音声変換中(7/7)"
   }[rec_progress[index]["main"]["stage"]];
 
   // 現在のステージの進捗を表示
@@ -328,7 +328,7 @@ function updateLastProgress(progress) {
 }
 
 /**
- * プロジェクトの情報を書き換える
+ * プロジェクトの情報を書き換えて画面に表示する
  */
 function rewriteProjectInfo(project) {
   console.log(project);

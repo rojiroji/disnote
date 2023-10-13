@@ -428,7 +428,7 @@ ipcMain.handle('recognizeProject', (event, projectId, isusewitai, witaitoken) =>
       const guilogpos = outputLine.indexOf(GUIMARK);
       if (guilogpos > -1) {
         let logbody = outputLine.slice(guilogpos + GUIMARK.length)// ログ本体を抽出
-        updateProgress(project, logbody, recfiles, multitracks);
+        multitracks = updateProgress(project, logbody, recfiles, multitracks);
         //mainWindow.webContents.send('engineStdout', logbody); // engineStdout(main.js)に渡す
       }
     }
@@ -478,6 +478,7 @@ ipcMain.handle('recognizeProject', (event, projectId, isusewitai, witaitoken) =>
    * エンジンから受け取ったログを解析し、画面に音声ファイルごとの進捗として表示する
    * @param {*} logbody ログ(json形式であること)
    * @param {*} recfiles  音声ファイルの情報の一覧
+   * @return ファイルがマルチトラックかどうか
    */
   function updateProgress(project, logbody, recfiles, multitracks) {
     logger.debug("updateProgress:" + logbody);
@@ -494,7 +495,7 @@ ipcMain.handle('recognizeProject', (event, projectId, isusewitai, witaitoken) =>
         for (const recfile of recfiles) {
           tableHtml += template_file_progress
             .replaceAll("${orgfile}", recfile.orgfile)
-            .replaceAll("${track}", multitracks ? "track" + (recfile.trackindex + 1) : "")
+            .replaceAll("${track}", multitracks ? "track" + (recfile.trackindex) : "")
             .replaceAll("${index}", recfile.index);
         }
         tableHtml += '<tr class="main"><td colspan="3">最終処理</td>' +
@@ -527,6 +528,7 @@ ipcMain.handle('recognizeProject', (event, projectId, isusewitai, witaitoken) =>
 
         return;
     }
+    return multitracks;
   }
 });
 

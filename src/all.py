@@ -131,6 +131,7 @@ def speechRecognizeGoogle(prepareThread):
                 continue
 
             # 音声認識
+            common.logForGui(logger, "rec", input_file, progress=0, max=1)
             speech_rec.main(input_file)
             thread.pushReadyConvertListGoogle(input_file)
             common.logForGui(logger, "rec", input_file, progress=1, max=1,info={"engine":"google"})
@@ -168,6 +169,7 @@ def speechRecognizeWitAI(prepareThread):
             while True:  # 何度かリトライ
                 retry = False
                 try:
+                    common.logForGui(logger, "rec", input_file, progress=0, max=1)  
                     speech_rec_wit.main(input_file)
                 except HTTPError as e:  # タイムアウトエラーの場合はリトライする
                     if e.code == 408:
@@ -235,6 +237,7 @@ def speechRecognizeWhisper(prepareThread, downloadWhisperGgmlModelThread):
                 continue
 
             # 音声認識
+            common.logForGui(logger, "rec", input_file, progress=0, max=1)
             speech_rec_whisper.main(input_file)
             thread.pushReadyConvertListWhisper(input_file)
             common.logForGui(logger, "rec", input_file, progress=1, max=1,info={"engine":"whisper"})
