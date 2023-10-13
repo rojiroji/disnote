@@ -20,12 +20,13 @@ $(function () {
           }
           $("#start_recognize").prop("disabled", true);//二度押し防止 
           $("#cancel_recognize").prop("disabled", true);//二度押し防止 
-          $("#recognize_initialized").text("音声認識の準備中…");
+          $("#recognize_initialized").text("音声認識の準備中…（しばらくお待ちください）");
 
           rec_progress = {}; // 進捗リセット
           rec_process_running = true; // プロセス起動中のフラグを立てる
           window.api.recognizeProject(projectid, isusewitai, witaitoken); // 認識開始
           updateCuiProgress("音声認識準備中");
+          $("body").css("cursor", "wait"); // カーソルを待ち状態に
         }
       },
       {
@@ -37,6 +38,8 @@ $(function () {
       },
     ],
     width: "500",
+  }).on('dialogclose', function (event) {
+    $("body").css("cursor", "auto"); // カーソルを戻す
   });
 
   $("#progress").dialog({ // 認識進捗
@@ -108,7 +111,7 @@ window.addEventListener('load', async (event) => {
   window.api.on("updateAudioFileProgress", updateAudioFileProgress); // 音声ファイルの進捗テーブルの更新
   window.api.on("updateLastProgress", updateLastProgress); // 最終処理の進捗テーブルの更新
   window.api.on("rewriteProjectInfo", rewriteProjectInfo); // プロジェクトの情報を再表示
-  
+
 
   document.querySelector('#disable_project').addEventListener('click', async (e) => { // プロジェクト無効化
     if (confirm("プロジェクトを削除しますか？\nもう一度同じファイルを登録すると復活します")) {
