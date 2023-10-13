@@ -12,11 +12,20 @@
 
 	<script>
 		$(function () {
-			/* callback登録 */
-			window.api.on("apiSaveEditNotify", saveEdit)
-			window.api.on("apiLoadEditData", (arg) => {
-				loadEditDataWrap(arg)
-			})
+			let url = new URL(window.location.href);
+			let params = url.searchParams;
+			console.log("param:electron=" + params.get("electron"));
+			const isElectron = !(params.get("electron") === null);
+			console.log("isElectron=" + isElectron);
+
+			if (isElectron) { // electronから起動した場合
+				/* callback登録 */
+				window.api.on("apiSaveEditNotify", saveEdit); // Ctrl+Sのイベント
+				window.api.on("apiLoadEditData", (arg) => { // htmlファイル読み込み完了イベント
+					loadEditFile(arg); // argに編集データが入っている。読み込み。
+				})
+				$("#aboutlink").attr("target", ""); // target="_blank"だとelectronがイベントを拾ってくれないので変更する
+			}
 
 			$edittingtag = null; // 編集中のhtmlタグ
 			var editText = {};
@@ -495,10 +504,18 @@
 				downloadStr(str, isCSV ? 'text/csv' : 'text/plain', filename + (isCSV ? 'csv' : 'txt'));
 			});
 			function saveEdit() { // 編集データ保存（ダウンロード）
-				var str = JSON.stringify({ projectName: $("#projectname").val(),projectHash: projectHash, personalData: personalData, editText: editText }, null, 4);
+				var str = JSON.stringify({
+					projectName: $("#projectname").val(),
+					projectHash: projectHash,
+					personalData: personalData,
+					editText: editText
+				}, null, 4);
 				var filename = decodeURI($("#projectname").val());
-				window.api.apiSaveEditFile(str)
-				//downloadStr(str, 'json', filename + '_disnote.json');
+				if (isElectron) {
+					window.api.apiSaveEditFile(str); // electron側で上書き保存
+				} else {
+					downloadStr(str, 'json', filename + '_disnote.json');
+				}
 				/* // 名前を付けて保存（フォルダが毎回リセットされるので没）
 				const opts = {
 					suggestedName: editFileName,
@@ -1370,7 +1387,7 @@
 				$("#draggable").css("display", "none");
 			});
 
-			// 編集データ読み込み(key=tdのid,value=編集テキスト の辞書データ)
+			// 編集データ読み込み(key=tdのid,value=編集テキスト の辞書データ) 
 			function loadEditData(editText) {
 				$("#draggable").css("cursor", "wait");
 				var keys = Object.keys(editText);
@@ -1388,7 +1405,7 @@
 				}
 
 				if (Object.keys(editText).length > 0) {
-					setTimeout(loadEditData, 100, editText); // まだ読み込みが終わっていないので、非同期で少し待って再読み込み
+					setTimeout(loadEditData, 100, editText); // まだdata行が作成しきっていないので、非同期で少し待って再読み込み
 				} else {
 					$("#draggable").css("display", "none");
 					$("#draggable").css("cursor", "auto");
@@ -1398,10 +1415,11 @@
 				}
 			}
 
-			function loadEditDataWrap(file) {
-				
-				file = JSON.parse(file);
+			// 編集ファイルの読み込み（引数：json文字列（未parse））
+			function loadEditFile(filestr) {
+
 				try {
+					file = JSON.parse(filestr);
 
 					if (file.projectHash == projectHash) {
 						editTextTmp = file.editText;
@@ -1416,30 +1434,16 @@
 				}
 				$("#draggable").css("display", "none");
 				alert(result);
-				reader.readAsText(e.originalEvent.dataTransfer.files[0]);
 			}
-			$(document).on("drop", function (e) { // 実際に読み込む
+
+			$(document).on("drop", function (e) { // jsonファイルをdrop
 				e.preventDefault();
 
 				var reader = new FileReader();
 
 				reader.onload = function (e) {
-					try {
-						file = JSON.parse(reader.result);
+					loadEditFile(reader.result);
 
-						if (file.projectHash == projectHash) {
-							editTextTmp = file.editText;
-							loadEditData(file.editText);
-							return; // 正常に読み込み開始
-						} else {
-							result = "編集ファイルの読み込みに失敗しました。違う音声ファイルの編集ファイルです。";
-						}
-
-					} catch (error) {
-						result = "編集ファイルの読み込みに失敗しました。jsonファイルではありません。";
-					}
-					$("#draggable").css("display", "none");
-					alert(result);
 				}
 				reader.readAsText(e.originalEvent.dataTransfer.files[0]);
 			});

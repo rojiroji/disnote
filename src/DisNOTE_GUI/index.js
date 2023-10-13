@@ -18,7 +18,7 @@ log4js.configure({
     system: { type: 'file', filename: 'log/disnote_gui.log', maxLogSize: 5000, backups: 4 }
   },
   categories: {
-    default: { appenders: ['system'], level: env.loglevel},
+    default: { appenders: ['system'], level: env.loglevel },
   }
 });
 const logger = log4js.getLogger('system');
@@ -115,6 +115,19 @@ const createWindow = () => {
   mainWindow.on("closed", () => {
     mainWindow = null;
   });
+
+  // リンクをクリックするとWebブラウザで開く
+  const handleUrlOpen = (e, url) => {
+    if (url.match(/^http/)) {
+      e.preventDefault()
+      shell.openExternal(url)
+    }
+  }
+  mainWindow.webContents.on('will-navigate', handleUrlOpen);
+  mainWindow.webContents.on('will-redirect', handleUrlOpen);
+  mainWindow.webContents.on('did-navigate', handleUrlOpen);
+  mainWindow.webContents.on('new-window', handleUrlOpen);
+
 };
 
 //  初期化が完了した時の処理
@@ -630,8 +643,9 @@ ipcMain.handle('editProject', async (event, projectId) => {
     logger.error('Error copying directory:', err);
   }
 
-  mainWindow.loadFile(dsthtmlfile) // 画面遷移
+  mainWindow.loadFile(dsthtmlfile, { query: { "electron": "true" } }) // 画面遷移 パラメタelectronを指定して、Electronから開いているという情報を渡す
     .then(_ => {
+
       result = loadEditFile(editFileName)
       /* 同一フォルダに編集済みデータがある場合は読み込む */
       if (result != null) {
