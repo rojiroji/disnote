@@ -206,6 +206,11 @@ def main(input_files, arg_files):
         "src/htmlfiles", os.path.join(basedir, "htmlfiles"), dirs_exist_ok=True
     )
 
+    # jsファイル書き込み(GUI版で使う)
+    jsfile = os.path.join(basedir, basefilename + ".js")
+    with open(jsfile, "w", newline="") as f:  # 変な改行が入るのを防ぐため newline=''
+        f.write(merged_js)
+
     # プレイリスト作成(ファイルパスだけ書く)
     logger.info("最終結果ファイル(m3u8)出力開始")
     with codecs.open(
@@ -221,6 +226,7 @@ def main(input_files, arg_files):
     logger.info("すべての処理が完了しました！")
     logger.info("【出力ファイル】")
     logger.info("　{}.html".format(basefilename))
+    logger.info("　{}.js".format(basefilename))
     logger.info("　{}.csv".format(basefilename))
     logger.info("　{}.m3u8".format(basefilename))
     if created_mixed_media:
