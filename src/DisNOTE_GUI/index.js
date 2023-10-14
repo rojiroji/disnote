@@ -215,6 +215,10 @@ app.on("window-all-closed", () => {
 ipcMain.handle('dropMediaFiles', (event, filePaths) => {
   filePaths.sort(); // 重複判断などをしやすくするためにソート
 
+  if(filePaths.length <= 0 || filePaths[0].length <= 0){
+    return null; // 空のファイルだったら何もしない
+  }
+
   // 既存プロジェクトを取得
   let project = getProject(filePaths);
   let newProjectId = null;
