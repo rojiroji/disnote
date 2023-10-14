@@ -835,5 +835,6 @@ ipcMain.handle('backToHome', async (event) => {
 function backToHome(){
   mainWindow.loadFile("index.html");
   mainWindow.setTitle("DisNOTE");
+  edited = false;
 }
 
