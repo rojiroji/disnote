@@ -137,14 +137,30 @@ document.addEventListener('drop', async (e) => {
     filePaths.push(f.path);
   }
 
-  await window.api.dropMediaFiles(filePaths); // 音声ファイルドロップ処理 → プロジェクト一覧再生成
-  reloadProjects();
+  const newProjectId = await window.api.dropMediaFiles(filePaths); // 音声ファイルドロップ処理 → プロジェクト一覧再生成
+  await reloadProjects();
+
+  if(newProjectId != null){ // 新しくプロジェクトを追加した場合は認識ダイアログを開く
+    openRecognizeDialog(newProjectId);
+  }
 });
+
+/**
+ * 認識ダイアログを開く
+ * @param {認識するプロジェクトのID} id 
+ */
+let projectid;
+function openRecognizeDialog(id){
+  projectid = id;
+  $("#recognize").dialog("open");
+  $("#start_recognize").prop("disabled", false); // ボタンを復活させる
+  $("#cancel_recognize").prop("disabled", false);// ボタンを復活させる          
+  $("#recognize_initialized").text("　");
+}
 
 /**
  * プロジェクト一覧再描画
  */
-let projectid
 async function reloadProjects() {
   let table = await window.api.getProjectsTable();
   document.querySelector('#projects').innerHTML = table;
@@ -176,11 +192,7 @@ async function reloadProjects() {
   const recognizebuttons = document.querySelectorAll("button.recognize");
   for (const recognizebutton of recognizebuttons) {
     recognizebutton.addEventListener('click', async (e) => {
-      projectid = e.currentTarget.getAttribute("projectid"); // ボタンにはprojetid属性がついている
-      $("#recognize").dialog("open");
-      $("#start_recognize").prop("disabled", false); // ボタンを復活させる
-      $("#cancel_recognize").prop("disabled", false);// ボタンを復活させる          
-      $("#recognize_initialized").text("　");
+      openRecognizeDialog(e.currentTarget.getAttribute("projectid")); // ボタンにはprojetid属性がついている)
     });
   }
 

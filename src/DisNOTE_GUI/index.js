@@ -209,12 +209,17 @@ ipcMain.handle('dropMediaFiles', (event, filePaths) => {
 
   // 既存プロジェクトを取得
   let project = getProject(filePaths);
+  let newProjectId = null;
 
   if (project == null) {// 新規プロジェクトの場合は追加    
     jsonData = createProjectJsonData(filePaths);
     jsonData.id = projects.length;
     projects.push(jsonData);
+    newProjectId = jsonData.id;
   } else {
+    if(!project.enabled){
+      newProjectId = project.id;
+    }
     project.modified_time = new Date().toISOString();
     project.enabled = true; // 無効化していたプロジェクトを復活させる
   }
@@ -222,6 +227,7 @@ ipcMain.handle('dropMediaFiles', (event, filePaths) => {
   // プロジェクトリスト出力
   writeProjects();
 
+  return newProjectId;
 })
 
 /**
