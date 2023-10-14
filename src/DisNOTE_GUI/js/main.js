@@ -58,7 +58,7 @@ $(function () {
     beforeClose: function (event, ui) { // ダイアログを閉じるときの処理
       return cancelRecognize();
     },
-    width: "640",
+    width: "680",
   });
 
 });
@@ -371,6 +371,10 @@ function engineStderr(outputLine) {
 function engineClose(code) {
   console.log("engine exit code=" + code);
   $("#progress_button").text("閉じる").prop("disabled", false); // ただの閉じるボタンにする
+  $("#start_recognize").prop("disabled", false); // ボタンを復活させる
+  $("#cancel_recognize").prop("disabled", false);// ボタンを復活させる 
+  $("body").css("cursor", "auto"); // カーソルを戻す
+
   if (code == 0) {
     alert("正常に音声認識が完了しました");
   } else if (code == null) {
