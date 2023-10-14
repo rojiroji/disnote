@@ -428,6 +428,9 @@ ipcMain.handle('recognizeProject', (event, projectId, isusewitai, witaitoken) =>
   config.isusewitai = isusewitai;
   config.witaitoken = witaitoken;
 
+  // Whisperのモデル（現時点では "none" で固定）
+  args.push("--whispermodel", "none");
+
   childProcess = spawn(env.engine, args, { encoding: env.encoding }); // エンジンのサブプロセスを起動
   let recfiles = [];
   let multitracks = false;

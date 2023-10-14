@@ -80,6 +80,9 @@ parser = argparse.ArgumentParser()
 parser.add_argument(
     "--witaitoken"
 )  # wit.aiのServer Access Token（未指定の場合(None)はiniファイルの設定を使う。"none" を指定したらwit.aiを使わない）
+parser.add_argument(
+    "--whispermodel"
+)  # Whisperのモデル（未指定の場合(None)はiniファイルの設定を使う。"none" を指定したらWhisperを使わない）
 parser.add_argument("--files", nargs="*", required=True)  # ファイル
 args = parser.parse_args()
 
@@ -217,21 +220,23 @@ def isRemoveTempSplitFlac():
 
 # Whisperのモデル名
 def getWhisperModel():
-    try:
-        config = readSysConfig()
-        val = config["DEFAULT"].get(WHISPER_MODEL)
-        if val is not None:
-            return val.strip()
+    if args.whispermodel is None:  # 引数で未指定の場合はiniファイルの設定を使う
+        try:
+            config = readSysConfig()
+            val = config["DEFAULT"].get(WHISPER_MODEL)
+            if val is not None:
+                return val.strip()
 
-    except:  # 設定ファイルが読めなかったり(初回起動時)、値がおかしかったらデフォルトで保存
-        pass
+        except:  # 設定ファイルが読めなかったり(初回起動時)、値がおかしかったらデフォルトで保存
+            pass
 
-    ret = WHISPER_MODEL_NONE
-    config.set("DEFAULT", WHISPER_MODEL, ret)
-    writeSysConfig(config)
+        ret = WHISPER_MODEL_NONE
+        config.set("DEFAULT", WHISPER_MODEL, ret)
+        writeSysConfig(config)
 
-    return ret
+        return ret
 
+    return args.whispermodel # 引数で直接指定
 
 # Whisperのモデル名が有効かどうか
 def isValidWhisperModel():
