@@ -91,7 +91,7 @@ def getSysArgs():
 
 # DisNOTEのバージョン
 def getVersion():
-    return "v2.6.0"
+    return "v3.0.0"
 
 
 # 共通設定iniファイルの設定値を一通り読み込み（設定値がなければ初期値が書き込まれる）
