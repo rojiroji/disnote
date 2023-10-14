@@ -65,6 +65,41 @@ try {
 var mainWindow;
 let isClose = false;
 let isSaveAndExit = false;
+let isSaveAndBackToHome = false;
+
+/**
+ * 終了orホームに戻る前の保存確認
+ */
+function checkSaveDialog(isClosing) {
+  const text = isClosing ? "終了" : "ホームに戻る";
+  const num = dialog.showMessageBox({
+    type: 'warning',
+    buttons: [`保存して${text}`, `保存せずに${text}`, 'キャンセル'],
+    title: 'DisNote',
+    message: "編集中のデータがあります。" + (isClosing ? "終了しますか？" : "ホームに戻りますか？"),
+    noLink: true
+  }).then((val) => {
+    switch (val.response) {
+      case 0:// 保存して終了 or ホームに戻る
+        if (isClosing) {
+          isSaveAndExit = true;
+        }else{
+          isSaveAndBackToHome = true;
+        }
+        mainWindow.webContents.send('apiSaveEditNotify'); // 保存通知
+        break;
+      case 1: // 保存せずに終了 or ホームに戻る
+        if (isClosing && mainWindow) {
+          isClose = true;
+          app.quit();
+        }else{
+          backToHome();
+        }
+        break;
+    }
+  });
+
+}
 
 const createWindow = () => {
   // メインウィンドウを作成します
@@ -87,9 +122,8 @@ const createWindow = () => {
 
   registShortcut()
 
-  // メインウィンドウに表示するURLを指定します
-  // （今回はmain.jsと同じディレクトリのindex.html）
-  mainWindow.loadFile("index.html");
+  // メインウィンドウに表示する
+  backToHome();
 
   if (env.opendevtools == "true") {
     // デベロッパーツールの起動
@@ -97,32 +131,6 @@ const createWindow = () => {
   }
   // メインウィンドウが閉じるときの処理
 
-  function checkSaveDialog(isClosing) {
-    const text = isClosing ? "終了" : "ホームに戻る";
-    const num = dialog.showMessageBox({
-      type: 'warning',
-      buttons: [`保存して${text}`, `保存せずに${text}`, 'キャンセル'],
-      title: 'DisNote',
-      message: "編集中のデータがあります。" + (isClosing ? "終了しますか？" : "ホームに戻りますか？"),
-      noLink: true
-    }).then((val) => {
-      switch (val.response) {
-        case 0:// 保存して終了 or ホームに戻る
-          if (isClosing) {
-            isSaveAndExit = true;
-          }
-          mainWindow.webContents.send('apiSaveEditNotify'); // 保存通知
-          break;
-        case 1: // 保存せずに終了 or ホームに戻る
-          if (isClosing && mainWindow) {
-            isClose = true;
-            app.quit();
-          }
-          break;
-      }
-    });
-
-  }
 
   mainWindow.on("close", async (e) => {
     if (isClose === false && edited) {
@@ -217,7 +225,7 @@ ipcMain.handle('dropMediaFiles', (event, filePaths) => {
     projects.push(jsonData);
     newProjectId = jsonData.id;
   } else {
-    if(!project.enabled){
+    if (!project.enabled) {
       newProjectId = project.id;
     }
     project.modified_time = new Date().toISOString();
@@ -626,26 +634,20 @@ ipcMain.handle('updateConfig', (event, project_sort_key, switch_project_sort_ord
 });
 
 /**
- * htmlファイル読み込み開始
- * js/main.js        document.addEventListener('drop' ...
- * -> js/preload.js  apiLoadFile
- * -> index.js       apiLoadFile
- */
-let editFileName = ""  /* 拡張子無しのファイル名 */
-
-/**
  * プロジェクトの編集ボタンを押下 → htmlファイルの読み込み（同時に編集ファイルも読み込む）
  * js/main.js        editProject -> editbutton.addEventListener('click',' ...
  * -> js/preload.js  editProject
  * -> index.js       editProject
  * @returns 
  */
+let editFileName = ""  // 編集ファイル
 let edittingProject;
 ipcMain.handle('editProject', async (event, projectId) => {
   const project = projects.find((project) => project.id == projectId);
   edittingProject = project;
 
   edited = false;
+  isSaveAndBackToHome = false;
 
   project.access_time = timeToLocalString(new Date()); // 閲覧時間更新
   writeProjects(); // 更新したのでプロジェクトリスト出力
@@ -774,6 +776,9 @@ ipcMain.handle('apiSaveEditFile', async (event, arg) => {
         isClose = true;
         app.quit();
       }
+      if(isSaveAndBackToHome){ // 保存してホームに戻る
+        backToHome();
+      }
       return true
     });
   } catch (err) {
@@ -801,5 +806,27 @@ function registShortcut() {
   localShortcut.register("Ctrl+S", () => {
     mainWindow.webContents.send('apiSaveEditNotify');
   })
+}
+
+/**
+ * ホームに戻る（編集画面から発火）
+ * index.html        backToHome
+ * -> js/preload.js  backToHome
+ * -> index.js       backToHome
+ */
+ipcMain.handle('backToHome', async (event) => {
+  if (edited) {
+    checkSaveDialog(false);
+    return;
+  }
+  backToHome();
+});
+
+/**
+ * ホームに戻る(index.html)
+ */
+function backToHome(){
+  mainWindow.loadFile("index.html");
+  mainWindow.setTitle("DisNOTE");
 }
 

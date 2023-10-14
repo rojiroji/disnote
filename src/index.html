@@ -18,6 +18,7 @@
 			const isElectron = !(params.get("electron") === null);
 			console.log("isElectron=" + isElectron);
 
+
 			if (isElectron) { // electronから起動した場合
 				/* callback登録 */
 				window.api.on("apiSaveEditNotify", saveEdit); // Ctrl+Sのイベント
@@ -26,6 +27,7 @@
 				});				
 
 				$("#aboutlink").attr("target", ""); // target="_blank"だとelectronがイベントを拾ってくれないので変更する
+				$("#home").css("display","block"); // ホームに戻るボタン有効
 			}
 
 			$edittingtag = null; // 編集中のhtmlタグ
@@ -585,6 +587,10 @@
 				$("#help").dialog("close");
 				$("#projectsetting").dialog("close");
 				$("#download").dialog("close");
+			});
+
+			$("#home").click(function () { // ホームに戻る（electron）
+				window.api.backToHome();
 			});
 
 			// 選択行を適当に取得
@@ -1746,6 +1752,7 @@
 			</div>
 
 			<div class="header">
+				<div id="home" class="push icon home" title="DisNOTEホームに戻る" style="display:none"></div>
 				<div id="save" class="push icon save" title="編集データ保存(Ctrl+S) (※ロードが完了するまでお待ちください)"
 					style="opacity:0.5;cursor: auto;"></div>
 				<div id="open_download" class="push icon download" title="ダウンロード(D) (※ロードが完了するまでお待ちください)"

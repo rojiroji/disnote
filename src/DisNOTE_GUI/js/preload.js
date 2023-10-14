@@ -35,7 +35,9 @@ contextBridge.exposeInMainWorld(
   setEdited: (edited) => ipcRenderer.invoke("setEdited", edited) // 編集フラグの上げ下げ
     .then(result => result)
     .catch(err => console.log(err)),
-
+  backToHome: () => ipcRenderer.invoke("backToHome") // ホームに戻る
+    .then(result => result)
+    .catch(err => console.log(err)),
   on: (channel, callback) => {
     ipcRenderer.on(channel, (_event, arg) => callback(arg))
   },
