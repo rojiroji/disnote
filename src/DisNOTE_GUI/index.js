@@ -6,7 +6,12 @@ const path = require("path");
 const fs = require('fs-extra');
 const { spawn } = require('child_process');
 const encoding = require('encoding-japanese');
-const log4js = require('log4js')
+const log4js = require('log4js');
+const axios = require('axios');
+
+// 現在のバージョン（common.pyでの定義と揃えること）
+const currentVersion = "v3.0.1";
+let newVersion = null; // 新しいバージョンがあるかどうかチェック（新しくなければnull）
 
 // 編集画面の編集フラグ
 let edited = false;
@@ -83,7 +88,7 @@ function checkSaveDialog(isClosing) {
       case 0:// 保存して終了 or ホームに戻る
         if (isClosing) {
           isSaveAndExit = true;
-        }else{
+        } else {
           isSaveAndBackToHome = true;
         }
         mainWindow.webContents.send('apiSaveEditNotify'); // 保存通知
@@ -92,7 +97,7 @@ function checkSaveDialog(isClosing) {
         if (isClosing && mainWindow) {
           isClose = true;
           app.quit();
-        }else{
+        } else {
           backToHome();
         }
         break;
@@ -215,7 +220,7 @@ app.on("window-all-closed", () => {
 ipcMain.handle('dropMediaFiles', (event, filePaths) => {
   filePaths.sort(); // 重複判断などをしやすくするためにソート
 
-  if(filePaths.length <= 0 || filePaths[0].length <= 0){
+  if (filePaths.length <= 0 || filePaths[0].length <= 0) {
     return null; // 空のファイルだったら何もしない
   }
 
@@ -287,7 +292,7 @@ ipcMain.handle('getProjectsTable', (event) => {
   let tableHtml = '<table class="projects">';
 
   // ヘッダ(ソート順など)
-  tableHtml += template_projects_header;
+  tableHtml += template_projects_header.replaceAll("${currentVersion}", currentVersion);
 
   // テーブルボディを作成
   for (const item of projects) {
@@ -783,7 +788,7 @@ ipcMain.handle('apiSaveEditFile', async (event, arg) => {
         isClose = true;
         app.quit();
       }
-      if(isSaveAndBackToHome){ // 保存してホームに戻る
+      if (isSaveAndBackToHome) { // 保存してホームに戻る
         backToHome();
       }
       return true
@@ -826,15 +831,45 @@ ipcMain.handle('backToHome', async (event) => {
     checkSaveDialog(false);
     return;
   }
-  backToHome();
+  await backToHome();
 });
 
 /**
  * ホームに戻る(index.html)
  */
-function backToHome(){
-  mainWindow.loadFile("index.html");
+async function backToHome() {
+  newVersion = await checkNewVersion();
+  mainWindow.loadFile("index.html", { query: { "newVersion": newVersion } });
   mainWindow.setTitle("DisNOTE");
   edited = false;
 }
 
+/**
+ * 新しいバージョンが公開されているかどうかチェックする
+ * @returns 新しいバージョンが公開されていればそのバージョン、そうでなければ空文字列
+ */
+async function checkNewVersion() {
+  try {
+    const response = await axios.get('https://roji3.jpn.org/disnote/version.cgi', { timeout: 1000 });
+
+    if (response.status === 200) {
+      const newVersion = 'v' + response.data.replace('DisNOTE_', '').replace('.zip', '');
+      const zipVersion = newVersion.replace('v', '').split('.');
+      const cVersion = currentVersion.replace('v', '').split('.');
+
+      for (let i = 0; i < 3; i++) {
+        if (parseInt(zipVersion[i]) > parseInt(cVersion[i])) {
+          return newVersion;
+        }
+        if (parseInt(zipVersion[i]) < parseInt(cVersion[i])) {
+          return "";
+        }
+      }
+    } else {
+      logger.info(`DisNOTE最新バージョンの取得に失敗: ${response.status}`); // アクセスに失敗しても特にエラーにはしない
+    }
+  } catch (error) {
+    logger.error('An error occurred:', error.message);
+  }
+  return "";
+}

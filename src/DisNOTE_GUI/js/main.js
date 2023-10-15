@@ -1,4 +1,11 @@
 $(function () {
+  let url = new URL(window.location.href);
+  let params = url.searchParams;
+  const newVersion = params.get("newVersion");
+  console.log("param:newVersion=" + newVersion);
+  if (newVersion) {
+    $("#newVersion").css("display", "inline");
+  }
 
   $("#recognize").dialog({ // 認識設定
     autoOpen: false,
@@ -140,7 +147,7 @@ document.addEventListener('drop', async (e) => {
   const newProjectId = await window.api.dropMediaFiles(filePaths); // 音声ファイルドロップ処理 → プロジェクト一覧再生成
   await reloadProjects();
 
-  if(newProjectId != null){ // 新しくプロジェクトを追加した場合は認識ダイアログを開く
+  if (newProjectId != null) { // 新しくプロジェクトを追加した場合は認識ダイアログを開く
     openRecognizeDialog(newProjectId);
   }
 });
@@ -150,7 +157,7 @@ document.addEventListener('drop', async (e) => {
  * @param {認識するプロジェクトのID} id 
  */
 let projectid;
-function openRecognizeDialog(id){
+function openRecognizeDialog(id) {
   projectid = id;
   $("#recognize").dialog("open");
   $("#start_recognize").prop("disabled", false); // ボタンを復活させる
