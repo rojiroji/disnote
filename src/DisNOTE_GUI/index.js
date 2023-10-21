@@ -62,6 +62,7 @@ try {
   config.y = undefined;
   config.isusewitai = false;
   config.witaitoken = "";
+  config.whispermodel = "none";
   config.project_sort_key = "id";
   config.project_sort_order = "desc"; // ソート順のデフォルトは降順
 }
@@ -417,7 +418,7 @@ function getProject(filePaths) {
  * @returns 
  */
 let childProcess = null;
-ipcMain.handle('recognizeProject', (event, projectId, isusewitai, witaitoken) => {
+ipcMain.handle('recognizeProject', (event, projectId, isusewitai, witaitoken, whispermodel) => {
   logger.debug("recognizeProject:" + projectId);
 
   // projectIdでproject取得
@@ -433,8 +434,9 @@ ipcMain.handle('recognizeProject', (event, projectId, isusewitai, witaitoken) =>
   config.isusewitai = isusewitai;
   config.witaitoken = witaitoken;
 
-  // Whisperのモデル（現時点では "none" で固定）
-  args.push("--whispermodel", "none");
+  // Whisperのモデル
+  args.push("--whispermodel", whispermodel);
+  config.whispermodel = whispermodel;
 
   childProcess = spawn(env.engine, args, { encoding: env.encoding }); // エンジンのサブプロセスを起動
   let recfiles = [];
@@ -522,7 +524,12 @@ ipcMain.handle('recognizeProject', (event, projectId, isusewitai, witaitoken) =>
           tableHtml += template_file_progress
             .replaceAll("${orgfile}", recfile.orgfile)
             .replaceAll("${track}", multitracks ? "track" + (recfile.trackindex) : "")
-            .replaceAll("${index}", recfile.index);
+            .replaceAll("${index}", recfile.index)
+            .replaceAll("${disp_google}", true ? "table-row" : "none") // Googleは必ず
+            .replaceAll("${disp_witai}", config.isusewitai ? "table-row" : "none") // wit.ai進捗行
+            .replaceAll("${disp_whisper}", config.whispermodel != "none" ? "table-row" : "none") // Whisper進捗行
+            .replaceAll("${rowspan}", 1 + 1 + (config.isusewitai ? 1 : 0) + ((config.whispermodel != "none") ? 1 : 0))
+            ;
         }
         tableHtml += '<tr class="main"><td colspan="3">最終処理</td>' +
           '<td class="progress"><div class="progress-container"><progress id="progress_last" value="0" max="100"></progress>' +

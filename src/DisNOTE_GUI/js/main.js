@@ -25,13 +25,14 @@ $(function () {
               return false;
             }
           }
+          const whispermodel = $("#whispermodel").val();
           $("#start_recognize").prop("disabled", true);//二度押し防止 
           $("#cancel_recognize").prop("disabled", true);//二度押し防止 
           $("#recognize_initialized").text("音声認識の準備中…（しばらくお待ちください）");
 
           rec_progress = {}; // 進捗リセット
           rec_process_running = true; // プロセス起動中のフラグを立てる
-          window.api.recognizeProject(projectid, isusewitai, witaitoken); // 認識開始
+          window.api.recognizeProject(projectid, isusewitai, witaitoken, whispermodel); // 認識開始
           updateCuiProgress("音声認識準備中");
           $("body").css("cursor", "wait"); // カーソルを待ち状態に
         }
@@ -68,6 +69,9 @@ $(function () {
     width: "680",
   });
 
+  $("#whispermodel").change(function(){ // Whisperのモデルを選択したとき、"none"以外だとチェックを入れる（表示だけで意味は無い）
+    $("#engine_whisper").prop("checked", ($("#whispermodel").val() != "none"));
+  });
 });
 
 // 音声認識エンジンキャンセル
@@ -82,17 +86,7 @@ function cancelRecognize() {
   }
   return true;
 }
-/*
-document.addEventListener('drop', (e) => {
-  e.preventDefault();
-  e.stopPropagation();
 
-  for (const f of e.dataTransfer.files) {
-    console.log('File(s) you dragged here: ', f.path)
-    window.api.apiLoadFile(f.path)
-  }
-});
-*/
 
 let rec_progress; // 音声認識の進捗 
 let rec_process_running = false; // 音声認識エンジンの状況
@@ -107,6 +101,10 @@ window.addEventListener('load', async (event) => {
   console.log(config);
   $("#engine_witai").prop("checked", config.isusewitai);
   $("#witaitoken").val(config.witaitoken);
+  if(config.whispermodel){
+    $("#whispermodel").val(config.whispermodel);
+  }
+  $("#engine_whisper").prop("checked", ($("#whispermodel").val() != "none"));
 
   /* callback登録 */
   window.api.on("engineStdout", engineStdout); // DisNOTEエンジンの標準出力を受け取る
@@ -269,6 +267,10 @@ function updateAudioFileProgress(info) {
       case "witai":
         progress_tag = document.querySelector(`#progress_witai_${index}`);
         percent_tag = document.querySelector(`#percent_witai_${index}`);
+        break;
+      case "whisper":
+        progress_tag = document.querySelector(`#progress_whisper_${index}`);
+        percent_tag = document.querySelector(`#percent_whisper_${index}`);
         break;
     }
     thread = info.engine;
