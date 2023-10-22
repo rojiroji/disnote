@@ -636,22 +636,35 @@ ipcMain.handle('getConfig', (event) => {
 });
 
 /**
- * コンフィグの情報を更新
+ * コンフィグの情報を更新(プロジェクトのソート設定)
  * js/main.js        reloadProjects =>
- * -> js/preload.js  updateConfig
- * -> index.js       updateConfig
+ * -> js/preload.js  updateProjectSortConfig
+ * -> index.js       updateProjectSortConfig
 * @returns 
  */
-ipcMain.handle('updateConfig', (event, project_sort_key, switch_project_sort_order) => {
-  logger.debug("updateConfig:");
+ipcMain.handle('updateProjectSortConfig', (event, project_sort_key, switch_project_sort_order) => {
+  logger.debug("updateProjectSortConfig:");
 
   config.project_sort_key = project_sort_key;
   if (switch_project_sort_order) {
     config.project_sort_order = (config.project_sort_order == "desc") ? "asc" : "desc";
   }
-  return config
+  return config;
 });
 
+/**
+ * コンフィグの情報を更新(configをそのまま指定)
+ * js/main.js        reloadProjects =>
+ * -> js/preload.js  updateConfig
+ * -> index.js       updateConfig
+* @returns 
+ */
+ipcMain.handle('updateConfig', (event, param_config) => {
+  logger.debug("updateConfig:");
+
+  config = param_config;
+  return config;
+});
 /**
  * プロジェクトの編集ボタンを押下 → htmlファイルの読み込み（同時に編集ファイルも読み込む）
  * js/main.js        editProject -> editbutton.addEventListener('click',' ...

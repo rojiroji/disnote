@@ -69,7 +69,7 @@ $(function () {
     width: "680",
   });
 
-  $("#whispermodel").change(function(){ // Whisperのモデルを選択したとき、"none"以外だとチェックを入れる（表示だけで意味は無い）
+  $("#whispermodel").change(function () { // Whisperのモデルを選択したとき、"none"以外だとチェックを入れる（表示だけで意味は無い）
     $("#engine_whisper").prop("checked", ($("#whispermodel").val() != "none"));
   });
 });
@@ -95,17 +95,34 @@ let rec_process_running = false; // 音声認識エンジンの状況
  * 起動時
  */
 window.addEventListener('load', async (event) => {
-  reloadProjects(); // プロジェクト一覧描画
 
   let config = await window.api.getConfig(); // コンフィグ取得
   console.log(config);
   $("#engine_witai").prop("checked", config.isusewitai);
   $("#witaitoken").val(config.witaitoken);
-  if(config.whispermodel){
+  if (config.whispermodel) {
     $("#whispermodel").val(config.whispermodel);
   }
   $("#engine_whisper").prop("checked", ($("#whispermodel").val() != "none"));
-
+  if(config.logowidth){
+    $("#logo").css("width",config.logowidth).css("height","auto");
+  }
+  $("#logo").css("display" , "block");
+  $("#logo").resizable({ // ロゴの拡大縮小設定
+    maxWidth: 704,
+    minWidth: 100,
+    aspectRatio: true,
+    autoHide: true,
+    stop: async function (event, ui) { 
+      let config = await window.api.getConfig();
+      config.logowidth = $("#logo").css("width");
+      await window.api.updateConfig(config); // サイズを保存
+    }
+  });
+  $("#logo").parent().css("margin", "0px auto"); // ロゴを中央に
+  
+  reloadProjects(); // プロジェクト一覧描画
+  
   /* callback登録 */
   window.api.on("engineStdout", engineStdout); // DisNOTEエンジンの標準出力を受け取る
   window.api.on("engineStderr", engineStderr); // DisNOTEエンジンのエラー出力を受け取る
@@ -175,11 +192,11 @@ async function reloadProjects() {
   $("#project_sort_order").text(config.project_sort_order == "desc" ? "↑" : "↓");
 
   document.querySelector('#project_sort_key').addEventListener('change', async (e) => { // ソート条件変更
-    await window.api.updateConfig($("#project_sort_key").val(), false);
+    await window.api.updateProjectSortConfig($("#project_sort_key").val(), false);
     await reloadProjects();
   });
   document.querySelector('#project_sort_order').addEventListener('click', async (e) => { // 降順/照準変更
-    await window.api.updateConfig($("#project_sort_key").val(), true);
+    await window.api.updateProjectSortConfig($("#project_sort_key").val(), true);
     await reloadProjects();
   });
 
