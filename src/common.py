@@ -51,7 +51,7 @@ def logForGui(logger, stage, input_file=None, info=None, progress=0, max=None):
     outinfo["progress"] = progress
     outinfo["max"] = max
     logger.info(LOG_FOR_GUI + json.dumps(outinfo))
-    logger.handlers[0].flush() # 標準出力を強制的にflush
+    logger.handlers[0].flush()  # 標準出力を強制的にflush
 
 
 # 認識対象の音声ファイル情報のmap（key=ファイル名 setAudioFileInfo
@@ -236,7 +236,8 @@ def getWhisperModel():
 
         return ret
 
-    return args.whispermodel # 引数で直接指定
+    return args.whispermodel  # 引数で直接指定
+
 
 # Whisperのモデル名が有効かどうか
 def isValidWhisperModel():
@@ -455,13 +456,13 @@ def getRecognizeResultFileWitAI(input_file):
     return os.path.join(outputdir, output_file)
 
 
-# 認識結果ファイル(whisper)
+# 認識結果ファイル(whisper) モデルごとにファイルを分ける
 def getRecognizeResultFileWhisper(input_file):
     base = getFileNameWithoutExtension(input_file)
     basedir = os.path.dirname(input_file)  # 入力音声ファイルの置いてあるディレクトリ
     outputdir = os.path.join(basedir, base)  # 各種ファイルの出力先ディレクトリ
 
-    output_file = "_{}_whisper.csv".format(base)
+    output_file = "_{}_whisper_{}.csv".format(base, getWhisperModel())
 
     return os.path.join(outputdir, output_file)
 
@@ -519,7 +520,7 @@ def getLogger(srcfile):
     )
 
     # loggerに2つのハンドラを設定
-    logger.addHandler(handler1) # 0番目は標準出力であること（logForGuiでflushするため）
+    logger.addHandler(handler1)  # 0番目は標準出力であること（logForGuiでflushするため）
     logger.addHandler(handler2)
 
     return logger

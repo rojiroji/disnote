@@ -18,24 +18,23 @@ class RequestError(Exception):
 logger = common.getLogger(__file__)
 
 model = None
-CONFIG_WORK_KEY = "speech_rec_whisper"
-CONFIG_WORK_PROGRESS = "speech_rec_progress_whisper"
+CONFIG_WORK_KEY = "speech_rec_whisper_" + common.getWhisperModel()  # モデルごとに進捗を記録
+CONFIG_WORK_PROGRESS = (
+    "speech_rec_progress_whisper_" + common.getWhisperModel()
+)  # モデルごとに進捗を記録
 CONFIG_WORK_CONV_READY = "speech_rec_conv_ready_whisper"
-CONFIG_WORK_MODEL = "speech_rec_whisper_model"
+
 
 # 音声ファイルの認識を行うかどうか。行わないなら理由（ログに出力する文字列）を返す。行うならNoneを返す。
 def reasonNotToRecognize(input_file):
     modelname = common.getWhisperModel()
     config = common.readConfig(input_file)
 
-    # モデルの指定が過去の結果と異なる場合はやり直す。初回もTrueになるはず。
-    model_changed = config["DEFAULT"].get(CONFIG_WORK_MODEL) != modelname
-
-    if config["DEFAULT"].get(CONFIG_WORK_KEY) == common.DONE and (not model_changed):
-        return "完了済みのためスキップ(音声認識)"
-
     if modelname == common.WHISPER_MODEL_NONE:
         return "Whisperを使用しない設定のためスキップ"
+
+    if config["DEFAULT"].get(CONFIG_WORK_KEY) == common.DONE:
+        return "完了済みのためスキップ(音声認識)"
 
     return None
 
@@ -55,10 +54,7 @@ def main(input_file):
 
     config = common.readConfig(input_file)
 
-    # モデルの指定が過去の結果と異なる場合はやり直す。初回もTrueになるはず。
-    model_changed = config["DEFAULT"].get(CONFIG_WORK_MODEL) != modelname
-
-    if config["DEFAULT"].get(CONFIG_WORK_KEY) == common.DONE and (not model_changed):
+    if config["DEFAULT"].get(CONFIG_WORK_KEY) == common.DONE:
         logger.info("完了済みのためスキップ(音声認識)")
         return
 
@@ -100,7 +96,7 @@ def main(input_file):
 
     # 中断データがあった場合は続きから、そうでない場合は最初から
     mode = "w"
-    if len(progress) > 0 and (not model_changed):
+    if len(progress) > 0:
         logger.info("認識途中のデータがあったため再開({})".format(progress))
         mode = "a"
 
@@ -128,7 +124,14 @@ def main(input_file):
     with codecs.open(recognize_result_file, mode, "CP932", "ignore") as f:
         logger.info("音声認識中(whisper)… {}".format(base))
         queuesize = len(split_result_queue)
-        common.logForGui(logger, "rec", input_file, progress=0, max=queuesize,info={"engine":"whisper"})  
+        common.logForGui(
+            logger,
+            "rec",
+            input_file,
+            progress=0,
+            max=queuesize,
+            info={"engine": "whisper"},
+        )
 
         # 分割して出力する音声ファイルのフォルダとプレフィックスまで指定
         audio_file_prefix = common.getSplitAudioFilePrefix(input_file)
@@ -174,7 +177,14 @@ def main(input_file):
             )
             if (id % 3) == 0 or (len(split_result_queue) == 0):  # 3行ごとか、最後の1行に進捗を出す
                 logger.info("　音声認識中(whisper)… {} {}/{}".format(base, id, queuesize))
-                common.logForGui(logger, "rec", input_file, progress=id, max=queuesize,info={"engine":"whisper"})  
+                common.logForGui(
+                    logger,
+                    "rec",
+                    input_file,
+                    progress=id,
+                    max=queuesize,
+                    info={"engine": "whisper"},
+                )
 
             f.write(
                 "{},{},{},{},{},{}\n".format(
@@ -191,10 +201,7 @@ def main(input_file):
             # ここまで完了した、と記録
             common.updateConfig(
                 input_file,
-                {
-                    CONFIG_WORK_PROGRESS: audio_file,
-                    CONFIG_WORK_MODEL: modelname,  # モデルを記録しておく
-                },
+                {CONFIG_WORK_PROGRESS: audio_file},
             )
 
     if len(progress) > 0:  # 中断したまま終わってしまった
@@ -208,7 +215,6 @@ def main(input_file):
         {
             CONFIG_WORK_PROGRESS: "",
             CONFIG_WORK_KEY: common.DONE,
-            CONFIG_WORK_MODEL: modelname,  # モデルを記録しておく  
             CONFIG_WORK_CONV_READY: "1",  # 再生用に変換してもOK
         },
     )
