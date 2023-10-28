@@ -45,9 +45,9 @@ $(function () {
         }
       },
     ],
+    open: function () { dialogToCenter($(this)); },
+    close: function () { $("body").css("cursor", "auto"); }, // カーソルを元に戻す
     width: "500",
-  }).on('dialogclose', function (event) {
-    $("body").css("cursor", "auto"); // カーソルを戻す
   });
 
   $("#progress").dialog({ // 認識進捗
@@ -66,6 +66,7 @@ $(function () {
     beforeClose: function (event, ui) { // ダイアログを閉じるときの処理
       return cancelRecognize();
     },
+    open: function () { dialogToCenter($(this)); },
     width: "680",
   });
 
@@ -73,6 +74,18 @@ $(function () {
     $("#engine_whisper").prop("checked", ($("#whispermodel").val() != "none"));
   });
 });
+
+// ダイアログをウィンドウ中央に移動 （デフォルトだとスクロール込みのウィンドウサイズの中央に表示されてしまう）
+function dialogToCenter($t) {
+  //console.log(`ウィンドウの高さ: ${windowHeight}`);
+  //const windowheight = $(window).height(); // これはスクロール込みの高さ
+
+  const windowHeight = window.innerHeight || document.documentElement.clientHeight || document.body.clientHeight;
+  $p = $t.parent();
+  const height = $p.outerHeight(true);
+  var top = $(window).scrollTop() + (windowHeight - height) / 2;
+  $p.offset({ top: top });
+}
 
 // 音声認識エンジンキャンセル
 function cancelRecognize() {
@@ -104,25 +117,25 @@ window.addEventListener('load', async (event) => {
     $("#whispermodel").val(config.whispermodel);
   }
   $("#engine_whisper").prop("checked", ($("#whispermodel").val() != "none"));
-  if(config.logowidth){
-    $("#logo").css("width",config.logowidth).css("height","auto");
+  if (config.logowidth) {
+    $("#logo").css("width", config.logowidth).css("height", "auto");
   }
-  $("#logo").css("display" , "block");
+  $("#logo").css("display", "block");
   $("#logo").resizable({ // ロゴの拡大縮小設定
     maxWidth: 704,
     minWidth: 100,
     aspectRatio: true,
     autoHide: true,
-    stop: async function (event, ui) { 
+    stop: async function (event, ui) {
       let config = await window.api.getConfig();
       config.logowidth = $("#logo").css("width");
       await window.api.updateConfig(config); // サイズを保存
     }
   });
   $("#logo").parent().css("margin", "0px auto"); // ロゴを中央に
-  
+
   reloadProjects(); // プロジェクト一覧描画
-  
+
   /* callback登録 */
   window.api.on("engineStdout", engineStdout); // DisNOTEエンジンの標準出力を受け取る
   window.api.on("engineStderr", engineStderr); // DisNOTEエンジンのエラー出力を受け取る
@@ -253,13 +266,7 @@ function checkedAudioFiles(tableHtml) {
   $("#recognize").dialog("close"); // エンジン起動のダイアログを閉じる
   $("#progress_button").text("音声認識中断").prop("disabled", false); // ボタンを復活させる
   $("#progress").dialog("open"); // サイズがここで確定するのでダイアログを開く
-  /*
-    const windowWidth = window.innerWidth || document.documentElement.clientWidth || document.body.clientWidth;
-  const windowHeight = window.innerHeight || document.documentElement.clientHeight || document.body.clientHeight;
-  
-  console.log(`ウィンドウの幅: ${windowWidth}`);
-  console.log(`ウィンドウの高さ: ${windowHeight}`);
-  */
+
 }
 
 
