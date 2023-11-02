@@ -1076,7 +1076,8 @@
 
 				// 再生ボタン
 				var playTdId = "play_" + i;
-				$play = $("<td>").addClass("play").attr({ "title": "" }).data('filename', data[i][1]).attr({ "id": playTdId }).data('number', i).on("click", function () {
+				var filename = data[i][1].replaceAll('#','%23'); // 音声ファイル名の # をエンコード（これを残すと正常に読み込まれない）
+				$play = $("<td>").addClass("play").attr({ "title": "" }).data('filename', filename).attr({ "id": playTdId }).data('number', i).on("click", function () {
 					play($(this));
 				});
 
@@ -1513,6 +1514,7 @@
 			updateTitle();
 			$("#version").text(version);
 
+			mixedMediafile = mixedMediafile.replaceAll('#','%23'); // 音声ファイル名の # をエンコード（これを残すと正常に読み込まれない）
 			$("#orgmedia").attr({ "src": mixedMediafile });
 			if (mixedMediaIsMovie) {
 				$("#movieThumbnail").attr({ "src": mixedMediafile });
