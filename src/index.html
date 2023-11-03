@@ -397,16 +397,20 @@
 			}
 
 			// 動画サムネイルクリックで動画ダイアログを開く
-			$("#movieThumbnail").on("click", function () {
+			function openMovieDialogue(){
 				$("#movieDialogue").dialog("open");
 				$("#orgmedia")[0].pause();
 				$("#orgmedia").css("display", "none"); // audioとサムネは隠す
 				$("#movieThumbnail").css("display", "none");
+			}
+			$("#movieThumbnail").on("click", function () {
+				openMovieDialogue();
 			});
+			
 			$("#movieDialogue").dialog({ // 動画ダイアログ
 				autoOpen: false, width: "400",
 				closeOnEscape: true,
-				position: { my: "right", at: "right" },
+				position: { my: "right-15 bottom-15",at: "right-15 bottom-15" },
 				collision: "flipfit",
 				resize: function () {
 					$(this).css("overflow", "hidden"); // リサイズ時のスクロールバー消し
@@ -1519,6 +1523,7 @@
 			if (mixedMediaIsMovie) {
 				$("#movieThumbnail").attr({ "src": mixedMediafile });
 				$("#movie").attr({ "src": mixedMediafile });
+				openMovieDialogue();
 			} else {
 				$(".movieThumbnail").css("display", "none")
 			}
