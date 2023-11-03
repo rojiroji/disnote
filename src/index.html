@@ -24,10 +24,10 @@
 				window.api.on("apiSaveEditNotify", saveEdit); // Ctrl+Sのイベント
 				window.api.on("apiLoadEditData", (arg) => { // htmlファイル読み込み完了イベント
 					loadEditFile(arg); // argに編集データが入っている。読み込み。
-				});				
+				});
 
 				$("#aboutlink").attr("target", ""); // target="_blank"だとelectronがイベントを拾ってくれないので変更する
-				$("#home").css("display","block"); // ホームに戻るボタン有効
+				$("#home").css("display", "block"); // ホームに戻るボタン有効
 			}
 
 			$edittingtag = null; // 編集中のhtmlタグ
@@ -35,10 +35,10 @@
 			var edited = false;
 			//var editFileName = "";
 
-			function setEdited(e){ // 編集中かどうかを保持
-				if(edited != e){
+			function setEdited(e) { // 編集中かどうかを保持
+				if (edited != e) {
 					edited = e;
-					if(isElectron){
+					if (isElectron) {
 						window.api.setEdited(edited); // electron側で保持
 					}
 				}
@@ -397,7 +397,7 @@
 			}
 
 			// 動画サムネイルクリックで動画ダイアログを開く
-			function openMovieDialogue(){
+			function openMovieDialogue() {
 				$("#movieDialogue").dialog("open");
 				$("#orgmedia")[0].pause();
 				$("#orgmedia").css("display", "none"); // audioとサムネは隠す
@@ -406,11 +406,11 @@
 			$("#movieThumbnail").on("click", function () {
 				openMovieDialogue();
 			});
-			
+
 			$("#movieDialogue").dialog({ // 動画ダイアログ
 				autoOpen: false, width: "400",
 				closeOnEscape: true,
-				position: { my: "right-15 bottom-15",at: "right-15 bottom-15" },
+				position: { my: "right-15 bottom-15", at: "right-15 bottom-15" },
 				collision: "flipfit",
 				resize: function () {
 					$(this).css("overflow", "hidden"); // リサイズ時のスクロールバー消し
@@ -1080,7 +1080,7 @@
 
 				// 再生ボタン
 				var playTdId = "play_" + i;
-				var filename = data[i][1].replaceAll('#','%23'); // 音声ファイル名の # をエンコード（これを残すと正常に読み込まれない）
+				var filename = data[i][1].replaceAll('#', '%23'); // 音声ファイル名の # をエンコード（これを残すと正常に読み込まれない）
 				$play = $("<td>").addClass("play").attr({ "title": "" }).data('filename', filename).attr({ "id": playTdId }).data('number', i).on("click", function () {
 					play($(this));
 				});
@@ -1518,7 +1518,7 @@
 			updateTitle();
 			$("#version").text(version);
 
-			mixedMediafile = mixedMediafile.replaceAll('#','%23'); // 音声ファイル名の # をエンコード（これを残すと正常に読み込まれない）
+			mixedMediafile = mixedMediafile.replaceAll('#', '%23'); // 音声ファイル名の # をエンコード（これを残すと正常に読み込まれない）
 			$("#orgmedia").attr({ "src": mixedMediafile });
 			if (mixedMediaIsMovie) {
 				$("#movieThumbnail").attr({ "src": mixedMediafile });
