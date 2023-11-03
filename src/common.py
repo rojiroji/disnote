@@ -10,6 +10,8 @@ import argparse
 import copy
 import json
 
+VERSION = "v3.1.0"
+
 input_file_config_lock = threading.Lock()
 error_occurred = False
 
@@ -94,7 +96,7 @@ def getSysArgs():
 
 # DisNOTEのバージョン
 def getVersion():
-    return "v3.0.1"
+    return VERSION
 
 
 # 共通設定iniファイルの設定値を一通り読み込み（設定値がなければ初期値が書き込まれる）
