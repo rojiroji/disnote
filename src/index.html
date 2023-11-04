@@ -17,6 +17,9 @@
 			console.log("param:electron=" + params.get("electron"));
 			const isElectron = !(params.get("electron") === null);
 			console.log("isElectron=" + isElectron);
+			console.log("param:existsYmm4TemplateProjectFile=" + params.get("existsYmm4TemplateProjectFile"));
+			const existsYmm4TemplateProjectFile = (params.get("existsYmm4TemplateProjectFile") == "true");
+			console.log("existsYmm4TemplateProjectFile=" + existsYmm4TemplateProjectFile);
 
 
 			if (isElectron) { // electronから起動した場合
@@ -26,9 +29,14 @@
 					loadEditFile(arg); // argに編集データが入っている。読み込み。
 				});
 
-				// ゆっくりMovieMaker4プロジェクトファイル の保存先(=現在のフォルダ)
-				const dir = window.location.pathname.replace(new RegExp("(?:\\\/+[^\\\/]*){0," + (1) + "}$"), "/"); // 現在のフォルダを取得
-				$("#ymm4projectInfo").html(decodeURI(dir.substr(1)) + "<br>に保存されます");  // 先頭に / があるので除いてから表示
+				if (existsYmm4TemplateProjectFile) {
+					// ゆっくりMovieMaker4プロジェクトファイル の保存先(=現在のフォルダ)
+					const dir = window.location.pathname.replace(new RegExp("(?:\\\/+[^\\\/]*){0," + (1) + "}$"), "/"); // 現在のフォルダを取得
+					$("#ymm4projectInfo").html(decodeURI(dir.substr(1)) + "<br>に保存されます");  // 先頭に / があるので除いてから表示
+				} else {
+					$("#ymm4projectInfo").html("<span style='color:red'>ymm4template\\template.ymmp を用意してください</span>");
+					$(".ymm4project").prop("disabled", true);
+				}
 
 				$("#aboutlink").attr("target", ""); // target="_blank"だとelectronがイベントを拾ってくれないので変更する
 				$("#home").css("display", "block"); // ホームに戻るボタン有効
@@ -535,9 +543,9 @@
 				downloadStr(str, isCSV ? 'text/csv' : 'text/plain', filename + (isCSV ? 'csv' : 'txt'));
 			});
 
-			$("#download_ymm4_project").click(function () { // ダウンロード処理(ゆっくりムービーメーカー4プロジェクトファイル)
-				if (!isElectron) {
-					return; // 管理画面経由でのみ使える
+			$("#download_ymm4_project").click(async function () { // ダウンロード処理(ゆっくりムービーメーカー4プロジェクトファイル)
+				if (!isElectron || !existsYmm4TemplateProjectFile) {
+					return; // 管理画面経由でのみ使える & テンプレートプロジェクトファイルがないと動かない
 				}
 				var filter = [true, true, true, true, false, true, false]; // 出力フィルタ（名前、ファイル名、時間、長さ、スコア（出力しない）、候補1、候補2～（出力しない）
 				var itemArray = data.map(function (orgLine, index) {
@@ -546,9 +554,17 @@
 				}).filter(function (line, index) {
 					return $("#tr_" + index).css("display") != "none"; // 表示している行だけ出力する(先にfilterするとindexがずれるので最後にfilterする)
 				});
-				window.api.apiSaveYmm4Project(itemArray, mixedMediafile, mixedMediaIsMovie,
+				var result = await window.api.apiSaveYmm4Project(itemArray, mixedMediafile.replaceAll('%23', '#'),
+					mixedMediaIsMovie,
 					$('#exec_ymm4').prop('checked'), $('#open_ymm4projectfolder').prop('checked'),
 					$("#orgmedia")[0].duration); // electron側で保存
+				if (result) {
+					if (!$('#exec_ymm4').prop('checked')) {
+						alert("正常に出力しました。");
+					}
+				} else {
+					alert("エラーが発生しました。ログファイルを参照してください。");
+				}
 			});
 
 

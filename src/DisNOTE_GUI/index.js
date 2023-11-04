@@ -20,6 +20,9 @@ let edited = false;
 const env = JSON.parse(fs.readFileSync(path.join(__dirname, 'env.json'), 'utf8'));
 console.log("env. " + JSON.stringify(env));
 
+// YMM4プロジェクトのテンプレートファイル（ユーザーが用意）
+const ymm4TemplateProjectFile = path.join(env.ymm4templatedir, 'template.ymmp')
+
 // logger設定
 log4js.configure({
   appenders: {
@@ -679,7 +682,6 @@ ipcMain.handle('updateConfig', (event, param_config) => {
   return config;
 });
 
-
 /**
  * YMM4プロジェクトを保存
  * index.html        $("#download_ymm4_project").click 
@@ -691,26 +693,25 @@ ipcMain.handle('apiSaveYmm4Project', async (event, itemArray, mixedMediafile, mi
   let ymm4ProjectPath = changeExtension(edittingProject.result, ".ymmp"); // 保存先
   ymm4ProjectPath = ymm4ProjectPath.replace(".ymmp", "_" + timeToLocalyyyyMMddHHmmss(new Date()) + ".ymmp"); // 日時をファイル名に含める
 
-  // プロジェクトのテンプレート読み込み（ユーザーに作ってもらう）
-  let template_ymm4project_text = fs.readFileSync(path.join(env.ymm4templatedir, 'template.ymmp'), 'utf8');
-  if (template_ymm4project_text.charCodeAt(0) === 0xFEFF) { // BOMを消す
-    template_ymm4project_text = template_ymm4project_text.substring(1);
-  }
-  const template_ymm4project = JSON.parse(template_ymm4project_text);
-  const fps = template_ymm4project.Timeline.VideoInfo.FPS;
-
-  // YMM4プロジェクトファイルを色々書き換え
-  template_ymm4project.FilePath = ymm4ProjectPath;
-
   try {
-    let items = template_ymm4project.Timeline.Items;
-    let layers = template_ymm4project.Timeline.LayerSettings.Items;
+
+    // プロジェクトのテンプレート読み込み（ユーザーに作ってもらう）
+    let templateYmm4projectText = fs.readFileSync(ymm4TemplateProjectFile, 'utf8');
+    if (templateYmm4projectText.charCodeAt(0) === 0xFEFF) { // BOMを消す
+      templateYmm4projectText = templateYmm4projectText.substring(1);
+    }
+    const templateYmm4Project = JSON.parse(templateYmm4projectText);
+    const fps = templateYmm4Project.Timeline.VideoInfo.FPS;
+
+
+    let items = templateYmm4Project.Timeline.Items;
+    let layers = templateYmm4Project.Timeline.LayerSettings.Items;
 
     // テンプレートファイルのキャラクター定義を読み込み（"DisNOTE自動作業用" のキャラクターが増幅しないように削除しておく）
     const setting_character = JSON.parse(fs.readFileSync(path.join(__dirname, 'ymm4setting', 'character.json'), 'utf8'));
-    let characters = template_ymm4project.Characters.filter((character) => character.Name != setting_character.Name);
+    let characters = templateYmm4Project.Characters.filter((character) => character.Name != setting_character.Name);
     characters.push(setting_character);
-    template_ymm4project.Characters = characters; // "DisNOTE自動作業用" のキャラクターを追加
+    templateYmm4Project.Characters = characters; // "DisNOTE自動作業用" のキャラクターを追加
 
     // 空いているレイヤーを探す
     let maxLayer = 0;
@@ -765,10 +766,10 @@ ipcMain.handle('apiSaveYmm4Project', async (event, itemArray, mixedMediafile, mi
     });
 
     // YMM4プロジェクトファイルを色々書き換え
-    template_ymm4project.FilePath = ymm4ProjectPath;
-    template_ymm4project.Timeline.MaxLayer = maxLayer;
-    template_ymm4project.Timeline.Length = mixedMediaLengthFrame;
-    fs.writeFileSync(ymm4ProjectPath, JSON.stringify(template_ymm4project, null, 2));
+    templateYmm4Project.FilePath = ymm4ProjectPath;
+    templateYmm4Project.Timeline.MaxLayer = maxLayer;
+    templateYmm4Project.Timeline.Length = mixedMediaLengthFrame;
+    fs.writeFileSync(ymm4ProjectPath, JSON.stringify(templateYmm4Project, null, 2));
 
     // フォルダを開く
     if (openYmm4projectfolder) {
@@ -847,7 +848,15 @@ ipcMain.handle('editProject', async (event, projectId) => {
     logger.error('Error copying directory:', err);
   }
 
-  mainWindow.loadFile(dsthtmlfile, { query: { "electron": "true" } }) // 画面遷移 パラメタelectronを指定して、Electronから開いているという情報を渡す
+
+
+
+  mainWindow.loadFile(dsthtmlfile, {
+    query: {
+      "electron": "true", // 画面遷移 パラメタelectronを指定して、Electronから開いているという情報を渡す
+      "existsYmm4TemplateProjectFile": fs.existsSync(ymm4TemplateProjectFile) // YMM4プロジェクトのテンプレートが存在するかどうか（無いと出力できない）
+    }
+  })
     .then(_ => {
 
       result = loadEditFile(editFileName)
