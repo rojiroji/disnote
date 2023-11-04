@@ -348,6 +348,15 @@ function timeToLocalString(time) {
 }
 
 /**
+ * 時刻をローカル時間のyyyyMMddHHmmss形式の文字列に変換（ライブラリを使えば簡単だがとりあえず標準で行う）
+ * @param {文字列に変換する時刻} time 
+ * @returns 
+ */
+function timeToLocalyyyyMMddHHmmss(time) {
+  const localString = timeToLocalString(time);
+  return timeToLocalString(time).replaceAll("/", "").replaceAll(":", "").replaceAll(" ", "");
+}
+/**
  * ドロップしたファイルパスから、プロジェクトのjsonデータを作成する
  * @param {ファイルパス} filePaths 
  * @returns 
@@ -669,6 +678,116 @@ ipcMain.handle('updateConfig', (event, param_config) => {
   config = param_config;
   return config;
 });
+
+
+/**
+ * YMM4プロジェクトを保存
+ * index.html        $("#download_ymm4_project").click 
+ * -> js/preload.js  apiSaveYmm4Project
+ * -> index.js       apiSaveYmm4Project
+ */
+ipcMain.handle('apiSaveYmm4Project', async (event, itemArray, mixedMediafile, mixedMediaIsMovie,
+  execYmm4, openYmm4projectfolder, mixedMediafileDuration) => {
+  let ymm4ProjectPath = changeExtension(edittingProject.result, ".ymmp"); // 保存先
+  ymm4ProjectPath = ymm4ProjectPath.replace(".ymmp", "_" + timeToLocalyyyyMMddHHmmss(new Date()) + ".ymmp"); // 日時をファイル名に含める
+
+  // プロジェクトのテンプレート読み込み（ユーザーに作ってもらう）
+  let template_ymm4project_text = fs.readFileSync(path.join(env.ymm4templatedir, 'template.ymmp'), 'utf8');
+  if (template_ymm4project_text.charCodeAt(0) === 0xFEFF) { // BOMを消す
+    template_ymm4project_text = template_ymm4project_text.substring(1);
+  }
+  const template_ymm4project = JSON.parse(template_ymm4project_text);
+  const fps = template_ymm4project.Timeline.VideoInfo.FPS;
+
+  // YMM4プロジェクトファイルを色々書き換え
+  template_ymm4project.FilePath = ymm4ProjectPath;
+
+  try {
+    let items = template_ymm4project.Timeline.Items;
+    let layers = template_ymm4project.Timeline.LayerSettings.Items;
+
+    // テンプレートファイルのキャラクター定義を読み込み（"DisNOTE自動作業用" のキャラクターが増幅しないように削除しておく）
+    const setting_character = JSON.parse(fs.readFileSync(path.join(__dirname, 'ymm4setting', 'character.json'), 'utf8'));
+    let characters = template_ymm4project.Characters.filter((character) => character.Name != setting_character.Name);
+    characters.push(setting_character);
+    template_ymm4project.Characters = characters; // "DisNOTE自動作業用" のキャラクターを追加
+
+    // 空いているレイヤーを探す
+    let maxLayer = 0;
+    Object.values(items).forEach(item => { // アイテムが使っているレイヤーを調べる
+      maxLayer = Math.max(item.Layer, maxLayer);
+    });
+    Object.values(layers).forEach(item => { // 定義済みのレイヤーを調べる
+      maxLayer = Math.max(item.Layer, maxLayer);
+    });
+
+    // 認識した音声 or 動画をアイテムに追加
+    let names = {}; // 名前とlayerの対応
+    maxLayer++;
+    names[path.basename(mixedMediafile)] = maxLayer;
+    const settingMedia = fs.readFileSync(path.join(__dirname, 'ymm4setting', mixedMediaIsMovie ? 'movie.json' : 'audio.json'), 'utf8');
+    const mixedMediaLengthFrame = Math.trunc(mixedMediafileDuration * fps);// 秒からフレーム数を計算、整数化
+    const newItemStr = settingMedia.replaceAll("$filepath", path.join(edittingProject.dir, mixedMediafile).replaceAll("\\", "\\\\"))
+      .replaceAll("$layer", maxLayer).replaceAll("$length", mixedMediaLengthFrame);
+    const newItem = JSON.parse(newItemStr);
+    items.push(newItem);
+
+    // 出力するセリフをアイテムに追加
+    const settingItem = fs.readFileSync(path.join(__dirname, 'ymm4setting', 'item.json'), 'utf8');
+    Object.values(itemArray).forEach(item => { // セリフ1行ごとにアイテム追加
+      const name = item[0];
+      const filename = item[1];
+      const time = item[2];
+      const length = item[3];
+      const text = item[4];
+
+      if (!(name in names)) { // キャラクター（話者）に対応するレイヤーを決定
+        maxLayer++;
+        names[name] = maxLayer;
+      }
+      const layer = names[name];
+      const frame = Math.trunc(time * fps / 1000); // ミリ秒からフレーム数を計算、整数化
+      const lengthframe = Math.trunc(length * fps / 1000);
+
+      // アイテム追加
+      const newItemStr = settingItem.replaceAll("$voice", text).replaceAll("$frame", frame)
+        .replaceAll("$layer", layer).replaceAll("$length", lengthframe).replaceAll("$remark", path.basename(filename));
+      const newItem = JSON.parse(newItemStr);
+      items.push(newItem);
+    });
+
+    // レイヤー設定
+    const settingLayerSetting = fs.readFileSync(path.join(__dirname, 'ymm4setting', 'layersetting.json'), 'utf8');
+    Object.keys(names).forEach(name => {
+      const newItemStr = settingLayerSetting.replaceAll("$name", name).replaceAll("$layer", names[name]);
+      const newItem = JSON.parse(newItemStr);
+      layers.push(newItem);
+    });
+
+    // YMM4プロジェクトファイルを色々書き換え
+    template_ymm4project.FilePath = ymm4ProjectPath;
+    template_ymm4project.Timeline.MaxLayer = maxLayer;
+    template_ymm4project.Timeline.Length = mixedMediaLengthFrame;
+    fs.writeFileSync(ymm4ProjectPath, JSON.stringify(template_ymm4project, null, 2));
+
+    // フォルダを開く
+    if (openYmm4projectfolder) {
+      shell.openPath(edittingProject.dir);
+    }
+    // YMM4を開く
+    if (execYmm4) {
+      shell.openPath(ymm4ProjectPath);
+    }
+
+    return true
+  } catch (err) {
+    logger.error('ymm4 save err:' + ymm4ProjectPath)
+    logger.error(err)
+    return false
+  }
+})
+
+
 /**
  * プロジェクトの編集ボタンを押下 → htmlファイルの読み込み（同時に編集ファイルも読み込む）
  * js/main.js        editProject -> editbutton.addEventListener('click',' ...
@@ -742,24 +861,25 @@ ipcMain.handle('editProject', async (event, projectId) => {
       }
     });
 
-  /**
-   * ファイルパスの拡張子を変更したものを返す
-   * @param {*} filepath ファイルのパス
-   * @param {*} toext 変更後の拡張子
-   */
-  function changeExtension(filepath, toext) {
-    const extension = path.extname(filepath);
-    let changedPath;
-    if (extension) {
-      // 拡張子を置き換える
-      changedPath = filepath.replace(new RegExp(`${extension}$`), toext); // 最後の一致のみ
-    } else {
-      // 拡張子がない場合は ".json" を追加する
-      changedPath = `${filepath}.json`;
-    }
-    return changedPath;
-  }
 })
+
+/**
+ * ファイルパスの拡張子を変更したものを返す
+ * @param {*} filepath ファイルのパス
+ * @param {*} toext 変更後の拡張子
+ */
+function changeExtension(filepath, toext) {
+  const extension = path.extname(filepath);
+  let changedPath;
+  if (extension) {
+    // 拡張子を置き換える
+    changedPath = filepath.replace(new RegExp(`${extension}$`), toext); // 最後の一致のみ
+  } else {
+    // 拡張子がない場合は ".json" を追加する
+    changedPath = `${filepath}.json`;
+  }
+  return changedPath;
+}
 
 /**
  * プロジェクトの編集ファイルの読み込み

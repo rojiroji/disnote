@@ -1,0 +1,236 @@
+
+    {
+      "Name": "DisNOTE自動作業用",
+      "GroupName": "その他",
+      "Color": "#FF8B0000",
+      "Layer": 0,
+      "KeyGesture": {
+        "Key": 0,
+        "Modifiers": 2
+      },
+      "Voice": {
+        "API": "None",
+        "Arg": "None"
+      },
+      "Volume": {
+        "Values": [
+          {
+            "Value": 50.0
+          }
+        ],
+        "Span": 0.0,
+        "AnimationType": "なし"
+      },
+      "Pan": {
+        "Values": [
+          {
+            "Value": 0.0
+          }
+        ],
+        "Span": 0.0,
+        "AnimationType": "なし"
+      },
+      "PlaybackRate": 100.0,
+      "VoiceParameter": null,
+      "AdditionalTime": 0.3,
+      "VoiceFadeIn": 0.0,
+      "VoiceFadeOut": 0.0,
+      "EchoIsEnabled": false,
+      "EchoInterval": 0.1,
+      "EchoAttenuation": 40.0,
+      "CustomVoiceIsEnabled": false,
+      "CustomVoiceIncludeSubdirectories": false,
+      "CustomVoiceDirectory": "",
+      "CustomVoiceFileName": "",
+      "AudioEffects": [],
+      "IsJimakuVisible": true,
+      "IsJimakuLocked": false,
+      "X": {
+        "Values": [
+          {
+            "Value": 0.0
+          }
+        ],
+        "Span": 0.0,
+        "AnimationType": "なし"
+      },
+      "Y": {
+        "Values": [
+          {
+            "Value": 530.0
+          }
+        ],
+        "Span": 0.0,
+        "AnimationType": "なし"
+      },
+      "Z": {
+        "Values": [
+          {
+            "Value": 0.0
+          }
+        ],
+        "Span": 0.0,
+        "AnimationType": "なし"
+      },
+      "Opacity": {
+        "Values": [
+          {
+            "Value": 100.0
+          }
+        ],
+        "Span": 0.0,
+        "AnimationType": "なし"
+      },
+      "Zoom": {
+        "Values": [
+          {
+            "Value": 100.0
+          }
+        ],
+        "Span": 0.0,
+        "AnimationType": "なし"
+      },
+      "Rotation": {
+        "Values": [
+          {
+            "Value": 0.0
+          }
+        ],
+        "Span": 0.0,
+        "AnimationType": "なし"
+      },
+      "JimakuFadeIn": 0.0,
+      "JimakuFadeOut": 0.0,
+      "Blend": "Normal",
+      "IsInverted": false,
+      "IsAlwaysOnTop": false,
+      "IsZOrderEnabled": false,
+      "IsClippingWithObjectAbove": false,
+      "Font": "メイリオ",
+      "FontSize": {
+        "Values": [
+          {
+            "Value": 45.0
+          }
+        ],
+        "Span": 0.0,
+        "AnimationType": "なし"
+      },
+      "LineHeight2": {
+        "Values": [
+          {
+            "Value": 100.0
+          }
+        ],
+        "Span": 0.0,
+        "AnimationType": "なし"
+      },
+      "LetterSpacing2": {
+        "Values": [
+          {
+            "Value": 0.0
+          }
+        ],
+        "Span": 0.0,
+        "AnimationType": "なし"
+      },
+      "DisplayInterval": 0.0,
+      "WordWrap": "NoWrap",
+      "MaxWidth": {
+        "Values": [
+          {
+            "Value": 1920.0
+          }
+        ],
+        "Span": 0.0,
+        "AnimationType": "なし"
+      },
+      "BasePoint": "CenterBottom",
+      "FontColor": "#FFFFFFFF",
+      "Style": "Border",
+      "StyleColor": "#FF8B0000",
+      "Bold": false,
+      "Italic": false,
+      "IsDevidedPerCharacter": false,
+      "JimakuVideoEffects": [],
+      "TachieType": null,
+      "TachieCharacterParameter": null,
+      "IsTachieLocked": false,
+      "TachieX": {
+        "Values": [
+          {
+            "Value": 0.0
+          }
+        ],
+        "Span": 0.0,
+        "AnimationType": "なし"
+      },
+      "TachieY": {
+        "Values": [
+          {
+            "Value": 0.0
+          }
+        ],
+        "Span": 0.0,
+        "AnimationType": "なし"
+      },
+      "TachieZ": {
+        "Values": [
+          {
+            "Value": 0.0
+          }
+        ],
+        "Span": 0.0,
+        "AnimationType": "なし"
+      },
+      "TachieOpacity": {
+        "Values": [
+          {
+            "Value": 100.0
+          }
+        ],
+        "Span": 0.0,
+        "AnimationType": "なし"
+      },
+      "TachieZoom": {
+        "Values": [
+          {
+            "Value": 100.0
+          }
+        ],
+        "Span": 0.0,
+        "AnimationType": "なし"
+      },
+      "TachieRotation": {
+        "Values": [
+          {
+            "Value": 0.0
+          }
+        ],
+        "Span": 0.0,
+        "AnimationType": "なし"
+      },
+      "TachieFadeIn": 0.0,
+      "TachieFadeOut": 0.0,
+      "TachieBlend": "Normal",
+      "TachieIsInverted": false,
+      "TachieIsAlwaysOnTop": false,
+      "TachieIsZOrderEnabled": false,
+      "TachieIsClippingWithObjectAbove": false,
+      "TachieDefaultItemParameter": null,
+      "TachieItemVideoEffects": [],
+      "TachieDefaultFaceParameter": null,
+      "TachieDefaultFaceEffects": [],
+      "AdditionalForegroundTemplateName": null,
+      "AdditionalBackgroundTemplateName": null,
+      "VoiceItemLength": 300,
+      "TachieItemLength": 300,
+      "VoiceItemKeyFrames": {
+        "Frames": [],
+        "Count": 0
+      },
+      "TachieItemKeyFrames": {
+        "Frames": [],
+        "Count": 0
+      }
+    }

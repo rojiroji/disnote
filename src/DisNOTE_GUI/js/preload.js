@@ -32,6 +32,12 @@ contextBridge.exposeInMainWorld(
   cancelRecognize: () => ipcRenderer.invoke("cancelRecognize") // 音声認識エンジンキャンセル
     .then(result => result)
     .catch(err => console.log(err)),
+  apiSaveYmm4Project: (itemArray, mixedMediafile, mixedMediaIsMovie, // YMM4プロジェクトを保存
+    execYmm4, openYmm4projectfolder, mixedMediafileDuration) =>
+    ipcRenderer.invoke("apiSaveYmm4Project", itemArray, mixedMediafile, mixedMediaIsMovie,
+      execYmm4, openYmm4projectfolder, mixedMediafileDuration)
+      .then(result => result)
+      .catch(err => console.log(err)),
   apiSaveEditFile: (path) => ipcRenderer.invoke("apiSaveEditFile", path) // 保存
     .then(result => result)
     .catch(err => console.log(err)),

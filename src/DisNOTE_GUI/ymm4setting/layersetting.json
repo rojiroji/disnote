@@ -1,0 +1,7 @@
+        {
+          "Layer": "$layer",
+          "Label": "$name",
+          "Color": "#00FFFFFF",
+          "IsHidden": false,
+          "Volume": 100.0
+        }

@@ -1,0 +1,50 @@
+      {
+        "$type": "YukkuriMovieMaker.Project.Items.AudioItem, YukkuriMovieMaker",
+        "IsWaveformEnabled": false,
+        "FilePath": "$filepath",
+        "AudioTrackIndex": 0,
+        "Volume": {
+          "Values": [
+            {
+              "Value": 50.0
+            },
+            {
+              "Value": 0.0
+            }
+          ],
+          "Span": 0.0,
+          "AnimationType": "なし"
+        },
+        "Pan": {
+          "Values": [
+            {
+              "Value": 0.0
+            },
+            {
+              "Value": 0.0
+            }
+          ],
+          "Span": 0.0,
+          "AnimationType": "なし"
+        },
+        "PlaybackRate": 100.0,
+        "ContentOffset": "00:00:00",
+        "FadeIn": 0.0,
+        "FadeOut": 0.0,
+        "IsLooped": false,
+        "EchoIsEnabled": false,
+        "EchoInterval": 0.1,
+        "EchoAttenuation": 40.0,
+        "AudioEffects": [],
+        "Group": 0,
+        "Frame": 0,
+        "Layer": "$layer",
+        "KeyFrames": {
+          "Frames": [],
+          "Count": 0
+        },
+        "Length": "$length",
+        "Remark": "",
+        "IsLocked": false,
+        "IsHidden": false
+      }

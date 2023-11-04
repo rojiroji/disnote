@@ -26,8 +26,15 @@
 					loadEditFile(arg); // argに編集データが入っている。読み込み。
 				});
 
+				// ゆっくりMovieMaker4プロジェクトファイル の保存先(=現在のフォルダ)
+				const dir = window.location.pathname.replace(new RegExp("(?:\\\/+[^\\\/]*){0," + (1) + "}$"), "/"); // 現在のフォルダを取得
+				$("#ymm4projectInfo").html(decodeURI(dir.substr(1)) + "<br>に保存されます");  // 先頭に / があるので除いてから表示
+
 				$("#aboutlink").attr("target", ""); // target="_blank"だとelectronがイベントを拾ってくれないので変更する
 				$("#home").css("display", "block"); // ホームに戻るボタン有効
+			} else {
+				$("#ymm4projectInfo").html("<span style='color:red'>本機能は管理画面からでないと使用できません</span>");
+				$(".ymm4project").prop("disabled", true);
 			}
 
 			$edittingtag = null; // 編集中のhtmlタグ
@@ -456,26 +463,32 @@
 				close: function () { saveConfig(); },
 			});
 
+			function getDownloadLineArray(filter, orgLine, index, isMSec) { // ダウンロードするファイルの内容を配列で返す（1行分）
+				var line = orgLine.slice(); // 以下の処理で配列を破壊するので、ここで配列を値コピー
+				var name = line[0];
+				$tr = $("#tr_" + index);
+				line[0] = $("#person_namesetting_" + personalData[name]["hash"]).val(); // 名前を表示名に変更
+				if (!isMSec) { // 開始時間を時間表示(そうでない場合はミリ秒)
+					line[2] = $tr.find("td.time").find($('#abstime').prop('checked') ? "span.abstime" : "span.reltime").text(); // 相対時間か時刻か
+				}
+
+				// 候補（現在選択中のものを先頭にもってくる）
+				$target = $tr.data('textTd');
+				var current = 0 + $target.data('current');
+				var len = $target.data('textlen');
+				for (var i = 0; i < len; i++) {
+					line[5 + i] = $target.data('text' + (current + i) % len);
+				}
+
+				return line.filter(function (cell, index) {
+					return filter[index < filter.length ? index : filter.length - 1]; // 設定に沿って出力列を決定(候補3以降は、候補2と同じ設定)
+				})
+			}
+
 			function getDownloadStr(filter, isCSV, isHeader) { // ダウンロードするファイルの内容を文字列で返す
 				var str = data.map(function (orgLine, index) {
-					var line = orgLine.slice(); // 以下の処理で配列を破壊するので、ここで配列を値コピー
-					var name = line[0];
-					$tr = $("#tr_" + index);
-					line[0] = $("#person_namesetting_" + personalData[name]["hash"]).val(); // 名前を表示名に変更
-					line[2] = $tr.find("td.time").find($('#abstime').prop('checked') ? "span.abstime" : "span.reltime").text(); // 相対時間か時刻か
-
-					// 候補（現在選択中のものを先頭にもってくる）
-					$target = $tr.data('textTd');
-					var current = 0 + $target.data('current');
-					var len = $target.data('textlen');
-					for (var i = 0; i < len; i++) {
-						line[5 + i] = $target.data('text' + (current + i) % len);
-					}
-
-
-					return line.filter(function (cell, index) {
-						return filter[index < filter.length ? index : filter.length - 1]; // 設定に沿って出力列を決定(候補3以降は、候補2と同じ設定)
-					}).map(function (cell) {
+					var lineArray = getDownloadLineArray(filter, orgLine, index, false);
+					return lineArray.map(function (cell) {
 						return isCSV ? `"${cell.replace(/\"/g, '\"\"')}"` : cell; // CSV形式の場合は "をエスケープして " で囲む
 					}).join(isCSV ? ',' : "\t");
 				}).filter(function (line, index) {
@@ -500,6 +513,7 @@
 				$a.attr("href", url);
 				$a[0].click();
 			}
+
 			$("#download_ymm4").click(function () { // ダウンロード処理(ゆっくりムービーメーカー4台本ファイル)
 				var filter = [true, false, false, false, false, true, false]; // 出力フィルタ（名前、ファイル名（出力しない）、時間（出力しない）、長さ（出力しない）、スコア（出力しない）、候補1、候補2～（出力しない）
 				var str = getDownloadStr(filter, true);
@@ -507,6 +521,7 @@
 
 				downloadStr(str, 'text/csv', filename + '_ymm4.csv', false);
 			});
+
 			$("#download_custom").click(function () { // ダウンロード処理
 				var filter = [true, true, true, false, false, true, false]; // 出力フィルタ（名前、ファイル名、時間、長さ（出力しない）、スコア（出力しない）、候補1、候補2～
 				filter[0] = $("#download_people").prop('checked');
@@ -519,7 +534,25 @@
 
 				downloadStr(str, isCSV ? 'text/csv' : 'text/plain', filename + (isCSV ? 'csv' : 'txt'));
 			});
-			function saveEdit() { // 編集データ保存（ダウンロード）
+
+			$("#download_ymm4_project").click(function () { // ダウンロード処理(ゆっくりムービーメーカー4プロジェクトファイル)
+				if (!isElectron) {
+					return; // 管理画面経由でのみ使える
+				}
+				var filter = [true, true, true, true, false, true, false]; // 出力フィルタ（名前、ファイル名、時間、長さ、スコア（出力しない）、候補1、候補2～（出力しない）
+				var itemArray = data.map(function (orgLine, index) {
+					var lineArray = getDownloadLineArray(filter, orgLine, index, true);
+					return lineArray;
+				}).filter(function (line, index) {
+					return $("#tr_" + index).css("display") != "none"; // 表示している行だけ出力する(先にfilterするとindexがずれるので最後にfilterする)
+				});
+				window.api.apiSaveYmm4Project(itemArray, mixedMediafile, mixedMediaIsMovie,
+					$('#exec_ymm4').prop('checked'), $('#open_ymm4projectfolder').prop('checked'),
+					$("#orgmedia")[0].duration); // electron側で保存
+			});
+
+
+			function saveEdit() { // 編集データ保存
 				var str = JSON.stringify({
 					projectName: $("#projectname").val(),
 					projectHash: projectHash,
@@ -1696,6 +1729,34 @@
 					<div class="dlbtn">
 						<span id="download_ymm4" class="download">
 							<span href="javascript:void(0)">ダウンロード</span>
+						</span>
+					</div>
+				</div>
+				<div class="group">
+					<div>
+						<span class="caption">ゆっくりMovieMaker4プロジェクトファイル 保存</span>
+					</div>
+					<div>
+						<span id="ymm4projectInfo">xxxに保存されます</span>
+
+						<table class="helptable">
+							<tr>
+								<td>
+									<label><input id="exec_ymm4" class="ymm4project"
+											type="checkbox">ゆっくりMovieMaker4で開く（要関連付け）</label>
+								</td>
+							</tr>
+							<tr>
+								<td>
+									<label><input id="open_ymm4projectfolder" class="ymm4project"
+											type="checkbox">保存先を開く</label>
+								</td>
+							</tr>
+						</table>
+					</div>
+					<div class="dlbtn">
+						<span id="download_ymm4_project" class="download ymm4project">
+							<span href="javascript:void(0)">保存</span>
 						</span>
 					</div>
 				</div>
