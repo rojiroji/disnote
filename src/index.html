@@ -38,7 +38,7 @@
 					$(".ymm4project").prop("disabled", true);
 				}
 
-				$("#aboutlink").attr("target", ""); // target="_blank"だとelectronがイベントを拾ってくれないので変更する
+				$(".blank").attr("target", ""); // target="_blank"だとelectronがイベントを拾ってくれないので変更する
 				$("#home").css("display", "block"); // ホームに戻るボタン有効
 			} else {
 				$("#ymm4projectInfo").html("<span style='color:red'>本機能は管理画面からでないと使用できません</span>");
@@ -1732,7 +1732,7 @@
 
 				</div>
 				<div class="about">
-					<a href="https://roji3.jpn.org/disnote/" target="_blank" id="aboutlink">DisNOTE <span
+					<a href="https://roji3.jpn.org/disnote/" target="_blank" id="aboutlink" class="blank">DisNOTE <span
 							id="version"></span></a>
 				</div>
 			</div>
@@ -1743,6 +1743,7 @@
 						<span class="caption">ゆっくりMovieMaker4台本形式 ダウンロード</span>
 					</div>
 					<div class="dlbtn">
+						<a href="https://roji3.jpn.org/disnote/output.html#ymm4csv" target="_blank" class="blank">説明</a>　
 						<span id="download_ymm4" class="download">
 							<span href="javascript:void(0)">ダウンロード</span>
 						</span>
@@ -1765,12 +1766,13 @@
 							<tr>
 								<td>
 									<label><input id="open_ymm4projectfolder" class="ymm4project"
-											type="checkbox">保存先を開く</label>
+											type="checkbox">保存先のフォルダを開く</label>
 								</td>
 							</tr>
 						</table>
 					</div>
 					<div class="dlbtn">
+						<a href="https://roji3.jpn.org/disnote/output.html#ymm4prj" target="_blank" class="blank">説明</a>　
 						<span id="download_ymm4_project" class="download ymm4project">
 							<span href="javascript:void(0)">保存</span>
 						</span>
@@ -1823,6 +1825,7 @@
 						</table>
 					</div>
 					<div class="dlbtn">
+						<a href="https://roji3.jpn.org/disnote/output.html#csv" target="_blank" class="blank">説明</a>　
 						<span id="download_custom" class="download">
 							<span href="javascript:void(0)">ダウンロード</span>
 						</span>
