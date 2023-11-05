@@ -10,7 +10,7 @@ import argparse
 import copy
 import json
 
-VERSION = "v3.1.0"
+VERSION = "v3.2.0"
 
 input_file_config_lock = threading.Lock()
 error_occurred = False
