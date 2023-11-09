@@ -73,6 +73,11 @@ $(function () {
   $("#whispermodel").change(function () { // Whisperのモデルを選択したとき、"none"以外だとチェックを入れる（表示だけで意味は無い）
     $("#engine_whisper").prop("checked", ($("#whispermodel").val() != "none"));
   });
+
+  $('#witaitoken').change(function() { // Wit.aiのトークンを入れたら有効化する
+    const isuse = ($("#witaitoken").val().length > 0);
+    $("#engine_witai").prop("checked", isuse);
+  });
 });
 
 // ダイアログをウィンドウ中央に移動 （デフォルトだとスクロール込みのウィンドウサイズの中央に表示されてしまう）
