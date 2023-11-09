@@ -334,22 +334,6 @@ try:
         logger.error("ffprobeを実行できません。ffprobeがDisNOTEと同じフォルダにあるか確認してください。")
         sys.exit(1)
 
-    # Whisper(バイナリ版)起動確認
-    if common.isUseBinaryWhisper() and common.isValidWhisperModel():
-        process = os.path.join("whisper", "disnote_whisper.exe")
-        try:
-            logger.info("{} 実行確認".format(process))
-            res = common.runSubprocess("{} -h".format(process))
-            logger.info("{} 実行確認OK".format(process))
-        except FileNotFoundError as e:
-            logger.error(e)
-            logger.error("{}が見つかりません。{}があるか確認してください。".format(process))
-            sys.exit(1)
-        except Exception as e:
-            logger.error(e)
-            logger.error("{}が実行できません。{}の状態を確認してください。".format(process))
-            sys.exit(1)
-
     # 入力ファイル一覧
     arg_files = copy.copy(args.files)
     arg_files.sort()  # ファイル名をソート（引数の順番だけ違う場合にファイル名を揃えるため）

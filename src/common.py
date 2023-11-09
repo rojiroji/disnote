@@ -111,7 +111,6 @@ def writeDefaultSysConfig():
     getWhisperLanguage()
     getWhisperTmpAudioLength()
     getWhisperBinaryDuration()
-    isUseBinaryWhisper()
 
 
 # 無音解析時に作るテンポラリファイルの音声の長さ（iniファイルでは分単位だが、ミリ秒に変換して返す）
@@ -310,22 +309,6 @@ def getWhisperBinaryDuration():
         writeSysConfig(config)
 
     return min * 60 * 1000
-
-
-# バイナリ版Whisperを使うかどうか(デフォルトはTrue)
-def isUseBinaryWhisper():
-    ret = 1
-    try:
-        config = readSysConfig()
-        val = config["DEFAULT"].get(IS_USE_BINARY_WHISPER)
-        ret = int(val)
-
-    except:  # 設定ファイルが読めなかったり(初回起動時)、値がおかしかったらデフォルトで保存
-        config.set("DEFAULT", IS_USE_BINARY_WHISPER, str(ret))
-        writeSysConfig(config)
-
-    return ret != 0
-
 
 # システムconfig読み込み
 def readSysConfig():
