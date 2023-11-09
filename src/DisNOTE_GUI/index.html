@@ -34,12 +34,12 @@
         <ul>
             <li>
                 <label>
-                    <input type="checkbox" id="engine_google" checked disabled> Google
+                    <input type="checkbox" id="engine_google" checked disabled> Google Cloud Speech API
                 </label>
             </li>
             <li>
                 <label>
-                    <input type="checkbox" id="engine_witai"> wit.ai　
+                    <input type="checkbox" id="engine_witai"> Wit.ai　
                 </label>
                 <input type="textbox" id="witaitoken" placeholder="トークンを入力してください" size="25">
             </li>
@@ -49,14 +49,15 @@
                 </label>
                 <select id="whispermodel">
                     <option value="none">なし</option>
-                    <option value="tiny">tiny</option>
-                    <option value="base">base</option>
-                    <option value="small">small</option>
-                    <option value="medium">medium（推奨）</option>
-                    <option value="large">large</option>
+                    <option value="tiny">tiny（精度低）</option>
+                    <option value="base">base（精度低）</option>
+                    <option value="small">small（精度低）</option>
+                    <option value="medium">medium（推奨、認識速度低速）</option>
+                    <option value="large">large（精度高、認識速度超低速）</option>
                 </select>
             </li>
         </ul>
+        <div><a href="https://roji3.jpn.org/disnote/recognition.html">認識エンジンの説明はこちら</a></div>
         <div id="recognize_initialized"></div>
         <button class="small-icon" id="disable_project" title="プロジェクトを削除します">
             <img src="img/delete.png">
