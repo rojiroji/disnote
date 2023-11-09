@@ -10,7 +10,7 @@ const log4js = require('log4js');
 const axios = require('axios');
 
 // 現在のバージョン（common.pyでの定義と揃えること）
-const currentVersion = "v3.2.0";
+const currentVersion = "v3.2.1";
 let newVersion = null; // 新しいバージョンがあるかどうかチェック（新しくなければnull）
 
 // 編集画面の編集フラグ
