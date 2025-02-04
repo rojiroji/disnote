@@ -3,6 +3,7 @@ import sys
 from collections import deque
 import common
 import traceback
+import codecs
 from mutagen.easyid3 import EasyID3
 import csv
 import shutil
@@ -51,7 +52,7 @@ def main(input_file):
     logger.info("認識結果ファイル：{}".format(os.path.basename(recognize_result_file)))
 
     recognize_result_list = list()
-    with open(recognize_result_file, "r") as f:
+    with codecs.open(recognize_result_file, "r", "CP932", "ignore") as f:
         rows = csv.reader(f)
         recognize_result_list.extend(rows)
 

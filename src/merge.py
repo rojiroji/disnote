@@ -125,7 +125,7 @@ def main(input_files, arg_files):
     merged_csv_file = os.path.join(basedir, basefilename + ".csv")
     logger.info("最終結果ファイル(csv)出力開始")
 
-    with open(merged_csv_file, "w", newline="") as f:  # 変な改行が入るのを防ぐため newline=''
+    with codecs.open(merged_csv_file, "w", "CP932", "ignore") as f:  # 変な改行が入るのを防ぐため newline=''
         writer = csv.writer(f, quoting=csv.QUOTE_ALL)
         writer.writerow(
             [
@@ -165,7 +165,7 @@ def main(input_files, arg_files):
         logger.info("　info.txtの読み込み失敗")
 
     # index.htmlのオリジナル読み込み
-    with open("src/index.html", "r") as f:
+    with codecs.open("src/index.html", "r", "CP932", "ignore") as f:
         index_data = f.read()
 
     # JavaScriptの変数部分を作成
@@ -201,7 +201,7 @@ def main(input_files, arg_files):
 
     # index.html書き込み
     htmlfile = os.path.join(basedir, basefilename + ".html")
-    with open(htmlfile, "w", newline="") as f:  # 変な改行が入るのを防ぐため newline=''
+    with codecs.open(htmlfile, "w", "CP932", "ignore") as f:  # 変な改行が入るのを防ぐため newline=''
         f.write(index_data)
 
     # htmlファイルなどをコピー
@@ -212,7 +212,7 @@ def main(input_files, arg_files):
 
     # jsファイル書き込み(GUI版で使う)
     jsfile = os.path.join(basedir, basefilename + ".js")
-    with open(jsfile, "w", newline="") as f:  # 変な改行が入るのを防ぐため newline=''
+    with codecs.open(jsfile, "w", "CP932", "ignore") as f:  # 変な改行が入るのを防ぐため newline=''
         f.write(merged_js)
 
     # プレイリスト作成(ファイルパスだけ書く)
@@ -236,14 +236,24 @@ def main(input_files, arg_files):
     if created_mixed_media:
         logger.info("　{}.mp3".format(basefilename))
 
+# 文字列が整数かどうかの判定
+def isInt(s):  # 整数値を表しているかどうかを判定
+    try:
+        int(s, 10)  # 文字列を実際にint関数で変換してみる
+    except ValueError:
+        return False
+    else:
+        return True
 
 # 認識結果ファイル(csv)を読み込んでマージする(行数を返す)
 def mergeRecognizeResult(recognize_result_file, resultMap, engine):
     TEXT_INDEX = 5
     try:
         logger.debug("認識結果ファイル：{}".format(os.path.basename(recognize_result_file)))
-        with open(recognize_result_file, "r") as f:
+        colcount = 0
+        with codecs.open(recognize_result_file, "r", "CP932", "ignore") as f:
             rows = csv.reader(f)
+            colcount += 1
 
             for row in rows:
                 audio_file = row[
@@ -252,7 +262,16 @@ def mergeRecognizeResult(recognize_result_file, resultMap, engine):
                 ppos = audio_file.rfind(".")
                 key = audio_file[0:ppos]
                 engineStr = engine * (len(row) - TEXT_INDEX)
-
+                
+                isFormatError = False
+                for rownum in [2,3,4]: # 3,4,5列目には数字が入っている。稀にファイル書き込みがおかしくて変な値が入っていることがある
+                    if isInt(row[rownum]) == False: 
+                        logger.info("フォーマットエラー：{} {}:{}".format(os.path.basename(recognize_result_file),colcount,rownum))
+                        isFormatError = True
+                
+                if isFormatError:
+                    continue
+                    
                 if key in resultMap.keys():
                     if len(row[TEXT_INDEX]) <= 0:
                         continue

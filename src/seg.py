@@ -4,6 +4,7 @@ from inaSpeechSegmenter import Segmenter
 from inaSpeechSegmenter.export_funcs import seg2csv, seg2textgrid
 import common
 import time
+import torch
 
 logger = common.getLogger(__file__)
 
@@ -14,6 +15,7 @@ CONFIG_SEG_SPLIT = "seg_split"
 
 def main(input_file):
     logger.info("1. 無音解析開始 - {}".format(os.path.basename(input_file)))
+    logger.info("Cuda.available:{}".format(torch.cuda.is_available()))
     func_in_time = time.time()
 
     config = common.readConfig(input_file)
