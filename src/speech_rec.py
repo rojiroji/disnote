@@ -61,7 +61,7 @@ def main(input_file):
 
     split_result_queue = deque()
 
-    with open(split_result_file, "r") as f:
+    with codecs.open(split_result_file, "r", "CP932", "ignore") as f:
         file_data = f.readlines()
         for line in file_data:
             split_result_queue.append(line.split("\t"))

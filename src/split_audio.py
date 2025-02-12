@@ -5,6 +5,7 @@ import speech_rec
 import speech_rec_wit
 import speech_rec_whisper
 import shutil
+import codecs
 
 logger = common.getLogger(__file__)
 
@@ -51,7 +52,7 @@ def main(input_file):
     # 実際に音声を分割する
     base = os.path.splitext(os.path.basename(input_file))[0]  # 拡張子なしのファイル名（話者）
 
-    with open(split_result_file, "r") as f:
+    with codecs.open(split_result_file, "r", "CP932") as f:
         logger.info("音声分割中… {}".format(base))
         index = 0
 

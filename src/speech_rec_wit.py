@@ -72,7 +72,7 @@ def main(input_file):
 
     split_result_queue = deque()
 
-    with open(split_result_file, "r") as f:
+    with codecs.open(split_result_file, "r", "CP932", "ignore") as f:
         file_data = f.readlines()
         for line in file_data:
             split_result_queue.append(line.split("\t"))
@@ -299,7 +299,7 @@ def recognize_wit(target_file, key):
                 # str = "タイムアウトになりました。時間を置いて再度実行してください" # タイムアウトエラーの場合はそのまま返す
                 raise
             elif e.code == 400:
-                str = "DisNOTE.iniのwit_ai_server_access_tokenの値が正しいか確認してください"
+                str = "Wit.aiのトークンの値が正しいか確認してください"
 
             raise RequestError(
                 "recognition request failed:{}({}) / {}。".format(e.code, e.reason, str)

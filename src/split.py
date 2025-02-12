@@ -5,6 +5,7 @@ from inaSpeechSegmenter.export_funcs import seg2csv, seg2textgrid
 from collections import deque
 import common
 import seg
+import codecs
 
 logger = common.getLogger(__file__)
 
@@ -176,7 +177,7 @@ def main(input_file):
     logger.info("分割結果ファイル：{}".format(os.path.basename(split_result_file)))
     base = os.path.splitext(os.path.basename(input_file))[0]  # 拡張子なしのファイル名（話者）
 
-    with open(split_result_file, "w") as f:  # 分割結果ファイルに結果書き込み+音声書き込み
+    with open(split_result_file, "w", encoding="CP932") as f:  # 分割結果ファイルに結果書き込み+音声書き込み
         speech_segment_index = 1
         index = 0
 
