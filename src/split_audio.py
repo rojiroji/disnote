@@ -82,14 +82,14 @@ def main(input_file):
 
             # いったんテンポラリファイルに吐く（ffmpegの処理中にプロセスが落ちると中途半端なファイルが残ってしまうのを防ぐ）
             tmp_audio_file = common.getTemporaryFile(input_file, __file__, "flac")
-            res = common.runSubprocess(
-                'ffmpeg -ss {} -t {} -i "{}" -vn -acodec flac -y "{}"'.format(
+            process_str = 'ffmpeg -ss {} -t {} -i "{}" -vn -acodec flac -y "{}"'.format(
                     start_time / 1000,
                     (end_time - start_time) / 1000,
                     input_file,
                     tmp_audio_file,
                 )
-            )
+            logger.debug("ffmpeg process:{}".format(process_str))
+            res = common.runSubprocess(process_str)
 
             # テンポラリファイルからリネーム、上書き
             shutil.move(tmp_audio_file, filename)
