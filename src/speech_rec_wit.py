@@ -236,6 +236,9 @@ def main(input_file):
             f.flush()
             # ここまで完了した、と記録
             common.updateConfig(input_file, {CONFIG_WORK_PROGRESS: audio_file})
+            
+            if common.isErrorOccurred():  # 他のスレッドでエラーが起きていたら強制終了する
+                return
 
     if len(progress) > 0:  # 中断したまま終わってしまった
         common.updateConfig(input_file, {CONFIG_WORK_PROGRESS: ""})

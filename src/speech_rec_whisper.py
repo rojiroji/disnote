@@ -135,6 +135,9 @@ def main(input_file):
 
         # 分割して出力する音声ファイルのフォルダとプレフィックスまで指定
         audio_file_prefix = common.getSplitAudioFilePrefix(input_file)
+        
+        # 単語辞書（試作）
+        horse_dictionary = "エリュシオン ヒョウカ ウシオ インフィルトレイター アルトラゼミ アストラルヴァンガード クオンガハラガクエン"
 
         while len(split_result_queue) > 0:
             split_result = split_result_queue.popleft()  # ID,ファイル名,開始時間,終了時間の順
@@ -203,6 +206,9 @@ def main(input_file):
                 input_file,
                 {CONFIG_WORK_PROGRESS: audio_file},
             )
+            
+            if common.isErrorOccurred():  # 他のスレッドでエラーが起きていたら強制終了する
+                return
 
     if len(progress) > 0:  # 中断したまま終わってしまった
         common.updateConfig(input_file, {CONFIG_WORK_PROGRESS: ""})
