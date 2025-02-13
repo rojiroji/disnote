@@ -136,9 +136,6 @@ def main(input_file):
         # 分割して出力する音声ファイルのフォルダとプレフィックスまで指定
         audio_file_prefix = common.getSplitAudioFilePrefix(input_file)
         
-        # 単語辞書（試作）
-        horse_dictionary = "エリュシオン ヒョウカ ウシオ インフィルトレイター アルトラゼミ アストラルヴァンガード クオンガハラガクエン"
-
         while len(split_result_queue) > 0:
             split_result = split_result_queue.popleft()  # ID,ファイル名,開始時間,終了時間の順
             id = int(split_result[0])
