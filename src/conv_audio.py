@@ -68,11 +68,15 @@ def main(input_file):
         split_result = (
             split_result_queue.popleft()
         )  # ID,srcファイル名(flac),開始時間(冒頭無音あり),終了時間(末尾無音あり),長さ(無音あり),開始時間(冒頭無音なし),終了時間(末尾無音なし)の順 _split.txt
-        id = int(split_result[0])
-        src_audio_file = split_result[1]
-        start_time = int(float(split_result[2]))
-        end_time = int(float(split_result[3]))
-        length = int(float(split_result[4]))
+        
+        try:
+            id = int(split_result[0])
+            src_audio_file = split_result[1]
+            start_time = int(float(split_result[2]))
+            end_time = int(float(split_result[3]))
+            length = int(float(split_result[4]))
+        except IndexError:
+            continue
 
         org_start_time = start_time
         org_end_time = end_time
@@ -86,8 +90,11 @@ def main(input_file):
         # 認識結果ファイルの読み込み
         recognize_result = recognize_result_list.pop(0)
         # 話者,dstファイル名(mp3),開始時間(冒頭無音なし),長さ(末尾無音なし), スコア, 認識結果 の順
-        audio_file = recognize_result[1]
-        text = recognize_result[5]
+        try:
+            audio_file = recognize_result[1]
+            text = recognize_result[5]
+        except IndexError:
+            continue
 
         # htmlファイルからの再生用に出力
         if (

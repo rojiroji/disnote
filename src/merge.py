@@ -265,9 +265,15 @@ def mergeRecognizeResult(recognize_result_file, resultMap, engine):
                 
                 isFormatError = False
                 for rownum in [2,3,4]: # 3,4,5列目には数字が入っている。稀にファイル書き込みがおかしくて変な値が入っていることがある
-                    if isInt(row[rownum]) == False: 
-                        logger.info("フォーマットエラー：{} {}:{}".format(os.path.basename(recognize_result_file),colcount,rownum))
+                    try:
+                        if isInt(row[rownum]) == False: 
+                            logger.info("フォーマットエラー(ValueError)：{} {}:{}".format(os.path.basename(recognize_result_file),colcount,rownum))
+                            isFormatError = True
+                    except IndexError:
+                        logger.info("フォーマットエラー(IndexError)：{} {}:{}".format(os.path.basename(recognize_result_file),colcount,rownum))
                         isFormatError = True
+                        continue
+
                 
                 if isFormatError:
                     continue
