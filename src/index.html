@@ -1086,10 +1086,9 @@
 				$target = $target.parent().data('textTd');
 
 				var $clipboard = $('<textarea></textarea>');
-				$clipboard.text($target.find('div.text').text());
 				$('body').append($clipboard);
 
-				$clipboard.val($target.text());
+				$clipboard.val($target.find('div.text').text());
 				$clipboard.select();
 				document.execCommand("Copy");
 				$clipboard.remove();
