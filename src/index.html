@@ -899,13 +899,6 @@
 					}
 				}
 
-				if (e.code == "KeyC") { // C,c（コピー）
-					if ($currentTd) {
-						copyTdText($currentTd);
-						return false;
-					}
-				}
-
 				if (e.ctrlKey) {
 					if (e.code == "KeyS") { // Ctrl+S,s（保存）
 						saveEdit();
@@ -918,6 +911,12 @@
 					return true;
 				}
 
+				if (e.code == "KeyC") { // C,c（コピー）
+					if ($currentTd) {
+						copyTdText($currentTd);
+						return false;
+					}
+				}
 				if (e.code == "KeyQ") { // Q,q（「話者表示」のチェック切り替え）
 					$target = $("#showname");
 					$target.prop("checked", !$target.prop("checked")).change();
