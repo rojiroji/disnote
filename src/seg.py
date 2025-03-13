@@ -128,6 +128,9 @@ def main(input_file):
             {CONFIG_WORK_PROGRESS: str(index), CONFIG_SEG_SPLIT: str(split_len)},
         )
 
+        if common.isErrorOccurred():  # 他のスレッドでエラーが起きていたら強制終了する
+            return
+    
     # 終了したことをiniファイルに保存
     common.updateConfig(
         input_file,
