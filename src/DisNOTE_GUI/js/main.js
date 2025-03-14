@@ -426,7 +426,7 @@ function engineClose(code) {
   } else if (code == null) {
     // キャンセル
   } else {
-    alert("音声認識が上手くいきませんでした。ログファイル（logs\\speechrec.log）を見てみてください。\ncode=" + code);
+    alert("音声認識が上手くいきませんでした。ログファイル（logs\\disnote.log）を確認してください。\ncode=" + code);
   }
   rec_process_running = false; // とにかくプロセスは落ちた
 }

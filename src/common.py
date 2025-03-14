@@ -502,7 +502,7 @@ def getLogger(srcfile):
 
     # ログファイル
     handler2 = logging.handlers.RotatingFileHandler(
-        filename="log/speechrec.log", maxBytes=1024 * 1024 * 10, backupCount=3
+        filename="log/disnote.log", maxBytes=1024 * 1024 * 10, backupCount=3
     )
     handler2.setLevel(logging.INFO)
     handler2.setFormatter(
