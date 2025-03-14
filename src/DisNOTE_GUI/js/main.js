@@ -1,3 +1,5 @@
+let rec_canceled = false; // キャンセルした
+
 $(function () {
   let url = new URL(window.location.href);
   let params = url.searchParams;
@@ -96,11 +98,11 @@ function dialogToCenter($t) {
 function cancelRecognize() {
   if (rec_process_running) {
     if (confirm("音声認識を中断しますか？")) {
-      $("#progress_button").text("閉じる").prop("disabled", true); // 二度押し防止
+      $("#progress_button").text("中断待ち…").prop("disabled", true); // 二度押し防止
       window.api.cancelRecognize();
-    } else {
-      return false;
+      rec_canceled = true;
     }
+    return false; // ここではウィンドウを閉じず、プロセスが落ちてから閉じられるようにする
   }
   return true;
 }
@@ -272,6 +274,8 @@ function checkedAudioFiles(tableHtml) {
   $("#progress_button").text("音声認識中断").prop("disabled", false); // ボタンを復活させる
   $("#progress").dialog("open"); // サイズがここで確定するのでダイアログを開く
 
+  rec_canceled = false;
+
 }
 
 
@@ -414,7 +418,11 @@ function engineClose(code) {
   $("body").css("cursor", "auto"); // カーソルを戻す
 
   if (code == 0) {
-    alert("正常に音声認識が完了しました");
+    if(rec_canceled){
+      alert("音声認識を中断しました");
+    }else{
+      alert("正常に音声認識が完了しました");
+    }
   } else if (code == null) {
     // キャンセル
   } else {
