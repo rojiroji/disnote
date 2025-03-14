@@ -334,6 +334,10 @@ try:
         logger.error("ffprobeを実行できません。ffprobeがDisNOTEと同じフォルダにあるか確認してください。")
         sys.exit(1)
 
+    logger.info("キャンセルファイル：{}".format(common.getCancelFilePath()))
+
+
+
     # 入力ファイル一覧
     arg_files = copy.copy(args.files)
     arg_files.sort()  # ファイル名をソート（引数の順番だけ違う場合にファイル名を揃えるため）
