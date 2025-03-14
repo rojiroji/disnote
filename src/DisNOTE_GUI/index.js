@@ -10,7 +10,7 @@ const log4js = require('log4js');
 const axios = require('axios');
 
 // 現在のバージョン（common.pyでの定義と揃えること）
-const currentVersion = "v3.2.1";
+const currentVersion = "v3.2.2";
 let newVersion = null; // 新しいバージョンがあるかどうかチェック（新しくなければnull）
 
 // 編集画面の編集フラグ
@@ -34,6 +34,9 @@ log4js.configure({
 });
 const logger = log4js.getLogger('system');
 logger.info("DisNote GUI");
+
+// キャンセルファイルのファイル名決定
+const cancelFilePath = path.join(__dirname, 'disnote_cancel');
 
 // プロジェクトリスト読み込み
 const projectsFilePath = path.join(__dirname, 'projects.json');
@@ -157,12 +160,11 @@ const createWindow = () => {
     config.x = mainWindow.getBounds().x;
     config.maximize = mainWindow.isMaximized();
 
-    fs.writeFile(configFilePath, JSON.stringify(config, null, 4), (err) => {
-      if (err) {
-        logger.error(err);
-        return;
-      }
-    });
+    try {
+      fs.writeFileSync(configFilePath, JSON.stringify(config, null, 4));
+    } catch (err) {
+      logger.error(err);
+    }   
     logger.info("DisNote GUI:exit.");
 
     // 子プロセスを落とす
@@ -450,6 +452,14 @@ ipcMain.handle('recognizeProject', (event, projectId, isusewitai, witaitoken, wh
   args.push("--whispermodel", whispermodel);
   config.whispermodel = whispermodel;
 
+  // キャンセルファイルのpath
+  args.push("--cancelfilepath", cancelFilePath);
+  try {
+    fs.unlinkSync(cancelFilePath);
+  } catch(err) {
+    ; // ファイルが存在しない場合は例外
+  }
+
   // projectの前回認識設定を記録
   project.recognize_options = { "witai": isusewitai, "whispermodel": whispermodel }
   writeProjects(); // 更新したのでプロジェクトリスト出力
@@ -597,7 +607,12 @@ ipcMain.handle('cancelRecognize', (event) => {
  */
 function killChildProcess() {
   if (childProcess != null) { // 既に落ちたプロセスに再度killしても副作用はないようなので状態は見ない
-    childProcess.kill('SIGTERM');  // TODO:SIGTERMで終了して、上手く落ちなかったらSIGKILLで落とす
+  //  childProcess.kill('SIGTERM');  
+    try {
+      fs.writeFileSync(cancelFilePath, "cancel");// キャンセルファイルを書き込み（作成）
+    } catch (err) {
+      logger.error(err);
+    }
   }
 }
 
