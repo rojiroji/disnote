@@ -463,19 +463,27 @@ try:
                 except Exception as e:
                     pass
 
-            tb = sys.exc_info()[2]
-            logger.error(traceback.format_exc())
-            logger.error("スレッド処理中にエラーが発生しました({})。".format(e.with_traceback(tb)))
-            sys.exit(1)
+            if common.isCancelFileExists():
+                logger.error("認識がキャンセルされました（{}）".format(common.getCancelFilePath()))
+                sys.exit(0)
+            else:
+                tb = sys.exc_info()[2]
+                logger.error(traceback.format_exc())
+                logger.error("スレッド処理中にエラーが発生しました({})。".format(e.with_traceback(tb)))
+                sys.exit(1)
 
     # 結果マージ
     try:
         merge.main(input_files, arg_files)
     except Exception as e:
-        tb = sys.exc_info()[2]
-        logger.error(traceback.format_exc())
-        logger.error("結果マージ(5)に失敗しました({})。".format(e.with_traceback(tb)))
-        sys.exit(1)
+        if common.isCancelFileExists():
+            logger.error("認識がキャンセルされました（{}）".format(common.getCancelFilePath()))
+            sys.exit(0)
+        else:
+            tb = sys.exc_info()[2]
+            logger.error(traceback.format_exc())
+            logger.error("結果マージ(5)に失敗しました({})。".format(e.with_traceback(tb)))
+            sys.exit(1)
 
 finally:  # バージョン確認する
     announceNewVersion()

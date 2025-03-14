@@ -14,6 +14,7 @@ VERSION = "v3.2.2"
 
 input_file_config_lock = threading.Lock()
 error_occurred = False
+cancel_file_path = None
 
 DONE = "done"
 
@@ -85,9 +86,15 @@ parser.add_argument(
 parser.add_argument(
     "--whispermodel"
 )  # Whisperのモデル（未指定の場合(None)はiniファイルの設定を使う。"none" を指定したらWhisperを使わない）
+parser.add_argument(
+    "--cancelfilepath"
+) # キャンセルファイルのパス
 parser.add_argument("--files", nargs="*", required=True)  # ファイル
 args = parser.parse_args()
 
+# キャンセルファイルのパス
+if args.cancelfilepath is not None:
+    cancel_file_path = args.cancelfilepath 
 
 # 実行引数を返す
 def getSysArgs():
@@ -547,7 +554,18 @@ def getFileFormat(input_file):
         logger.error("フォーマット確認失敗。{} は音声ファイルではないようです。".format(input_file))
         pass
 
+# キャンセルファイル
+def getCancelFilePath():
+    global cancel_file_path
+    return cancel_file_path
 
+# キャンセルファイルが存在するかどうか
+def isCancelFileExists():
+    if getCancelFilePath() is not None:
+        if os.path.isfile(getCancelFilePath()):
+            return True
+    return False
+   
 # スレッド処理中に例外が発生したフラグを立てる。このフラグが立っていたら、各スレッドは可及的速やかにスレッドを中断する
 def errorOccurred():
     global error_occurred
@@ -556,5 +574,8 @@ def errorOccurred():
 
 # スレッド処理中に例外が発生したかどうか
 def isErrorOccurred():
+    if isCancelFileExists():# キャンセルファイルが存在したら例外を出して終了
+        raise RuntimeError("認識がキャンセルされました（{}）".format(getCancelFilePath()))
+        
     global error_occurred
     return error_occurred
