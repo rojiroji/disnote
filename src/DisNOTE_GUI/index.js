@@ -567,6 +567,7 @@ ipcMain.handle('recognizeProject', (event, projectId, whispermodel) => {
 
         project.result = info.result;
         project.recognized_time = timeToLocalString(new Date()); // 認識結果登録
+        project.recognized_version = currentVersion; // 認識時のDisNOTEバージョンを記録
         writeProjects(); // 更新したのでプロジェクトリスト出力
         mainWindow.webContents.send('rewriteProjectInfo', project);
         break;
@@ -606,6 +607,19 @@ function killChildProcess() {
     }
   }
 }
+
+/**
+ * プロジェクトの情報を取得
+ * js/main.js        openRecognizeDialog ->
+ * -> js/preload.js  getProject
+ * -> index.js       getProject
+* @returns 
+ */
+ipcMain.handle('getProject', (event, projectId) => {
+  logger.debug("getProject:" + projectId);
+
+  return projects.find((project) => project.id == projectId);
+});
 
 /**
  * プロジェクトのfolderボタンを押下 → フォルダを開く。

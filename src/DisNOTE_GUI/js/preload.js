@@ -20,6 +20,9 @@ contextBridge.exposeInMainWorld(
   getProjectsTable: () => ipcRenderer.invoke("getProjectsTable") // プロジェクトリストのtableを取得
     .then(result => result)
     .catch(err => console.log(err)),
+  getProject: (projectId) => ipcRenderer.invoke("getProject", projectId) // プロジェクトの情報を取得
+    .then(result => result)
+    .catch(err => console.log(err)),
   recognizeProject: (projectId, whispermodel) => ipcRenderer.invoke("recognizeProject", projectId, whispermodel) // 音声認識開始
     .then(result => result)
     .catch(err => console.log(err)),

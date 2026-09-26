@@ -63,6 +63,9 @@ $(function () {
     width: "680",
   });
 
+  $("#whispermodel").change(function () { // エンジンを選択し直したら警告表示を更新
+    updateRecognizeWarning();
+  });
 });
 
 // ダイアログをウィンドウ中央に移動 （デフォルトだとスクロール込みのウィンドウサイズの中央に表示されてしまう）
@@ -172,12 +175,41 @@ document.addEventListener('drop', async (e) => {
  * @param {認識するプロジェクトのID} id 
  */
 let projectid;
-function openRecognizeDialog(id) {
+let currentProject = null; // 認識ダイアログを開いているプロジェクトの情報
+async function openRecognizeDialog(id) {
   projectid = id;
+  currentProject = await window.api.getProject(id);
   $("#recognize").dialog("open");
   $("#start_recognize").prop("disabled", false); // ボタンを復活させる
   $("#cancel_recognize").prop("disabled", false);// ボタンを復活させる          
   $("#recognize_initialized").text("　");
+  updateRecognizeWarning();
+}
+
+/**
+ * 認識済みプロジェクトに対して、バージョン未設定やエンジン変更を検知して警告を表示する
+ */
+function updateRecognizeWarning() {
+  const warningTag = $("#recognize_warning");
+
+  const isRecognized = currentProject && currentProject.recognized_time && currentProject.recognized_time !== "-";
+  if (!isRecognized) {
+    warningTag.hide();
+    return;
+  }
+
+  if (!currentProject.recognized_version) { // バージョン未記録（v3以前の認識結果）
+    warningTag.text("バージョン3以前で認識しています。音声認識を開始すると、認識結果がリセットされます").show();
+    return;
+  }
+
+  const prevModel = currentProject.recognize_options && currentProject.recognize_options.whispermodel;
+  if (prevModel && prevModel !== $("#whispermodel").val()) { // 前回認識時とエンジン（モデル）が異なる
+    warningTag.text("エンジンを変更しました。音声認識を開始すると、認識結果がリセットされます").show();
+    return;
+  }
+
+  warningTag.hide();
 }
 
 /**
