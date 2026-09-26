@@ -18,15 +18,6 @@ $(function () {
         id: "start_recognize",
         text: "音声認識開始",
         click: async function () {
-          // wit.aiのtoken（チェックボックスが入っていなければ無視）
-          const witaitoken = $("#witaitoken").val();
-          const isusewitai = $("#engine_witai").prop("checked");
-          if (isusewitai) {
-            if (witaitoken.length <= 0) {
-              alert("wit.aiのトークンが入力されていません");
-              return false;
-            }
-          }
           const whispermodel = $("#whispermodel").val();
           $("#start_recognize").prop("disabled", true);//二度押し防止 
           $("#cancel_recognize").prop("disabled", true);//二度押し防止 
@@ -34,7 +25,7 @@ $(function () {
 
           rec_progress = {}; // 進捗リセット
           rec_process_running = true; // プロセス起動中のフラグを立てる
-          window.api.recognizeProject(projectid, isusewitai, witaitoken, whispermodel); // 認識開始
+          window.api.recognizeProject(projectid, whispermodel); // 認識開始
           updateCuiProgress("音声認識準備中");
           $("body").css("cursor", "wait"); // カーソルを待ち状態に
         }
@@ -72,14 +63,6 @@ $(function () {
     width: "680",
   });
 
-  $("#whispermodel").change(function () { // Whisperのモデルを選択したとき、"none"以外だとチェックを入れる（表示だけで意味は無い）
-    $("#engine_whisper").prop("checked", ($("#whispermodel").val() != "none"));
-  });
-
-  $('#witaitoken').change(function() { // Wit.aiのトークンを入れたら有効化する
-    const isuse = ($("#witaitoken").val().length > 0);
-    $("#engine_witai").prop("checked", isuse);
-  });
 });
 
 // ダイアログをウィンドウ中央に移動 （デフォルトだとスクロール込みのウィンドウサイズの中央に表示されてしまう）
@@ -118,12 +101,9 @@ window.addEventListener('load', async (event) => {
 
   let config = await window.api.getConfig(); // コンフィグ取得
   console.log(config);
-  $("#engine_witai").prop("checked", config.isusewitai);
-  $("#witaitoken").val(config.witaitoken);
   if (config.whispermodel) {
     $("#whispermodel").val(config.whispermodel);
   }
-  $("#engine_whisper").prop("checked", ($("#whispermodel").val() != "none"));
   if (config.logowidth) {
     $("#logo").css("width", config.logowidth).css("height", "auto");
   }
@@ -264,12 +244,6 @@ function updateCuiProgress(text) {
 function checkedAudioFiles(tableHtml) {
   document.querySelector('#progress_table').innerHTML = tableHtml;
 
-  // witaiを使わない場合は進捗を進めないのでその旨を表示
-  if (!$("#engine_witai").prop("checked")) {
-    $("div.witaiprogress").text("skip");
-    $("progress.witaiprogress").val(100);
-  }
-
   $("#recognize").dialog("close"); // エンジン起動のダイアログを閉じる
   $("#progress_button").text("音声認識中断").prop("disabled", false); // ボタンを復活させる
   $("#progress").dialog("open"); // サイズがここで確定するのでダイアログを開く
@@ -293,14 +267,6 @@ function updateAudioFileProgress(info) {
   let thread = "";
   if (info.engine) {
     switch (info.engine) {
-      case "google":
-        progress_tag = document.querySelector(`#progress_google_${index}`);
-        percent_tag = document.querySelector(`#percent_google_${index}`);
-        break;
-      case "witai":
-        progress_tag = document.querySelector(`#progress_witai_${index}`);
-        percent_tag = document.querySelector(`#percent_witai_${index}`);
-        break;
       case "whisper":
         progress_tag = document.querySelector(`#progress_whisper_${index}`);
         percent_tag = document.querySelector(`#percent_whisper_${index}`);
@@ -317,7 +283,7 @@ function updateAudioFileProgress(info) {
   /**
    * rec_progressのフォーマット
    * rec_progress[index] = { // 音声ファイルごとの配列
-   *    "main" : { // スレッド（main ,google, witai）
+   *    "main" : { // スレッド（main, whisper）
    *       "progress"{
    *          "setAudioFileInfo" : "100", // ステージごとの進捗
    *          "checkedFiles" : "50"

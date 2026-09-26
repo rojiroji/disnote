@@ -66,9 +66,7 @@ try {
   config.maximize = false;
   config.x = undefined;
   config.y = undefined;
-  config.isusewitai = false;
-  config.witaitoken = "";
-  config.whispermodel = "none";
+  config.whispermodel = "medium";
   config.project_sort_key = "id";
   config.project_sort_order = "desc"; // ソート順のデフォルトは降順
 }
@@ -432,7 +430,7 @@ function getProject(filePaths) {
  * @returns 
  */
 let childProcess = null;
-ipcMain.handle('recognizeProject', (event, projectId, isusewitai, witaitoken, whispermodel) => {
+ipcMain.handle('recognizeProject', (event, projectId, whispermodel) => {
   logger.debug("recognizeProject:" + projectId);
 
   // projectIdでproject取得
@@ -442,11 +440,6 @@ ipcMain.handle('recognizeProject', (event, projectId, isusewitai, witaitoken, wh
   let args = ["--files"].concat(project.files.map(file => {
     return file.fullpath;
   }))
-
-  // wit.aiのtoken(画面で指定していない場合は"none"を明示)
-  args.push("--witaitoken", isusewitai ? witaitoken : "none");
-  config.isusewitai = isusewitai;
-  config.witaitoken = witaitoken;
 
   // Whisperのモデル
   args.push("--whispermodel", whispermodel);
@@ -461,7 +454,7 @@ ipcMain.handle('recognizeProject', (event, projectId, isusewitai, witaitoken, wh
   }
 
   // projectの前回認識設定を記録
-  project.recognize_options = { "witai": isusewitai, "whispermodel": whispermodel }
+  project.recognize_options = { "whispermodel": whispermodel }
   writeProjects(); // 更新したのでプロジェクトリスト出力
 
   childProcess = spawn(env.engine, args, { encoding: env.encoding }); // エンジンのサブプロセスを起動
@@ -551,10 +544,8 @@ ipcMain.handle('recognizeProject', (event, projectId, isusewitai, witaitoken, wh
             .replaceAll("${orgfile}", recfile.orgfile)
             .replaceAll("${track}", multitracks ? "track" + (recfile.trackindex) : "")
             .replaceAll("${index}", recfile.index)
-            .replaceAll("${disp_google}", true ? "table-row" : "none") // Googleは必ず
-            .replaceAll("${disp_witai}", config.isusewitai ? "table-row" : "none") // wit.ai進捗行
-            .replaceAll("${disp_whisper}", config.whispermodel != "none" ? "table-row" : "none") // Whisper進捗行
-            .replaceAll("${rowspan}", 1 + 1 + (config.isusewitai ? 1 : 0) + ((config.whispermodel != "none") ? 1 : 0))
+            .replaceAll("${disp_whisper}", "table-row") // Whisper進捗行
+            .replaceAll("${rowspan}", 2)
             ;
         }
         tableHtml += '<tr class="main"><td colspan="3">最終処理</td>' +
