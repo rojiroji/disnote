@@ -3,8 +3,6 @@ import os
 import seg
 import split
 import split_audio
-import speech_rec
-import speech_rec_wit
 import speech_rec_whisper
 import conv_audio
 import common
@@ -16,8 +14,6 @@ import copy
 import time
 import thread
 from concurrent.futures import ThreadPoolExecutor, wait
-from urllib.error import HTTPError
-import socket
 
 logger = common.getLogger(__file__)
 
@@ -96,103 +92,6 @@ def prepare(input_files):
         common.errorOccurred()
         raise
 
-# 音声認識を行うスレッド(Google音声認識)
-def speechRecognizeGoogle(prepareThread):
-    global logger
-
-    try:
-        while True:
-            if common.isErrorOccurred():  # 他のスレッドでエラーが起きていたら強制終了する
-                return
-
-            time.sleep(1)
-            logger.debug("スレッド待機中(speechRecognizeGoogle)")
-
-            input_file = thread.popReadyRecognizeListGoogle()
-            if input_file is None:
-                if (
-                    prepareThread.done()
-                ):  # 仕事リストが空＆prepareThreadが終了していたら、もうリストに追加されることはないので終了する
-                    logger.info("全ファイル音声認識終了(Google)")
-                    return
-                continue
-
-            # 音声認識
-            common.logForGui(logger, "rec", input_file, progress=0, max=1)
-            speech_rec.main(input_file)
-            thread.pushReadyConvertListGoogle(input_file)
-            common.logForGui(logger, "rec", input_file, progress=1, max=1,info={"engine":"google"})
-    except Exception as e:
-        common.errorOccurred()
-        tb = sys.exc_info()[2]
-        logger.error(traceback.format_exc())
-        logger.error("{} の音声認識(3)に失敗しました({})。".format(input_file, e.with_traceback(tb)))
-        raise
-
-
-# 音声認識を行うスレッド(wit.ai音声認識)
-def speechRecognizeWitAI(prepareThread):
-    global logger
-
-    try:
-        while True:
-            if common.isErrorOccurred():  # 他のスレッドでエラーが起きていたら強制終了する
-                return
-
-            time.sleep(1)
-            logger.debug("スレッド待機中(speechRecognizeWitAI)")
-
-            input_file = thread.popReadyRecognizeListWitAI()
-            if input_file is None:
-                if (
-                    prepareThread.done()
-                ):  # 仕事リストが空＆prepareThreadが終了していたら、もうリストに追加されることはないので終了する
-                    logger.info("全ファイル音声認識終了(wit.ai)")
-                    return
-                continue
-
-            # 音声認識
-            retry_count = 0
-            while True:  # 何度かリトライ
-                retry = False
-                try:
-                    common.logForGui(logger, "rec", input_file, progress=0, max=1)  
-                    speech_rec_wit.main(input_file)
-                except HTTPError as e:  # タイムアウトエラーの場合はリトライする
-                    if e.code == 408:
-                        retry = True
-                    else:
-                        raise e
-                except socket.timeout:  # タイムアウトエラーの場合はリトライする
-                    retry = True
-                except Exception as e:
-                    raise e
-
-                if retry:
-                    retry_count += 1
-
-                    if retry_count <= 3:  # 最大3回
-                        logger.info(
-                            "wit.aiの音声認識でタイムアウトが発生したためリトライします({})".format(retry_count)
-                        )
-                        time.sleep(5)
-                    else:
-                        raise RuntimeError("リトライ回数が上限を超えました({})。".format(retry_count))
-                else:
-                    # 完了
-                    thread.pushReadyConvertListWitAI(input_file)
-                    common.logForGui(logger, "rec", input_file, progress=1, max=1,info={"engine":"witai"})
-
-                    break
-
-    except Exception as e:
-        common.errorOccurred()
-        tb = sys.exc_info()[2]
-        logger.error(traceback.format_exc())
-        logger.error("{} の音声認識(3)に失敗しました({})。".format(input_file, e.with_traceback(tb)))
-        raise
-
-
 # 音声認識を行うスレッド(whisper音声認識)
 def speechRecognizeWhisper(prepareThread):
     global logger
@@ -254,6 +153,10 @@ def convert(recognizeThreads):
                 if recognize_done:  # 音声認識が終了していたら、もうリストに追加されることはないので終了する
                     return
                 continue
+                
+            # 他のスレッドでエラーが起きていたら強制終了する（再チェック。音声認識がエラー終了した状態でmp3変換が行われると、分割したflacが消えるので次回起動時にまた分割処理が走ってしまう）
+            if common.isErrorOccurred():
+                return
 
             # 音声変換
             conv_audio.main(input_file)
@@ -426,12 +329,6 @@ try:
             threadList.append(prepareThread)
 
             recognizeThreads = list()
-            recognizeThreads.append(
-                executor.submit(speechRecognizeGoogle, prepareThread)
-            )  # 音声認識スレッド(Google)
-            recognizeThreads.append(
-                executor.submit(speechRecognizeWitAI, prepareThread)
-            )  # 音声認識スレッド(wit.ai)
             recognizeThreads.append(
                 executor.submit(
                     speechRecognizeWhisper,

@@ -93,14 +93,6 @@ def main(input_files, arg_files):
     for input_file in input_files:
         count = 0
 
-        if True:  # Google音声認識は必ず使う
-            recognize_result_file = common.getRecognizeResultFile(input_file)
-            count += mergeRecognizeResult(recognize_result_file, resultMap, "G")
-
-        if len(common.getWitAiServerAccessToken()) > 0:  # wit.aiを使用した場合
-            recognize_result_file = common.getRecognizeResultFileWitAI(input_file)
-            count += mergeRecognizeResult(recognize_result_file, resultMap, "W")
-
         if whispermodelname != common.WHISPER_MODEL_NONE:  # Whisperを使用した場合
             recognize_result_file = common.getRecognizeResultFileWhisper(input_file)
             count += mergeRecognizeResult(

@@ -48,7 +48,7 @@ def main(input_file):
             split_result_queue.append(line.split("\t"))
 
     # 認識結果ファイルの読み込み
-    recognize_result_file = common.getRecognizeResultFile(input_file)
+    recognize_result_file = common.getRecognizeResultFileWhisper(input_file)
     logger.info("認識結果ファイル：{}".format(os.path.basename(recognize_result_file)))
 
     recognize_result_list = list()

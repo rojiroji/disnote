@@ -1,8 +1,6 @@
 import os
 import sys
 import common
-import speech_rec
-import speech_rec_wit
 import speech_rec_whisper
 import shutil
 import codecs
@@ -18,16 +16,6 @@ def main(input_file):
 
     # 音声認識済みなら音声分割をスキップする
     needSplitFiles = False
-
-    if speech_rec.reasonNotToRecognize(input_file) is None:  # 音声認識(Google) が未完了なら分割する
-        logger.info("　進捗確認：音声認識(Google) 未完了")
-        needSplitFiles = True
-
-    if (
-        speech_rec_wit.reasonNotToRecognize(input_file) is None
-    ):  # 音声認識(wit.ai) が未完了なら分割する
-        logger.info("　進捗確認：音声認識(wit.ai) 未完了")
-        needSplitFiles = True
 
     if (
         speech_rec_whisper.reasonNotToRecognize(input_file) is None

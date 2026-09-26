@@ -22,8 +22,6 @@ SYSTEM_CONF_FILE = "DisNOTE.ini"
 SEG_TMP_AUDIO_LENGTH = "seg_tmp_audio_length"
 SEG_FILTER_STRENGTH = "seg_filter_strength"
 IS_RECOGNIZE_NOIZE = "is_recognize_noize"
-WIT_AI_SERVER_ACCESS_TOKEN = "wit_ai_server_access_token"
-RECOGNIZE_GOOGLE_LANGUAGE = "recognize_google_language"
 REMOVE_TEMP_SPLIT_FLAC = "remove_temp_split_flac"
 WHISPER_MODEL = "whisper_model"
 WHISPER_LANG = "recognize_whisper_language"
@@ -32,7 +30,6 @@ WHISPER_BINARY_DURATION = "whisper_binary_duration"
 IS_USE_BINARY_WHISPER = "is_use_binary_whisper"
 
 WHISPER_MODEL_NONE = "none"
-WIT_AI_SERVER_ACCESS_TOKEN_NONE = "none"
 
 LOG_FOR_GUI = "[PROGRESS]"  # GUI用にログを出力するときに出す文字列
 
@@ -81,9 +78,6 @@ def getAudioFileInfo(input_file):
 # 引数設定
 parser = argparse.ArgumentParser()
 parser.add_argument(
-    "--witaitoken"
-)  # wit.aiのServer Access Token（未指定の場合(None)はiniファイルの設定を使う。"none" を指定したらwit.aiを使わない）
-parser.add_argument(
     "--whispermodel"
 )  # Whisperのモデル（未指定の場合(None)はiniファイルの設定を使う。"none" を指定したらWhisperを使わない）
 parser.add_argument(
@@ -111,8 +105,6 @@ def writeDefaultSysConfig():
     getSegTmpAudioLength()
     getSegFilterStrength()
     isRecognizeNoize()
-    getWitAiServerAccessToken()
-    getRecognizeGoogleLanguage()
     isRemoveTempSplitFlac()
     getWhisperModel()
     getWhisperLanguage()
@@ -168,47 +160,6 @@ def isRecognizeNoize():
         writeSysConfig(config)
 
     return ret != 0
-
-
-# wit.aiのServer Access Token(未設定時(空文字列)はwit.aiでの認識をスキップする)
-def getWitAiServerAccessToken():
-    if args.witaitoken is None:  # 引数で未指定の場合はiniファイルの設定を使う
-        try:
-            config = readSysConfig()
-            val = config["DEFAULT"].get(WIT_AI_SERVER_ACCESS_TOKEN)
-            if val is not None:
-                return val.strip()
-
-        except:  # 設定ファイルが読めなかったり(初回起動時)、値がおかしかったらデフォルトで保存
-            pass
-
-        config.set("DEFAULT", WIT_AI_SERVER_ACCESS_TOKEN, "")
-        writeSysConfig(config)
-        return ""
-
-    if args.witaitoken == WIT_AI_SERVER_ACCESS_TOKEN_NONE:  # 引数で"none"を指定したら使わない
-        return ""
-
-    return args.witaitoken
-
-
-# GoogleAPIで認識する際の言語（デフォルトは日本語(ja-JP)）
-def getRecognizeGoogleLanguage():
-    try:
-        config = readSysConfig()
-        val = config["DEFAULT"].get(RECOGNIZE_GOOGLE_LANGUAGE)
-        if val is not None:
-            val = val.strip()
-            if len(val) > 0:
-                return val
-
-    except:  # 設定ファイルが読めなかったり(初回起動時)、値がおかしかったらデフォルトで保存
-        pass
-
-    config.set("DEFAULT", RECOGNIZE_GOOGLE_LANGUAGE, "ja-JP")
-    writeSysConfig(config)
-
-    return ""
 
 
 # 音声認識にかけたflacファイルを最後に削除するかどうか(デフォルトはTrue)
@@ -422,28 +373,6 @@ def getSplitResultFile(input_file):
     outputdir = os.path.join(basedir, base)  # 各種ファイルの出力先ディレクトリ
 
     output_file = "_{}_split.txt".format(base)
-
-    return os.path.join(outputdir, output_file)
-
-
-# 認識結果ファイル(Google)
-def getRecognizeResultFile(input_file):
-    base = getFileNameWithoutExtension(input_file)
-    basedir = os.path.dirname(input_file)  # 入力音声ファイルの置いてあるディレクトリ
-    outputdir = os.path.join(basedir, base)  # 各種ファイルの出力先ディレクトリ
-
-    output_file = "_{}.csv".format(base)
-
-    return os.path.join(outputdir, output_file)
-
-
-# 認識結果ファイル(wit.ai)
-def getRecognizeResultFileWitAI(input_file):
-    base = getFileNameWithoutExtension(input_file)
-    basedir = os.path.dirname(input_file)  # 入力音声ファイルの置いてあるディレクトリ
-    outputdir = os.path.join(basedir, base)  # 各種ファイルの出力先ディレクトリ
-
-    output_file = "_{}_witai.csv".format(base)
 
     return os.path.join(outputdir, output_file)
 
