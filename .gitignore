@@ -142,3 +142,4 @@ DisNOTE-win32-x64
 src/DisNOTE_GUI/projects.json
 /src/DisNOTE_GUI/log
 src/DisNOTE_GUI/ymm4template/template.ymmp
+/test
