@@ -27,11 +27,7 @@ CONFIG_WORK_CONV_READY = "speech_rec_conv_ready_whisper"
 
 # 音声ファイルの認識を行うかどうか。行わないなら理由（ログに出力する文字列）を返す。行うならNoneを返す。
 def reasonNotToRecognize(input_file):
-    modelname = common.getWhisperModel()
     config = common.readConfig(input_file)
-
-    if modelname == common.WHISPER_MODEL_NONE:
-        return "Whisperを使用しない設定のためスキップ"
 
     if config["DEFAULT"].get(CONFIG_WORK_KEY) == common.DONE:
         return "完了済みのためスキップ(音声認識)"
@@ -56,10 +52,6 @@ def main(input_file):
 
     if config["DEFAULT"].get(CONFIG_WORK_KEY) == common.DONE:
         logger.info("完了済みのためスキップ(音声認識)")
-        return
-
-    if modelname == common.WHISPER_MODEL_NONE:
-        logger.info("whisperを使用しない設定のためスキップ")
         return
 
     if not common.isValidWhisperModel():

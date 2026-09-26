@@ -93,11 +93,10 @@ def main(input_files, arg_files):
     for input_file in input_files:
         count = 0
 
-        if whispermodelname != common.WHISPER_MODEL_NONE:  # Whisperを使用した場合
-            recognize_result_file = common.getRecognizeResultFileWhisper(input_file)
-            count += mergeRecognizeResult(
-                recognize_result_file, resultMap, whispermodelname[0]
-            )  # tiny,base,small,medium,largeのいずれかの先頭1文字（小文字）
+        recognize_result_file = common.getRecognizeResultFileWhisper(input_file)
+        count += mergeRecognizeResult(
+            recognize_result_file, resultMap, whispermodelname[0]
+        )  # tiny,base,small,medium,largeのいずれかの先頭1文字（小文字）
 
         # 発言がない人物は話者一覧から外す
         if count <= 0:

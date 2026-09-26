@@ -29,8 +29,6 @@ WHISPER_TMP_AUDIO_LENGTH = "whisper_tmp_audio_length"
 WHISPER_BINARY_DURATION = "whisper_binary_duration"
 IS_USE_BINARY_WHISPER = "is_use_binary_whisper"
 
-WHISPER_MODEL_NONE = "none"
-
 LOG_FOR_GUI = "[PROGRESS]"  # GUI用にログを出力するときに出す文字列
 
 
@@ -189,7 +187,7 @@ def getWhisperModel():
         except:  # 設定ファイルが読めなかったり(初回起動時)、値がおかしかったらデフォルトで保存
             pass
 
-        ret = WHISPER_MODEL_NONE
+        ret = "medium"
         config.set("DEFAULT", WHISPER_MODEL, ret)
         writeSysConfig(config)
 
