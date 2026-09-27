@@ -386,13 +386,19 @@ def getRecognizeResultFileWhisper(input_file):
     return os.path.join(outputdir, output_file)
 
 
-# 認識中間ファイル(whisper)
+# 認識中間ファイル(whisper) seg.pyがfaster-whisperで検出した発話区間と認識テキストを一時保持するキャッシュファイル
 def getSegmentFileWhisper(input_file):
     base = getFileNameWithoutExtension(input_file)
     basedir = os.path.dirname(input_file)  # 入力音声ファイルの置いてあるディレクトリ
     outputdir = os.path.join(basedir, base)  # 各種ファイルの出力先ディレクトリ
 
-    output_file = "_{}_whisper_segment.csv".format(base)
+    output_file = "_{}_whisper_segment_{}.csv".format(base, getWhisperModel())
+
+    # なければmkdir
+    try:
+        os.mkdir(outputdir)
+    except FileExistsError:
+        pass
 
     return os.path.join(outputdir, output_file)
 

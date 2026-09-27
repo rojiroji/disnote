@@ -1,20 +1,25 @@
 import os
 import sys
-from inaSpeechSegmenter import Segmenter
-from inaSpeechSegmenter.export_funcs import seg2csv, seg2textgrid
+import csv
+import codecs
 import common
 import time
 import torch
+from faster_whisper import WhisperModel
 
 logger = common.getLogger(__file__)
 
-CONFIG_WORK_KEY = "seg"
-CONFIG_WORK_PROGRESS = "seg_progress"
+CONFIG_WORK_KEY = "seg_whisper_" + common.getWhisperModel()  # モデルごとに完了状態を記録
+CONFIG_WORK_PROGRESS = "seg_progress_whisper_" + common.getWhisperModel()
 CONFIG_SEG_SPLIT = "seg_split"
+
+model = None
 
 
 def main(input_file):
-    logger.info("1. 無音解析開始 - {}".format(os.path.basename(input_file)))
+    global model
+
+    logger.info("1. 無音解析開始(faster-whisper) - {}".format(os.path.basename(input_file)))
     logger.info("Cuda.available:{}".format(torch.cuda.is_available()))
     func_in_time = time.time()
 
@@ -22,6 +27,17 @@ def main(input_file):
     if config["DEFAULT"].get(CONFIG_WORK_KEY) == common.DONE:
         logger.info("完了済みのためスキップ(無音解析)")
         return
+
+    modelname = common.getWhisperModel()
+    language = common.getWhisperLanguage()
+    logger.info("faster-whisperモデル：{}".format(modelname))
+
+    if not common.isValidWhisperModel():
+        raise ValueError(
+            "whisperのモデル名が不正({})：DisNOTE.iniの{}の設定を確認してください".format(
+                modelname, common.WHISPER_MODEL
+            )
+        )
 
     progress = config["DEFAULT"].getint(CONFIG_WORK_PROGRESS, 0)
 
@@ -36,6 +52,14 @@ def main(input_file):
             progress = 0  # 区切り単位が異なっていたら最初からやりなおし
         else:
             logger.info("無音解析途中のデータがあったため再開({})".format(progress))
+
+    # faster-whisperモデル読み込み（読み込みを1回にするためにglobalに保持）
+    if model is None:
+        device = "cuda" if torch.cuda.is_available() else "cpu"
+        compute_type = "float16" if device == "cuda" else "int8"
+        logger.info("faster-whisperモデル読み込み開始：{}({})".format(modelname, device))
+        model = WhisperModel(modelname, device=device, compute_type=compute_type)
+        logger.info("faster-whisperモデル読み込み完了：{}".format(modelname))
 
     # 音声ファイルを無音で分割して秒数とかを出力
 
@@ -62,75 +86,89 @@ def main(input_file):
 
     base = os.path.splitext(os.path.basename(input_file))[0]  # 拡張子なしのファイル名（話者）
 
-    # ノイズフィルタの設定
-    filter = ""
-    if common.getSegFilterStrength() > 0:  # anlmdnフィルタをかける
-        filter = "-af anlmdn=s={}".format(common.getSegFilterStrength())
+    # 発話区間キャッシュ(開始・終了時刻(絶対時刻,ミリ秒)と認識テキスト)。speech_rec_whisper.pyが最終的な認識結果ファイルを作る際に参照する
+    segment_cache_file = common.getSegmentFileWhisper(input_file)
+    logger.info("発話区間キャッシュファイル：{}".format(os.path.basename(segment_cache_file)))
+    cache_mode = "a" if progress > 0 else "w"
 
-    logger.info("ノイズフィルタ：{}".format("なし" if len(filter) == 0 else filter))
+    with codecs.open(segment_cache_file, cache_mode, "CP932", "ignore") as cache_f:
+        cache_writer = csv.writer(cache_f)
 
-    while start_time < duration:
-        # 分析結果ファイル
-        seg_result_file = common.getSegResultFile(input_file, index)
-        logger.info("分析結果ファイル：{}".format(os.path.basename(seg_result_file)))
-        logger.info(
-            "　無音解析処理中… {} {}/{}".format(base, index + 1, int(duration / split_len) + 1)
-        )
-        common.logForGui(
-            logger,
-            "seg",
-            input_file,
-            progress=index,
-            max=int(duration / split_len),
-        )
-
-        end_time = min(start_time + split_len, duration)
-
-        # ffmpegで分割
-        filter_start_time = time.time()
-        res = common.runSubprocess(
-            'ffmpeg -ss {} -t {} -i "{}" {} -vn -acodec flac -y {}'.format(
-                start_time / 1000,
-                (end_time - start_time) / 1000,
+        while start_time < duration:
+            # 分析結果ファイル
+            seg_result_file = common.getSegResultFile(input_file, index)
+            logger.info("分析結果ファイル：{}".format(os.path.basename(seg_result_file)))
+            logger.info(
+                "　無音解析処理中… {} {}/{}".format(base, index + 1, int(duration / split_len) + 1)
+            )
+            common.logForGui(
+                logger,
+                "seg",
                 input_file,
-                filter,
-                tmp_audio_file,
+                progress=index,
+                max=int(duration / split_len),
             )
-        )
-        filter_end_time = time.time()
-        logger.debug(
-            "　フィルタ処理 {:.2f}min".format((filter_end_time - filter_start_time) / 60)
-        )
 
-        # 区間検出実行
-        seg_start_time = time.time()
-        seg = Segmenter(vad_engine="smn", detect_gender=False)
-        segmentation = seg(tmp_audio_file)
-        seg_end_time = time.time()
+            end_time = min(start_time + split_len, duration)
 
-        # csv(という名のタブ)出力
-        seg2csv(segmentation, seg_result_file)
-        seg2sv_end_time = time.time()
-
-        logger.debug(
-            "　無音解析処理 {:.2f}min+{:.2f}min".format(
-                (seg_end_time - seg_start_time) / 60,
-                (seg2sv_end_time - seg_end_time) / 60,
+            # ffmpegで分割
+            filter_start_time = time.time()
+            common.runSubprocess(
+                'ffmpeg -ss {} -t {} -i "{}" -vn -acodec flac -y {}'.format(
+                    start_time / 1000,
+                    (end_time - start_time) / 1000,
+                    input_file,
+                    tmp_audio_file,
+                )
             )
-        )
+            filter_end_time = time.time()
+            logger.debug(
+                "　フィルタ処理 {:.2f}min".format((filter_end_time - filter_start_time) / 60)
+            )
 
-        start_time += split_len
-        index = index + 1
+            # 区間検出+音声認識を同時に実行
+            seg_start_time = time.time()
+            segments, info = model.transcribe(tmp_audio_file, language=language)
+            segments = list(segments)  # ジェネレータを消費して確定させる
+            seg_end_time = time.time()
+            logger.debug(
+                "　無音解析・音声認識処理 {:.2f}min".format((seg_end_time - seg_start_time) / 60)
+            )
 
-        # ここまで完了した、と記録
-        common.updateConfig(
-            input_file,
-            {CONFIG_WORK_PROGRESS: str(index), CONFIG_SEG_SPLIT: str(split_len)},
-        )
+            chunk_duration_sec = (end_time - start_time) / 1000
 
-        if common.isErrorOccurred():  # 他のスレッドでエラーが起きていたら強制終了する
-            return
-    
+            # 無音解析結果(inaSpeechSegmenter互換フォーマット)を出力
+            with open(seg_result_file, "w", encoding="utf-8", newline="") as f:
+                f.write("labels\tstart\tstop\n")
+                prev_end = 0.0
+                for seg_item in segments:
+                    if seg_item.start > prev_end:  # 発話と発話の間の無音区間
+                        f.write("noEnergy\t{}\t{}\n".format(prev_end, seg_item.start))
+                    f.write("speech\t{}\t{}\n".format(seg_item.start, seg_item.end))
+                    prev_end = seg_item.end
+                if prev_end < chunk_duration_sec:  # 末尾の無音区間
+                    f.write("noEnergy\t{}\t{}\n".format(prev_end, chunk_duration_sec))
+
+            # 発話区間の開始・終了時刻(絶対時刻,ミリ秒)と認識テキストをキャッシュに保存
+            for seg_item in segments:
+                abs_start_ms = int(start_time + seg_item.start * 1000)
+                abs_end_ms = int(start_time + seg_item.end * 1000)
+                text = seg_item.text.strip().replace("\n", " ")
+                cache_writer.writerow([abs_start_ms, abs_end_ms, text])
+            cache_f.flush()
+
+            start_time += split_len
+            index = index + 1
+
+            # ここまで完了した、と記録
+            common.updateConfig(
+                input_file,
+                {CONFIG_WORK_PROGRESS: str(index), CONFIG_SEG_SPLIT: str(split_len)},
+            )
+
+            if common.isErrorOccurred():  # 他のスレッドでエラーが起きていたら強制終了する
+                return
+
     # 終了したことをiniファイルに保存
     common.updateConfig(
         input_file,

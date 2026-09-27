@@ -22,11 +22,11 @@ def main(input_file):
     # 	if config['DEFAULT'].get(CONFIG_WORK_KEY) == common.DONE: # 処理順によっては変換前のファイルが残っていることがあるので、完了済みでもreturnしない
     # 		logger.info("完了済みのためスキップ(音声変換)")
     # 		return
-    if (
-        config["DEFAULT"].get(CONFIG_WORK_CONV_READY) != "1"
-    ):  # v1.4.0以前だと、mp3のファイル名を保持していない（flacをそのままHTMLで再生する）ためスキップ
-        logger.info("認識処理時のDisNOTEのバージョンが古いためスキップ(音声変換)")
-        return
+    #if (
+    #    config["DEFAULT"].get(CONFIG_WORK_CONV_READY) != "1"
+    #):  # v1.4.0以前だと、mp3のファイル名を保持していない（flacをそのままHTMLで再生する）ためスキップ
+    #    logger.info("認識処理時のDisNOTEのバージョンが古いためスキップ(音声変換)")
+    #    return
 
     # (元々の)入力の音声ファイルのパスを指定
     logger.info("音声ファイル：{}".format(os.path.basename(input_file)))
