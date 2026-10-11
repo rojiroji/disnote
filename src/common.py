@@ -334,26 +334,6 @@ def getFileNameWithoutExtension(input_file):
     return os.path.splitext(os.path.basename(input_file))[0]
 
 
-# 分析結果ファイル
-def getSegResultFile(input_file, index):
-    base = getFileNameWithoutExtension(input_file)
-    basedir = os.path.dirname(input_file)  # 入力音声ファイルの置いてあるディレクトリ
-    outputdir = os.path.join(basedir, base)  # 各種ファイルの出力先ディレクトリ
-
-    if index > 0:
-        output_file = "_{}_{}.txt".format(base, index + 1)
-    else:
-        output_file = "_{}.txt".format(base)
-
-    # なければmkdir
-    try:
-        os.mkdir(outputdir)
-    except FileExistsError:
-        pass
-
-    return os.path.join(outputdir, output_file)
-
-
 # 分割音声ファイルのprefix
 def getSplitAudioFilePrefix(input_file):
     base = getFileNameWithoutExtension(input_file)

@@ -1,9 +1,6 @@
 import sys
 import os
 import seg
-import split
-import split_audio
-import speech_rec_whisper
 import conv_audio
 import common
 import merge
@@ -55,34 +52,8 @@ def prepare(input_files):
                 )
                 raise
 
-            # 音声分割設定
-            try:
-                split.main(input_file)
-                common.logForGui(logger, "split", input_file, progress=1, max=1)
-            except Exception as e:
-                tb = sys.exc_info()[2]
-                logger.error(traceback.format_exc())
-                logger.error(
-                    "{} の音声分割設定(2-1)に失敗しました({})。".format(
-                        input_file, e.with_traceback(tb)
-                    )
-                )
-                raise
-
-            # 音声分割
-            try:
-                split_audio.main(input_file)
-                common.logForGui(logger, "split_audio", input_file, progress=1, max=1)
-            except Exception as e:
-                tb = sys.exc_info()[2]
-                logger.error(traceback.format_exc())
-                logger.error(
-                    "{} の音声分割(2-2)に失敗しました({})。".format(input_file, e.with_traceback(tb))
-                )
-                raise
-
-            # 音声認識スレッドに登録
-            thread.pushReadyRecognizeList(input_file)
+            # 音声変換スレッドに登録(音声認識はseg.main内で完了している)
+            thread.pushReadyConvertListWhisper(input_file)
 
             logger.info(
                 "認識準備終了：{} ({}/{})".format(basename, index + 1, len(input_files))
@@ -92,46 +63,11 @@ def prepare(input_files):
         common.errorOccurred()
         raise
 
-# 音声認識を行うスレッド(whisper音声認識)
-def speechRecognizeWhisper(prepareThread):
-    global logger
-
-    try:
-        while True:
-            if common.isErrorOccurred():  # 他のスレッドでエラーが起きていたら強制終了する
-                return
-
-            time.sleep(1)
-            logger.debug("スレッド待機中(speechRecognizeWhisper)")
-
-            # 無音検出とWhisperは両方クライアントのリソースを使うので、並列では行わない
-            if not prepareThread.done():
-                continue
-
-            input_file = thread.popReadyRecognizeListWhisper()
-            if input_file is None:
-                if (
-                    prepareThread.done()
-                ):  # 仕事リストが空＆prepareThreadが終了していたら、もうリストに追加されることはないので終了する
-                    logger.info("全ファイル音声認識終了(Whisper)")
-                    return
-                continue
-
-            # 音声認識
-            common.logForGui(logger, "rec", input_file, progress=0, max=1)
-            speech_rec_whisper.main(input_file)
-            thread.pushReadyConvertListWhisper(input_file)
-            common.logForGui(logger, "rec", input_file, progress=1, max=1,info={"engine":"whisper"})
-    except Exception as e:
-        common.errorOccurred()
-        tb = sys.exc_info()[2]
-        logger.error(traceback.format_exc())
-        logger.error("{} の音声認識(3)に失敗しました({})。".format(input_file, e.with_traceback(tb)))
-        raise
+# 音声認識はseg.main内で行うため、音声認識スレッドは不要
 
 
 # mp3への変換を行うスレッド
-def convert(recognizeThreads):
+def convert(prepareThread):
     global logger
     try:
         while True:
@@ -140,17 +76,13 @@ def convert(recognizeThreads):
 
             time.sleep(1)
 
-            recognize_done = True
-            for t in recognizeThreads:
-                recognize_done &= t.done()  # 音声認識スレッドがすべて終了しているかどうか
+            prepare_done = prepareThread.done()  # 認識準備スレッドが終了しているかどうか
 
-            logger.debug("スレッド待機中(convert) 音声認識全て終了：{}".format(recognize_done))
+            logger.debug("スレッド待機中(convert) 認識準備終了：{}".format(prepare_done))
 
-            input_file = thread.popReadyConvertList(
-                pop_and=(not recognize_done)
-            )  # 音声認識スレッドが終了していなかったらandを取る。終了していたらorで妥協する（何らかの原因でandが空だった場合に永遠に終了しないため）。
+            input_file = thread.popReadyConvertList(pop_and=False)
             if input_file is None:
-                if recognize_done:  # 音声認識が終了していたら、もうリストに追加されることはないので終了する
+                if prepare_done:  # 認識準備が終了していたら、もうリストに追加されることはないので終了する
                     return
                 continue
                 
@@ -328,27 +260,13 @@ try:
             prepareThread = executor.submit(prepare, input_files)  # 認識準備スレッド
             threadList.append(prepareThread)
 
-            recognizeThreads = list()
-            recognizeThreads.append(
-                executor.submit(
-                    speechRecognizeWhisper,
-                    prepareThread
-                )
-            )  # 音声認識スレッド(Whisper)
-            threadList.extend(recognizeThreads)
-
             e = prepareThread.exception()  # 認識準備スレッド終了待ち
             if e is not None:
                 raise e
             logger.info("全ファイル認識準備終了")
 
-            convertThread = executor.submit(convert, recognizeThreads)  # mp3変換スレッド
+            convertThread = executor.submit(convert, prepareThread)  # mp3変換スレッド
             threadList.append(convertThread)
-
-            for t in recognizeThreads:  # 音声認識スレッド終了待ち
-                e = t.exception()
-                if e is not None:
-                    raise e
 
             e = convertThread.exception()  # mp3変換スレッド終了待ち
             if e is not None:
