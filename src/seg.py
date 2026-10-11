@@ -15,6 +15,8 @@ CONFIG_SEG_SPLIT = "seg_split"
 CONFIG_WORK_REC_KEY = "speech_rec_whisper_" + common.getWhisperModel()  # モデルごとに認識結果出力の完了状態を記録
 CONFIG_WORK_CONV_READY = "speech_rec_conv_ready_whisper"
 
+OVERLAP_MS = 30 * 1000  # チャンク前後に付けるオーバーラップ(ミリ秒)。境界をまたぐ発話を完全に拾うため
+
 model = None
 
 
@@ -125,13 +127,16 @@ def main(input_file):
             )
 
             end_time = min(start_time + split_len, duration)
+            # 認識は前後オーバーラップ込みの範囲で行う(前チャンクからの続きの発話を完全に認識させるため)
+            transcribe_start_time = max(start_time - OVERLAP_MS, 0)
+            transcribe_end_time = min(end_time + OVERLAP_MS, duration)
 
             # ffmpegで分割
             filter_start_time = time.time()
             common.runSubprocess(
                 'ffmpeg -ss {} -t {} -i "{}" -vn -acodec flac -y {}'.format(
-                    start_time / 1000,
-                    (end_time - start_time) / 1000,
+                    transcribe_start_time / 1000,
+                    (transcribe_end_time - transcribe_start_time) / 1000,
                     input_file,
                     tmp_audio_file,
                 )
@@ -157,8 +162,14 @@ def main(input_file):
 
             # 発話区間の開始・終了時刻(絶対時刻,ミリ秒)と認識テキストを保存
             for seg_item in segments:
-                abs_start_ms = int(start_time + seg_item.start * 1000)
-                abs_end_ms = int(start_time + seg_item.end * 1000)
+                abs_start_ms = int(transcribe_start_time + seg_item.start * 1000)
+                abs_end_ms = int(transcribe_start_time + seg_item.end * 1000)
+
+                # 終了時刻がチャンク本来の範囲外の発話は隣接チャンクで拾うためスキップ(重複除外)
+                # 終了時刻で判定するのは、開始時刻が前チャンクにまたがる発話を前チャンクで採用するため
+                if abs_end_ms <= start_time or abs_end_ms > end_time:
+                    continue
+
                 text = seg_item.text.strip().replace("\n", " ")
                 cache_writer.writerow([abs_start_ms, abs_end_ms, text])
                 all_segments.append((abs_start_ms, abs_end_ms, text))
