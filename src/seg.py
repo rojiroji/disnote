@@ -168,6 +168,11 @@ def main(input_file):
                 # 終了時刻がチャンク本来の範囲外の発話は隣接チャンクで拾うためスキップ(重複除外)
                 # 終了時刻で判定するのは、開始時刻が前チャンクにまたがる発話を前チャンクで採用するため
                 if abs_end_ms <= start_time or abs_end_ms > end_time:
+                    logger.info(
+                        "　重複除外：{}〜{} (チャンク{}の範囲外)".format(
+                            abs_start_ms, abs_end_ms, index
+                        )
+                    )
                     continue
 
                 text = seg_item.text.strip().replace("\n", " ")
