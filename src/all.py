@@ -9,97 +9,12 @@ import requests
 import json
 import copy
 import time
-import thread
-from concurrent.futures import ThreadPoolExecutor, wait
 
 logger = common.getLogger(__file__)
 
 logger.info("----------------------------------------")
 logger.info("             DisNOTE {}".format(common.getVersion()))
 logger.info("----------------------------------------")
-
-
-# 認識準備を行うスレッド
-def prepare(input_files):
-    global logger
-    try:
-        for index, input_file in enumerate(input_files):
-            if common.isErrorOccurred():  # 他のスレッドでエラーが起きていたら強制終了する
-                return
-
-            basename = os.path.basename(input_file)
-
-            logger.info(
-                "認識準備開始：{} ({}/{})".format(basename, index + 1, len(input_files))
-            )
-
-            # フォーマット確認
-            try:
-                common.getFileFormat(input_file)
-            except Exception as e:
-                logger.error("処理を中断します。")
-                raise
-
-            # 無音解析
-            try:
-                seg.main(input_file)
-                common.logForGui(logger, "seg", input_file, progress=1, max=1)
-            except Exception as e:
-                tb = sys.exc_info()[2]
-                logger.error(traceback.format_exc())
-                logger.error(
-                    "{} の無音解析(1)に失敗しました({})。".format(input_file, e.with_traceback(tb))
-                )
-                raise
-
-            # 音声変換スレッドに登録(音声認識はseg.main内で完了している)
-            thread.pushReadyConvertListWhisper(input_file)
-
-            logger.info(
-                "認識準備終了：{} ({}/{})".format(basename, index + 1, len(input_files))
-            )
-            common.logForGui(logger, "prepare", input_file, progress=1, max=1)
-    except Exception as e:
-        common.errorOccurred()
-        raise
-
-# 音声認識はseg.main内で行うため、音声認識スレッドは不要
-
-
-# mp3への変換を行うスレッド
-def convert(prepareThread):
-    global logger
-    try:
-        while True:
-            if common.isErrorOccurred():  # 他のスレッドでエラーが起きていたら強制終了する
-                return
-
-            time.sleep(1)
-
-            prepare_done = prepareThread.done()  # 認識準備スレッドが終了しているかどうか
-
-            logger.debug("スレッド待機中(convert) 認識準備終了：{}".format(prepare_done))
-
-            input_file = thread.popReadyConvertList(pop_and=False)
-            if input_file is None:
-                if prepare_done:  # 認識準備が終了していたら、もうリストに追加されることはないので終了する
-                    return
-                continue
-                
-            # 他のスレッドでエラーが起きていたら強制終了する（再チェック。音声認識がエラー終了した状態でmp3変換が行われると、分割したflacが消えるので次回起動時にまた分割処理が走ってしまう）
-            if common.isErrorOccurred():
-                return
-
-            # 音声変換
-            conv_audio.main(input_file)
-            common.logForGui(logger, "conv_audio", input_file, progress=1, max=1)
-
-    except Exception as e:
-        common.errorOccurred()
-        tb = sys.exc_info()[2]
-        logger.error(traceback.format_exc())
-        logger.error("{} の音声変換(4)に失敗しました({})。".format(input_file, e.with_traceback(tb)))
-        raise
 
 
 # 新しいバージョンがあったら表示する
@@ -252,44 +167,50 @@ try:
 
     common.logForGui(logger, "checkedAudioFiles")
 
-    # ファイルそれぞれに対して音声認識
-    with ThreadPoolExecutor() as executor:
-        threadList = list()
+    # ファイルそれぞれに対して音声認識(直列)
+    try:
+        for index, input_file in enumerate(input_files):
+            basename = os.path.basename(input_file)
+            logger.info("認識開始：{} ({}/{})".format(basename, index + 1, len(input_files)))
 
-        try:
-            prepareThread = executor.submit(prepare, input_files)  # 認識準備スレッド
-            threadList.append(prepareThread)
-
-            e = prepareThread.exception()  # 認識準備スレッド終了待ち
-            if e is not None:
-                raise e
-            logger.info("全ファイル認識準備終了")
-
-            convertThread = executor.submit(convert, prepareThread)  # mp3変換スレッド
-            threadList.append(convertThread)
-
-            e = convertThread.exception()  # mp3変換スレッド終了待ち
-            if e is not None:
-                raise e
-            logger.info("全ファイル音声変換終了")
-
-        except Exception as e:  # 例外が起きたら、すべてのスレッドの終了を待ってからログを出力して終了する
-            common.errorOccurred()
-            logger.error("スレッド処理中にエラーが発生したため全スレッドを停止")
-            for t in threadList:
-                try:
-                    t.result()
-                except Exception as e:
-                    pass
-
-            if common.isCancelFileExists():
-                logger.error("認識がキャンセルされました（{}）".format(common.getCancelFilePath()))
-                sys.exit(0)
-            else:
+            # 無音解析・音声認識
+            try:
+                seg.main(input_file)
+                common.logForGui(logger, "seg", input_file, progress=1, max=1)
+            except Exception as e:
                 tb = sys.exc_info()[2]
                 logger.error(traceback.format_exc())
-                logger.error("スレッド処理中にエラーが発生しました({})。".format(e.with_traceback(tb)))
-                sys.exit(1)
+                logger.error(
+                    "{} の無音解析(1)に失敗しました({})。".format(input_file, e.with_traceback(tb))
+                )
+                raise
+
+            # mp3変換
+            try:
+                conv_audio.main(input_file)
+                common.logForGui(logger, "conv_audio", input_file, progress=1, max=1)
+            except Exception as e:
+                tb = sys.exc_info()[2]
+                logger.error(traceback.format_exc())
+                logger.error(
+                    "{} の音声変換(4)に失敗しました({})。".format(input_file, e.with_traceback(tb))
+                )
+                raise
+
+            logger.info("認識終了：{} ({}/{})".format(basename, index + 1, len(input_files)))
+            common.logForGui(logger, "prepare", input_file, progress=1, max=1)
+
+        logger.info("全ファイル音声変換終了")
+
+    except Exception as e:
+        if common.isCancelFileExists():
+            logger.error("認識がキャンセルされました（{}）".format(common.getCancelFilePath()))
+            sys.exit(0)
+        else:
+            tb = sys.exc_info()[2]
+            logger.error(traceback.format_exc())
+            logger.error("処理中にエラーが発生しました({})。".format(e.with_traceback(tb)))
+            sys.exit(1)
 
     # 結果マージ
     try:
