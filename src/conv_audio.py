@@ -56,10 +56,10 @@ def main(input_file):
         tmp_audio_file = common.getTemporaryFile(input_file, __file__, "mp3")
         try:
             common.runSubprocess(
-                'ffmpeg -ss {} -t {} -i "{}" -vn -y "{}"'.format(
+                'ffmpeg -i "{}" -ss {:.3f} -t {:.3f} -vn -y "{}"'.format(
+                    input_file,
                     org_start_time / 1000,
                     length / 1000,
-                    input_file,
                     tmp_audio_file,
                 )
             )

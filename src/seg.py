@@ -153,6 +153,7 @@ def main(input_file):
                 language=language,
                 vad_filter=True,
                 vad_parameters=dict(min_silence_duration_ms=500, speech_pad_ms=200),
+                word_timestamps=True,  # 発話終端を最後の単語の終了時刻で特定するため（OFFにすると終端が切れることがある）
             )
             segments = list(segments)  # ジェネレータを消費して確定させる
             seg_end_time = time.time()
@@ -163,7 +164,11 @@ def main(input_file):
             # 発話区間の開始・終了時刻(絶対時刻,ミリ秒)と認識テキストを保存
             for seg_item in segments:
                 abs_start_ms = int(transcribe_start_time + seg_item.start * 1000)
-                abs_end_ms = int(transcribe_start_time + seg_item.end * 1000)
+                # セグメントの終了時刻は推定値で早まることがあるため、最後の単語の終了時刻を発話終端とする
+                if seg_item.words:
+                    abs_end_ms = int(transcribe_start_time + seg_item.words[-1].end * 1000)
+                else:
+                    abs_end_ms = int(transcribe_start_time + seg_item.end * 1000)
 
                 # 終了時刻がチャンク本来の範囲外の発話は隣接チャンクで拾うためスキップ(重複除外)
                 # 終了時刻で判定するのは、開始時刻が前チャンクにまたがる発話を前チャンクで採用するため
