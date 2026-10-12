@@ -8,7 +8,6 @@ import traceback
 import requests
 import json
 import copy
-import time
 
 logger = common.getLogger(__file__)
 

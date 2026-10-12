@@ -101,13 +101,8 @@ def getVersion():
 # 共通設定iniファイルの設定値を一通り読み込み（設定値がなければ初期値が書き込まれる）
 def writeDefaultSysConfig():
     getSegTmpAudioLength()
-    getSegFilterStrength()
-    isRecognizeNoize()
-    isRemoveTempSplitFlac()
     getWhisperModel()
     getWhisperLanguage()
-    getWhisperTmpAudioLength()
-    getWhisperBinaryDuration()
 
 
 # 無音解析時に作るテンポラリファイルの音声の長さ（iniファイルでは分単位だが、ミリ秒に変換して返す）
@@ -127,52 +122,6 @@ def getSegTmpAudioLength():
         writeSysConfig(config)
 
     return min * 60 * 1000
-
-
-# 無音解析時にかけるノイズフィルタの強さ(0以下だとフィルタをかけない)
-def getSegFilterStrength():
-    ret = 0.1
-
-    try:
-        config = readSysConfig()
-        val = config["DEFAULT"].get(SEG_FILTER_STRENGTH)
-        ret = float(val)
-
-    except:  # 設定ファイルが読めなかったり(初回起動時)、値がおかしかったらデフォルトで保存
-        config.set("DEFAULT", SEG_FILTER_STRENGTH, str(ret))
-        writeSysConfig(config)
-
-    return ret
-
-
-# ノイズっぽい音声を認識するかどうか
-def isRecognizeNoize():
-    ret = 0
-    try:
-        config = readSysConfig()
-        val = config["DEFAULT"].get(IS_RECOGNIZE_NOIZE)
-        ret = int(val)
-
-    except:  # 設定ファイルが読めなかったり(初回起動時)、値がおかしかったらデフォルトで保存
-        config.set("DEFAULT", IS_RECOGNIZE_NOIZE, str(ret))
-        writeSysConfig(config)
-
-    return ret != 0
-
-
-# 音声認識にかけたflacファイルを最後に削除するかどうか(デフォルトはTrue)
-def isRemoveTempSplitFlac():
-    ret = 1
-    try:
-        config = readSysConfig()
-        val = config["DEFAULT"].get(REMOVE_TEMP_SPLIT_FLAC)
-        ret = int(val)
-
-    except:  # 設定ファイルが読めなかったり(初回起動時)、値がおかしかったらデフォルトで保存
-        config.set("DEFAULT", REMOVE_TEMP_SPLIT_FLAC, str(ret))
-        writeSysConfig(config)
-
-    return ret != 0
 
 
 # Whisperのモデル名
@@ -228,43 +177,6 @@ def getWhisperLanguage():
 
     return ret
 
-
-# Whisper(python版)解析時に作るテンポラリファイルの音声の長さ（iniファイルでは分単位だが、ミリ秒に変換して返す）
-def getWhisperTmpAudioLength():
-    min = 5  # 5分ごとに分割（デフォルト）
-
-    try:
-        config = readSysConfig()
-        val = config["DEFAULT"].get(WHISPER_TMP_AUDIO_LENGTH)
-        min = int(val)
-        if min < 1:  # 最低でも1分区切り
-            min = 1
-
-    except:  # 設定ファイルが読めなかったり(初回起動時)、値がおかしかったらデフォルトで保存
-        min = 5
-        config.set("DEFAULT", WHISPER_TMP_AUDIO_LENGTH, str(min))
-        writeSysConfig(config)
-
-    return min * 60 * 1000
-
-
-# Whisper(バイナリ版)解析時に読み込む音声の長さ（iniファイルでは分単位だが、ミリ秒に変換して返す）
-def getWhisperBinaryDuration():
-    min = 20  # 20分ごとに出力（デフォルト）
-
-    try:
-        config = readSysConfig()
-        val = config["DEFAULT"].get(WHISPER_BINARY_DURATION)
-        min = int(val)
-        if min < 1:  # 最低でも1分区切り
-            min = 1
-
-    except:  # 設定ファイルが読めなかったり(初回起動時)、値がおかしかったらデフォルトで保存
-        min = 20
-        config.set("DEFAULT", WHISPER_BINARY_DURATION, str(min))
-        writeSysConfig(config)
-
-    return min * 60 * 1000
 
 # システムconfig読み込み
 def readSysConfig():
@@ -342,17 +254,6 @@ def getSplitAudioFilePrefix(input_file):
 
     output_prefix = "{}_".format(base)
     return os.path.join(outputdir, output_prefix)
-
-
-# 分割結果ファイル
-def getSplitResultFile(input_file):
-    base = getFileNameWithoutExtension(input_file)
-    basedir = os.path.dirname(input_file)  # 入力音声ファイルの置いてあるディレクトリ
-    outputdir = os.path.join(basedir, base)  # 各種ファイルの出力先ディレクトリ
-
-    output_file = "_{}_split.txt".format(base)
-
-    return os.path.join(outputdir, output_file)
 
 
 # 認識結果ファイル(whisper) モデルごとにファイルを分ける
@@ -478,12 +379,6 @@ def isCancelFileExists():
         if os.path.isfile(getCancelFilePath()):
             return True
     return False
-   
-# スレッド処理中に例外が発生したフラグを立てる。このフラグが立っていたら、各スレッドは可及的速やかにスレッドを中断する
-def errorOccurred():
-    global error_occurred
-    error_occurred = True
-
 
 # スレッド処理中に例外が発生したかどうか
 def isErrorOccurred():

@@ -8,7 +8,6 @@ import shutil
 from dateutil.parser import parse
 from dateutil.parser import ParserError
 from dateutil.relativedelta import relativedelta
-import datetime
 import codecs
 import hashlib
 
