@@ -1,8 +1,10 @@
-cd /d %~dp0
+@echo off
+cd /d "%~dp0"
 
-py -m pip install --upgrade pip > stdout.txt
-py -m pip install inaSpeechSegmenter ffmpeg-python SpeechRecognition mutagen requests > stdout.txt
-rem py -m pip install git+https://github.com/openai/whisper.git > stdout.txt
-py -m pip freeze > freeze_develop.txt
+src\.venv\Scripts\python.exe -m pip install --upgrade pip > stdout.txt
+if errorlevel 1 exit /b 1
+src\.venv\Scripts\python.exe -m pip install ffmpeg-python mutagen requests faster-whisper==1.2.1 torch==2.8.0 python-dateutil==2.8.2 > stdout.txt
+if errorlevel 1 exit /b 1
 
-py src/all.py %* 
+src\.venv\Scripts\python.exe src\all.py %*
+exit /b %errorlevel%
