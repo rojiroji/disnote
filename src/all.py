@@ -197,7 +197,7 @@ try:
                 raise
 
             logger.info("認識終了：{} ({}/{})".format(basename, index + 1, len(input_files)))
-            common.logForGui(logger, "prepare", input_file, progress=1, max=1)
+            common.logForGui(logger, "fihished", input_file, progress=1, max=1)
 
         logger.info("全ファイル音声変換終了")
 

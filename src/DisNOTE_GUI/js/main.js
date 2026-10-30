@@ -294,73 +294,47 @@ function updateAudioFileProgress(info) {
     progress = 100 * info.progress / info.max;
   }
 
-  let progress_tag = null;
-  let percent_tag = null;
-  let thread = "";
-  if (info.engine) {
-    switch (info.engine) {
-      case "whisper":
-        progress_tag = document.querySelector(`#progress_whisper_${index}`);
-        percent_tag = document.querySelector(`#percent_whisper_${index}`);
-        break;
-    }
-    thread = info.engine;
-  } else {
-    progress_tag = document.querySelector(`#progress_main_${index}`);
-    percent_tag = document.querySelector(`#percent_main_${index}`);
-    thread = "main";
-  }
-
-
   /**
    * rec_progressのフォーマット
    * rec_progress[index] = { // 音声ファイルごとの配列
-   *    "main" : { // スレッド（main, whisper）
-   *       "progress"{
-   *          "setAudioFileInfo" : "100", // ステージごとの進捗
-   *          "checkedFiles" : "50"
-   *       },
-   *       "stage" : "checkedFiles" // 現在のステージ
-   *    }
+   *    "progress" : { // ステージごとの進捗
+   *       "setAudioFileInfo" : "100",
+   *       "seg" : "50"
+   *    },
+   *    "stage" : "seg" // 現在のステージ
    * }
    */
   // 進捗度合いを保持（非同期で呼び出される。巻き戻らないようにする）
   if (!(index in rec_progress)) {
     rec_progress[index] = {};
-  }
-  if (!(thread in rec_progress[index])) {
-    rec_progress[index][thread] = {};
-    rec_progress[index][thread]["progress"] = {};
+    rec_progress[index]["progress"] = {};
   }
   // ステージが後であれば更新
-  const stages = ["setAudioFileInfo", "seg", "prepare", "rec", "conv_audio"];
-  const current_stage_id = findIndexInArray(stages, rec_progress[index][thread]["stage"]);
+  const stages = ["setAudioFileInfo", "seg", "conv_audio", "fihished"];
+  const current_stage_id = findIndexInArray(stages, rec_progress[index]["stage"]);
   const new_stage_id = findIndexInArray(stages, info.stage);
   if (current_stage_id < new_stage_id) {
-    rec_progress[index][thread]["stage"] = info.stage;
+    rec_progress[index]["stage"] = info.stage;
   }
 
   //ステージごとの進捗を更新
-  if (rec_progress[index][thread]["progress"][info.stage] > progress) {
+  if (rec_progress[index]["progress"][info.stage] > progress) {
     // 現在保持している進捗がundefinedの場合と、現在保持している進捗の方が先に進んでいたら何もしない
   } else {
-    rec_progress[index][thread]["progress"][info.stage] = progress;
+    rec_progress[index]["progress"][info.stage] = progress;
   }
 
   // 現在のステージを表示
   document.querySelector(`#stage_${index}`).innerHTML = {
-    "setAudioFileInfo": "準備中(1/5)", "seg": "無音解析中(2/5)",
-    "prepare": "音声認識開始待ち(3/5)", "rec": "音声認識中(4/5)",
-    "conv_audio": "音声変換中(5/5)"
-  }[rec_progress[index]["main"]["stage"]];
+    "setAudioFileInfo": "準備中(1/4)", "seg": "音声認識中(2/4)",
+    "conv_audio": "音声変換中(3/4)", "fihished": "完了(4/4)"
+  }[rec_progress[index]["stage"]];
 
   // 現在のステージの進捗を表示
-  if (progress_tag) {
-    progress_tag.value = rec_progress[index][thread]["progress"][info.stage];
-  }
-  if (percent_tag) {
-    percent_tag.innerText = rec_progress[index][thread]["progress"][info.stage].toFixed(1) + "%";
-  }
+  document.querySelector(`#progress_main_${index}`).value =
+    rec_progress[index]["progress"][info.stage];
+  document.querySelector(`#percent_main_${index}`).innerText =
+    rec_progress[index]["progress"][info.stage].toFixed(1) + "%";
   console.log(rec_progress);
 }
 

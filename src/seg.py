@@ -222,7 +222,7 @@ def main(input_file):
             CONFIG_WORK_CONV_READY: "1",  # 再生用に変換してもOK
         },
     )
-    common.logForGui(logger, "rec", input_file, progress=1, max=1, info={"engine": "whisper"})
+    common.logForGui(logger, "seg", input_file, progress=1, max=1, info={"engine": "whisper"})
 
     func_out_time = time.time()
     logger.info(

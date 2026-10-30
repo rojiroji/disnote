@@ -1,21 +1,11 @@
 <tr class="main">
-    <td class="orgfile" rowspan="${rowspan}" title="${orgfile}">${orgfile}</td>
-    <td class="track" rowspan="${rowspan}">${track}</td>
-    <td class="stage" id="stage_${index}">準備中(1/7)</td>
+    <td class="orgfile" title="${orgfile}">${orgfile}</td>
+    <td class="track">${track}</td>
+    <td class="stage" id="stage_${index}">準備中(1/5)</td>
     <td class="progress main">
         <div class="progress-container">
             <progress id="progress_main_${index}" value="0" max="100"></progress>
             <div class="custom-text" id="percent_main_${index}" >0.0%</div>
         </div>
-
-    </td>
-</tr>
-<tr class="progress_whisper" style="display:${disp_whisper}">
-    <td class="enginename">　音声認識(Whisper)</td>
-    <td class="progress whisper">
-        <div class="progress-container">
-            <progress id="progress_whisper_${index}" class="whisperprogress" value="0" max="100"></progress>
-            <div class="custom-text whisperprogress" id="percent_whisper_${index}">認識待ち</div>
-        </div> 
     </td>
 </tr>

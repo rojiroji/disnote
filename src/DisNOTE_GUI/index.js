@@ -544,8 +544,6 @@ ipcMain.handle('recognizeProject', (event, projectId, whispermodel) => {
             .replaceAll("${orgfile}", recfile.orgfile)
             .replaceAll("${track}", multitracks ? "track" + (recfile.trackindex) : "")
             .replaceAll("${index}", recfile.index)
-            .replaceAll("${disp_whisper}", "table-row") // Whisper進捗行
-            .replaceAll("${rowspan}", 2)
             ;
         }
         tableHtml += '<tr class="main"><td colspan="3">最終処理</td>' +
