@@ -21,8 +21,16 @@ READING_ENGINE_IDS = {
     "b": "B",
     "s": "S",
     "m": "M",
-    "l": "L",
 }
+# 単語辞書で変換した候補のエンジンID（モデルごとに数字を割り当てる）
+DICTIONARY_ENGINE_IDS = {
+    "t": "1",
+    "b": "2",
+    "s": "3",
+    "m": "4",
+    "l": "5",
+}
+DICTIONARY_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "trpg_dictionary.csv")
 
 
 def main(input_files, arg_files):
@@ -98,6 +106,8 @@ def main(input_files, arg_files):
     whispermodelname = common.getWhisperModel()
     # 全候補で共有し、読み候補の形態素解析に使う
     tokenizer = Tokenizer()
+    # 単語辞書（現状はソースと同じフォルダ固定。後で引数指定にする予定）
+    word_dict = loadWordDictionary(DICTIONARY_FILE)
 
     resultMap = dict()
     for input_file in input_files:
@@ -105,7 +115,7 @@ def main(input_files, arg_files):
 
         recognize_result_file = common.getRecognizeResultFileWhisper(input_file)
         count += mergeRecognizeResult(
-            recognize_result_file, resultMap, whispermodelname[0], tokenizer
+            recognize_result_file, resultMap, whispermodelname[0], tokenizer, word_dict
         )  # tiny,base,small,medium,largeのいずれかの先頭1文字（小文字）
 
         # 発言がない人物は話者一覧から外す
@@ -247,7 +257,7 @@ def isInt(s):  # 整数値を表しているかどうかを判定
         return True
 
 # 認識結果ファイル(csv)を読み込んでマージする(行数を返す)
-def mergeRecognizeResult(recognize_result_file, resultMap, engine, tokenizer):
+def mergeRecognizeResult(recognize_result_file, resultMap, engine, tokenizer, word_dict):
     TEXT_INDEX = 5
     try:
         logger.debug("認識結果ファイル：{}".format(os.path.basename(recognize_result_file)))
@@ -262,12 +272,16 @@ def mergeRecognizeResult(recognize_result_file, resultMap, engine, tokenizer):
                 ]  # 2列目（音声ファイル名(分割したファイル）をキーにする。バージョンによって拡張子が異なるので拡張子以降は省略）
                 ppos = audio_file.rfind(".")
                 key = audio_file[0:ppos]
-                # 候補1の読みを候補2として追加し、エンジンIDも対応させる
+                # 候補1の読みを追加し、さらに単語辞書で変換した結果を新しい候補1にする
+                # （元の候補1と読みは、候補2と候補3にずれる）。エンジンIDも対応させる
                 candidate_count = len(row) - TEXT_INDEX
                 reading = toHiragana(row[TEXT_INDEX], tokenizer)
+                converted = convertWithDictionary(row[TEXT_INDEX], tokenizer, word_dict)
                 row.insert(TEXT_INDEX + 1, reading)
+                row.insert(TEXT_INDEX, converted)
                 engineStr = (
-                    engine
+                    DICTIONARY_ENGINE_IDS[engine]
+                    + engine
                     + READING_ENGINE_IDS[engine]
                     + engine * (candidate_count - 1)
                 )
@@ -309,19 +323,104 @@ def mergeRecognizeResult(recognize_result_file, resultMap, engine, tokenizer):
     return 0
 
 
-def toHiragana(text, tokenizer):
-    # 形態素ごとの読みをつなぎ、カタカナの読みをひらがなに変換する
-    readings = []
+def kanaToHiragana(text):
+    # カタカナ(ァ〜ヶ)だけをひらがなに変換する。それ以外の文字はそのまま
+    return "".join(
+        chr(ord(char) - 0x60) if "\u30a1" <= char <= "\u30f6" else char
+        for char in text
+    )
+
+
+def tokenizeWithReading(text, tokenizer):
+    # 形態素解析して、(表層形, ひらがなの読み, 品詞情報) のリストを返す
+    result = []
     for token in tokenizer.tokenize(text):
+        # 辞書にない語は読みが "*" になるので、表層形をそのまま読みとして使う
         reading = token.reading if token.reading != "*" else token.surface
-        readings.append(
-            "".join(
-                # Janomeの読みはカタカナなので、ひらがな範囲の文字だけ変換する
-                chr(ord(char) - 0x60) if "\u30a1" <= char <= "\u30f6" else char
-                for char in reading
-            )
+        result.append(
+            (token.surface, kanaToHiragana(reading), token.part_of_speech.split(","))
         )
-    return "".join(readings)
+    return result
+
+
+def isJoinedToPrevious(prev_pos, pos):
+    # 形態素が直前の形態素と一体の語（活用語尾・複合名詞など）かどうかを判定する
+    # 一体の語の途中は、単語辞書の一致の開始位置・終了位置にしない
+    if pos[0] == "助動詞" and prev_pos[0] in ("動詞", "形容詞", "助動詞"):  # 食べ|ます、行っ|た など
+        return True
+    if pos[0] == "助詞" and pos[1] == "接続助詞" and prev_pos[0] in ("動詞", "形容詞", "助動詞"):
+        return True  # 食べ|て など
+    if pos[0] == "動詞" and pos[1] == "非自立":  # 食べ|て|いる など
+        return True
+    if pos[0] == "名詞" and pos[1] in ("接尾", "非自立"):
+        return True
+    if prev_pos[0] == "接頭詞":
+        return True
+    if prev_pos[0] == "名詞" and pos[0] == "名詞":  # 複合名詞
+        return True
+    return False
+
+
+def toHiragana(text, tokenizer):
+    # 形態素ごとの読みをつなぎ、ひらがなに変換する
+    return "".join(reading for _, reading, _ in tokenizeWithReading(text, tokenizer))
+
+
+def loadWordDictionary(dictionary_file):
+    # 単語辞書(Shift-JISのcsv)を読み込み、{読み(ひらがな): 単語} を返す
+    # 1列目が読み(ひらがな/カタカナ)、2列目が単語、1行目はヘッダ
+    word_dict = {}
+    try:
+        with codecs.open(dictionary_file, "r", "CP932", "ignore") as f:
+            rows = csv.reader(f)
+            next(rows, None)  # ヘッダ行を読み飛ばす
+            for row in rows:
+                if len(row) < 2:
+                    continue
+                reading = kanaToHiragana(row[0].strip())
+                word = row[1].strip()
+                if reading and word:
+                    word_dict[reading] = word
+        logger.info("単語辞書読み込み：{}件".format(len(word_dict)))
+    except FileNotFoundError:
+        logger.info("単語辞書なし（スキップ）：{}".format(dictionary_file))
+    return word_dict
+
+
+def convertWithDictionary(text, tokenizer, word_dict):
+    # 候補1を形態素に分け、読みが単語辞書に一致する連続した形態素を辞書の単語に置き換える
+    if not word_dict:
+        return text
+    max_len = max(len(reading) for reading in word_dict)
+    tokens = tokenizeWithReading(text, tokenizer)
+    # 語の途中(一体の語の内部)では、一致の開始・終了をしないための境界判定
+    is_boundary_before = [True] + [
+        not isJoinedToPrevious(tokens[k - 1][2], tokens[k][2])
+        for k in range(1, len(tokens))
+    ]
+    result = []
+    i = 0
+    while i < len(tokens):
+        # 語の境界から始まり、語の境界で終わる範囲のうち、最も長く一致するものを探す(長い読みを優先)
+        matched_end = None
+        matched_word = None
+        joined = ""
+        if is_boundary_before[i]:
+            for j in range(i, len(tokens)):
+                joined += tokens[j][1]
+                if len(joined) > max_len:
+                    break
+                is_word_end = j + 1 == len(tokens) or is_boundary_before[j + 1]
+                if is_word_end and joined in word_dict:
+                    matched_end = j + 1
+                    matched_word = word_dict[joined]
+        if matched_end is not None:
+            result.append(matched_word)
+            i = matched_end
+        else:
+            result.append(tokens[i][0])
+            i += 1
+    return "".join(result)
 
 
 # 直接起動した場合
