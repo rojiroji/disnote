@@ -199,13 +199,13 @@ function updateRecognizeWarning() {
   }
 
   if (!currentProject.recognized_version) { // バージョン未記録（v3以前の認識結果）
-    warningTag.text("バージョン3以前で認識しています。音声認識を開始すると、認識結果がリセットされます").show();
+    warningTag.text("バージョン3以前で認識しています。認識結果がリセットされます").show();
     return;
   }
 
   const prevModel = currentProject.recognize_options && currentProject.recognize_options.whispermodel;
   if (prevModel && prevModel !== $("#whispermodel").val()) { // 前回認識時とエンジン（モデル）が異なる
-    warningTag.text("エンジンを変更しました。音声認識を開始すると、認識結果がリセットされます").show();
+    warningTag.text("エンジンを変更しました。認識結果がリセットされます").show();
     return;
   }
 
