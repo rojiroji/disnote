@@ -3,7 +3,9 @@ import sys
 import common
 import codecs
 from mutagen.easyid3 import EasyID3
+from mutagen.id3 import ID3, ID3NoHeaderError, TXXX
 import csv
+import json
 import shutil
 
 logger = common.getLogger(__file__)
@@ -43,14 +45,24 @@ def main(input_file):
         except IndexError:
             continue
 
+        segment_signature = json.dumps(
+            [org_start_time, length, text], ensure_ascii=False
+        )
+
         if os.path.exists(audio_file):  # dstファイル(mp3)が存在する場合
-            audio_file_mttime = os.stat(audio_file).st_mtime
-            recognize_result_file_mttime = os.stat(recognize_result_file).st_mtime
-            if audio_file_mttime > recognize_result_file_mttime:  # 認識結果より後に作られたファイルならOK
+            try:
+                tags = ID3(audio_file)
+            except ID3NoHeaderError:
+                tags = ID3()
+            if any(
+                frame.desc == "DISNOTE_SEGMENT"
+                and segment_signature in frame.text
+                for frame in tags.getall("TXXX")
+            ):
                 logger.debug("変換後のファイルが存在しているためスキップ:{}".format(audio_file))
                 continue
 
-            logger.debug("変換後のファイルが存在しているが、古いので作り直す:{}".format(audio_file))
+            logger.debug("変換後のファイルが古いので作り直す:{}".format(audio_file))
 
         # 入力ファイルから発話区間を切り出してmp3に変換。いったんテンポラリファイルに吐く（ffmpegの処理中にプロセスが落ちると中途半端なファイルが残ってしまうのを防ぐ）
         tmp_audio_file = common.getTemporaryFile(input_file, __file__, "mp3")
@@ -85,6 +97,13 @@ def main(input_file):
         except Exception as e:
             logger.info(e)
             pass
+
+        try:
+            tags = ID3(tmp_audio_file)
+        except ID3NoHeaderError:
+            tags = ID3()
+        tags.add(TXXX(encoding=3, desc="DISNOTE_SEGMENT", text=segment_signature))
+        tags.save(tmp_audio_file)
 
         # テンポラリファイルからリネーム、上書き
         shutil.move(tmp_audio_file, audio_file)
