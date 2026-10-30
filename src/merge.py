@@ -10,10 +10,19 @@ from dateutil.parser import ParserError
 from dateutil.relativedelta import relativedelta
 import codecs
 import hashlib
+from janome.tokenizer import Tokenizer
 
 logger = common.getLogger(__file__)
 
 CONFIG_WORK_KEY = "merge"
+# 読み候補は大文字IDにして、モデルごとの通常候補と区別する
+READING_ENGINE_IDS = {
+    "t": "T",
+    "b": "B",
+    "s": "S",
+    "m": "M",
+    "l": "L",
+}
 
 
 def main(input_files, arg_files):
@@ -87,6 +96,8 @@ def main(input_files, arg_files):
 
     # 認識結果ファイル(csv)を読み込んでマージする
     whispermodelname = common.getWhisperModel()
+    # 全候補で共有し、読み候補の形態素解析に使う
+    tokenizer = Tokenizer()
 
     resultMap = dict()
     for input_file in input_files:
@@ -94,7 +105,7 @@ def main(input_files, arg_files):
 
         recognize_result_file = common.getRecognizeResultFileWhisper(input_file)
         count += mergeRecognizeResult(
-            recognize_result_file, resultMap, whispermodelname[0]
+            recognize_result_file, resultMap, whispermodelname[0], tokenizer
         )  # tiny,base,small,medium,largeのいずれかの先頭1文字（小文字）
 
         # 発言がない人物は話者一覧から外す
@@ -236,7 +247,7 @@ def isInt(s):  # 整数値を表しているかどうかを判定
         return True
 
 # 認識結果ファイル(csv)を読み込んでマージする(行数を返す)
-def mergeRecognizeResult(recognize_result_file, resultMap, engine):
+def mergeRecognizeResult(recognize_result_file, resultMap, engine, tokenizer):
     TEXT_INDEX = 5
     try:
         logger.debug("認識結果ファイル：{}".format(os.path.basename(recognize_result_file)))
@@ -251,7 +262,15 @@ def mergeRecognizeResult(recognize_result_file, resultMap, engine):
                 ]  # 2列目（音声ファイル名(分割したファイル）をキーにする。バージョンによって拡張子が異なるので拡張子以降は省略）
                 ppos = audio_file.rfind(".")
                 key = audio_file[0:ppos]
-                engineStr = engine * (len(row) - TEXT_INDEX)
+                # 候補1の読みを候補2として追加し、エンジンIDも対応させる
+                candidate_count = len(row) - TEXT_INDEX
+                reading = toHiragana(row[TEXT_INDEX], tokenizer)
+                row.insert(TEXT_INDEX + 1, reading)
+                engineStr = (
+                    engine
+                    + READING_ENGINE_IDS[engine]
+                    + engine * (candidate_count - 1)
+                )
                 
                 isFormatError = False
                 for rownum in [2,3,4]: # 3,4,5列目には数字が入っている。稀にファイル書き込みがおかしくて変な値が入っていることがある
@@ -288,6 +307,21 @@ def mergeRecognizeResult(recognize_result_file, resultMap, engine):
         )
 
     return 0
+
+
+def toHiragana(text, tokenizer):
+    # 形態素ごとの読みをつなぎ、カタカナの読みをひらがなに変換する
+    readings = []
+    for token in tokenizer.tokenize(text):
+        reading = token.reading if token.reading != "*" else token.surface
+        readings.append(
+            "".join(
+                # Janomeの読みはカタカナなので、ひらがな範囲の文字だけ変換する
+                chr(ord(char) - 0x60) if "\u30a1" <= char <= "\u30f6" else char
+                for char in reading
+            )
+        )
+    return "".join(readings)
 
 
 # 直接起動した場合
